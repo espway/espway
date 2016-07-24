@@ -4,6 +4,9 @@
 #include "espfs.h"
 #include "webpages-espfs.h"
 #include "captdns.h"
+#include "cgiwebsocket.h"
+
+const int LED_PIN = 2;
 
 void initAP(void) {
     char *ssid = "esp8266";
@@ -22,9 +25,20 @@ void initAP(void) {
     wifi_set_opmode(SOFTAP_MODE);
 }
 
+void socketSendLedStatus(Websock *ws) {
+    char status = GPIO_INPUT_GET(LED_PIN);
+    cgiWebsocketSend(ws, &status, 1, WEBSOCK_FLAG_NONE);
+}
+
+void socketConnect(Websock *ws) {
+    ws->recvCb = NULL;
+    socketSendLedStatus(ws);
+}
+
 HttpdBuiltInUrl builtInUrls[] = {
     {"*", cgiRedirectApClientToHostname, "espway.robot"},
     {"/", cgiRedirect, "/index.html"},
+    {"/ws", cgiWebsocket, socketConnect},
     {"*", cgiEspFsHook, NULL},
     {NULL, NULL, NULL}
 };
