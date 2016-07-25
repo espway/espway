@@ -27,11 +27,18 @@ void initAP(void) {
 
 void socketSendLedStatus(Websock *ws) {
     char status = GPIO_INPUT_GET(LED_PIN);
-    cgiWebsocketSend(ws, &status, 1, WEBSOCK_FLAG_NONE);
+    cgiWebsocketSend(ws, &status, 1, WEBSOCK_FLAG_BIN);
+}
+
+void socketReceive(Websock *ws, char *data, int len, int flags) {
+    if (len != 1) return;
+    /* uint8_t *udata = (uint8_t *)data; */
+    GPIO_OUTPUT_SET(LED_PIN, data[0]);
+    socketSendLedStatus(ws);
 }
 
 void socketConnect(Websock *ws) {
-    ws->recvCb = NULL;
+    ws->recvCb = socketReceive;
     socketSendLedStatus(ws);
 }
 
