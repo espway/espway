@@ -3,7 +3,6 @@
 #include "httpdespfs.h"
 #include "espfs.h"
 #include "webpages-espfs.h"
-#include "captdns.h"
 #include "cgiwebsocket.h"
 
 const int LED_PIN = 2;
@@ -57,7 +56,6 @@ void initHttpd(void) {
     espFsInit((void*)(webpages_espfs_start));
 #endif
     httpdInit(builtInUrls, 80);
-    captdnsInit();
 }
 
 void user_init(void) {
