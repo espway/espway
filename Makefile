@@ -8,11 +8,11 @@ OUTPUT_TYPE=combined
 #OUTPUT_TYPE=ota
 
 #SPI flash size, in K
-ESP_SPI_FLASH_SIZE_K=1024
+ESP_SPI_FLASH_SIZE_K=4096
 #0: QIO, 1: QOUT, 2: DIO, 3: DOUT
 ESP_FLASH_MODE=0
 #0: 40MHz, 1: 26MHz, 2: 20MHz, 15: 80MHz
-ESP_FLASH_FREQ_DIV=0
+ESP_FLASH_FREQ_DIV=15
 
 
 ifeq ("$(OUTPUT_TYPE)","separate")
@@ -51,16 +51,16 @@ APPGEN		?= $(SDK_BASE)/tools/gen_appbin.py
 TARGET		= espway
 
 # which modules (subdirectories) of the project to include in compiling
-MODULES		= user
-EXTRA_INCDIR	= include libesphttpd/include
+MODULES		= user driver
+EXTRA_INCDIR	= include libesphttpd/include $(SDK_BASE)/driver_lib/include
 
 # libraries used in this project, mainly provided by the SDK
-LIBS		= c gcc phy pp net80211 wpa main lwip crypto
+LIBS		= c gcc phy pp net80211 wpa main lwip driver
 #Add in esphttpd lib
 LIBS += esphttpd
 
 # compiler flags using during compilation of source files
-CFLAGS		= -Os -std=gnu99 -Werror -Wpointer-arith -Wundef -Wall -Wl,-EL -fno-inline-functions \
+CFLAGS		= -Os -std=gnu99 -Wpointer-arith -Wundef -Wall -Wl,-EL -fno-inline-functions \
 		-nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH \
 		-Wno-address
 
