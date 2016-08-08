@@ -14,6 +14,11 @@
 #define MPU_GYRO_CONFIG 0x1B
 #define MPU_ACCEL_CONFIG 0x1C
 
+#define MPU_INT_PIN_CFG 0x37
+#define MPU_INT_LEVEL (1 << 7)
+#define MPU_INT_OPEN (1 << 6)
+#define MPU_INT_RD_CLEAR (1 << 4)
+
 #define MPU_INT_ENABLE 0x38
 #define MPU_DATA_RDY_EN 1
 #define MPU_MOT_EN (1 << 6)
@@ -73,6 +78,8 @@ typedef struct {
     // 3 = +- 16 g
     uint8_t accelRange;
     bool enableInterrupt;
+    bool intActiveLow;
+    bool intOpenDrain;
 } mpuconfig;
 
 typedef struct {
@@ -89,7 +96,9 @@ typedef struct {
     .sampleRateDivider = 4,
     .gyroRange = 3,
     .accelRange = 0,
-    .enableInterrupt = true
+    .enableInterrupt = true,
+    .intActiveLow = false,
+    .intOpenDrain = false
 }; */
 
 int mpuReadIntStatus(const uint8_t addr);

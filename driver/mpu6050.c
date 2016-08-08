@@ -12,19 +12,18 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <esp8266.h>
+#include "ets_sys.h"
 
 #include "i2c_master.h"
+#include "i2c_helper.h"
 #include "mpu6050.h"
 
 LOCAL int ICACHE_FLASH_ATTR mpuWriteRegister(const uint8_t addr,
     const uint8_t reg, const uint8_t value, const bool stop) {
     uint8_t regValue[] = { reg, value };
     i2c_master_start();
-    bool ret = i2c_master_transmitTo(addr);
-    if (ret) os_printf("transmitTo ok\n");
-    ret = ret && i2c_master_writeBytes(regValue, 2);
-    if (ret) os_printf("writeBytes ok\n");
+    bool ret = i2c_master_transmitTo(addr) &&
+        i2c_master_writeBytes(regValue, 2);
     if (stop) i2c_master_stop();
     return ret ? 0 : -1;
 }
@@ -81,39 +80,36 @@ int ICACHE_FLASH_ATTR mpuSetup(const uint8_t addr,
     // Wake up and disable temperature measurement if asked for
     status = mpuWriteRegister(addr, MPU_PWR_MGMT_1,
         MPU_CLK_PLL_ZGYRO | (config->disableTemp ? MPU_TEMP_DIS : 0), false);
-    os_printf("mpu1\n");
     if (status != 0) return status;
     // Configure the low pass filter
     if (config->lowpass > 6) return -10;
     status = mpuWriteRegister(addr, MPU_CONFIG, config->lowpass, false);
-    os_printf("mpu2\n");
     if (status != 0) return status;
     // Configure gyro and accelerometer sensitivities
     if (config->gyroRange > 3) return -11;
     status = mpuWriteRegister(addr, MPU_GYRO_CONFIG,
         config->gyroRange << 3, false);
-    os_printf("mpu3\n");
     if (status != 0) return status;
     if (config->accelRange > 3) return -12;
     status = mpuWriteRegister(addr, MPU_ACCEL_CONFIG,
         config->accelRange << 3, false);
-    os_printf("mpu4\n");
     if (status != 0) return status;
     // Configure the sample rate
     status = mpuWriteRegister(addr, MPU_SMPRT_DIV, config->sampleRateDivider,
         false);
-    os_printf("mpu5\n");
     if (status != 0) return status;
     // Configure the interrupt
+    status = mpuWriteRegister(addr, MPU_INT_PIN_CFG,
+        (config->intOpenDrain ? MPU_INT_OPEN : 0) |
+        (config->intActiveLow ? MPU_INT_LEVEL : 0) |
+        MPU_INT_RD_CLEAR, true);
+    if (status != 0) return status;
     status = mpuWriteRegister(addr, MPU_INT_ENABLE,
         config->enableInterrupt ? MPU_DATA_RDY_EN : 0, true);
-    os_printf("mpu6\n");
     if (status != 0) return status;
     uint8_t id;
     status = mpuReadRegisters(addr, MPU_WHO_AM_I, 1, &id);
-    os_printf("mpu7\n");
     if (status != 0) return status;
-    os_printf("%d\n", id);
     return id == addr ? 0 : -1;
 }
 
