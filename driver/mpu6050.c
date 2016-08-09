@@ -48,20 +48,22 @@ int ICACHE_FLASH_ATTR mpuReadIntStatus(const uint8_t addr) {
 
 int ICACHE_FLASH_ATTR mpuReadRawData(const uint8_t addr, int16_t * const data) {
     uint8_t *myData = (uint8_t *)data;
-    uint8_t reg[] = { MPU_ACCEL_XOUT_H };
+    uint8_t reg = MPU_ACCEL_XOUT_H;
     i2c_master_start();
     bool ret = i2c_master_transmitTo(addr) &&
-        i2c_master_writeBytes(reg, 1);
+        i2c_master_writeBytes(&reg, 1);
     i2c_master_start();
     ret = ret && i2c_master_receiveFrom(addr);
-    for (int8_t i = 0; i < 6; i++) {
-        if (!ret) break;
+
+    if (ret) {
+        for (int8_t i = 0; i < 6; i++) {
+            *(myData + 1) = i2c_master_readNextByte(true);
+            *myData = i2c_master_readNextByte(true);
+            myData += 2;
+        }
         *(myData + 1) = i2c_master_readNextByte(true);
-        *myData = i2c_master_readNextByte(true);
-        myData += 2;
+        *myData = i2c_master_readNextByte(false);
     }
-    *(myData + 1) = i2c_master_readNextByte(false);
-    *myData = i2c_master_readNextByte(false);
 
     i2c_master_stop();
     return ret ? 0 : -1;

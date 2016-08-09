@@ -14,6 +14,20 @@
 const int LED_PIN = 2;
 const int MPU_ADDR = 0x68;
 
+#define N_TASKS_MAX 2
+
+os_event_t gTaskQueue[N_TASKS_MAX];
+
+int16_t pitch;
+
+void ICACHE_FLASH_ATTR compute(os_event_t *e) {
+    int16_t buf[7];
+    mpuReadIntStatus(MPU_ADDR);
+    if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
+
+    os_printf("%d\n", buf[0]);
+}
+
 void initAP(void) {
     char *ssid = "esp8266";
     struct softap_config conf;
@@ -32,13 +46,13 @@ void initAP(void) {
 }
 
 void socketSendLedStatus(Websock *ws) {
-    char status = GPIO_INPUT_GET(LED_PIN);
+    char status = GPIO_INPUT_GET(GPIO_ID_PIN(LED_PIN));
     cgiWebsocketSend(ws, &status, 1, WEBSOCK_FLAG_BIN);
 }
 
 void socketReceive(Websock *ws, char *data, int len, int flags) {
     if (len != 1) return;
-    GPIO_OUTPUT_SET(LED_PIN, data[0]);
+    GPIO_OUTPUT_SET(GPIO_ID_PIN(LED_PIN), data[0]);
     socketSendLedStatus(ws);
 }
 
@@ -67,12 +81,7 @@ void mpuInterrupt(uint32_t intr_mask, void *args) {
     uint32_t gpio_status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
     GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, gpio_status);
 
-    mpuReadIntStatus(MPU_ADDR);
-
-    int16_t buf[7];
-    mpuReadRawData(MPU_ADDR, buf);
-
-    os_printf("%d\n", buf[0]);
+    system_os_post(USER_TASK_PRIO_2, 0, 0);
 }
 
 void user_init(void) {
@@ -93,10 +102,12 @@ void user_init(void) {
         .intActiveLow = true,
         .intOpenDrain = true
     };
-    int status = mpuSetup(MPU_ADDR, &mpuDefaultConfig);
+    mpuSetup(MPU_ADDR, &mpuDefaultConfig);
 
     ETS_GPIO_INTR_ATTACH(mpuInterrupt, NULL);
     gpio_pin_intr_state_set(GPIO_ID_PIN(0), GPIO_PIN_INTR_NEGEDGE);
     mpuReadIntStatus(MPU_ADDR);
+
+    system_os_task(compute, USER_TASK_PRIO_2, gTaskQueue, N_TASKS_MAX);
 }
 
