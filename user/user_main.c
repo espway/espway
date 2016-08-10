@@ -17,18 +17,34 @@ const int MPU_ADDR = 0x68;
 #define N_TASKS_MAX 2
 
 os_event_t gTaskQueue[N_TASKS_MAX];
+os_timer_t gReportTimer;
 
-int16_t pitch;
+mpufilter gMpuFilter;
+int16_t gPitch;
+int nSamples = 0;
+unsigned long lastTime = 0;
 
 void ICACHE_FLASH_ATTR compute(os_event_t *e) {
     int16_t buf[7];
     mpuReadIntStatus(MPU_ADDR);
     if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
+    mpuUpdatePitch(&gMpuFilter, buf, &gPitch);
 
-    os_printf("%d\n", buf[0]);
+    os_printf("%d\n", gPitch);
+
+    nSamples += 1;
 }
 
-void initAP(void) {
+void ICACHE_FLASH_ATTR reportSamplerate(void *args) {
+    unsigned long curTime = system_get_time();
+    unsigned long sampleRate = (1000000UL * (uint32_t)nSamples) /
+        (curTime - lastTime);
+    lastTime = curTime;
+    nSamples = 0;
+    /* os_printf("%lu\n", sampleRate); */
+}
+
+void ICACHE_FLASH_ATTR initAP(void) {
     char *ssid = "esp8266";
     struct softap_config conf;
     wifi_softap_get_config(&conf);
@@ -84,7 +100,8 @@ void mpuInterrupt(uint32_t intr_mask, void *args) {
     system_os_post(USER_TASK_PRIO_2, 0, 0);
 }
 
-void user_init(void) {
+void ICACHE_FLASH_ATTR user_init(void) {
+    system_update_cpu_freq(SYS_CPU_160MHZ);
     gpio_init();
     i2c_master_gpio_init();
     uart_init(BIT_RATE_115200, BIT_RATE_115200);
@@ -92,22 +109,27 @@ void user_init(void) {
     initAP();
     initHttpd();
 
-    mpuconfig mpuDefaultConfig = {
+    mpuconfig mpuConfig = {
         .disableTemp = true,
         .lowpass = 3,
-        .sampleRateDivider = 4,
+        .sampleRateDivider = 0,
         .gyroRange = 3,
         .accelRange = 0,
         .enableInterrupt = true,
         .intActiveLow = true,
         .intOpenDrain = true
     };
-    mpuSetup(MPU_ADDR, &mpuDefaultConfig);
+    mpuSetup(MPU_ADDR, &mpuConfig);
+    mpuSetupFilter(&mpuConfig, &gMpuFilter, 4);
 
     ETS_GPIO_INTR_ATTACH(mpuInterrupt, NULL);
     gpio_pin_intr_state_set(GPIO_ID_PIN(0), GPIO_PIN_INTR_NEGEDGE);
     mpuReadIntStatus(MPU_ADDR);
 
     system_os_task(compute, USER_TASK_PRIO_2, gTaskQueue, N_TASKS_MAX);
+    system_os_post(USER_TASK_PRIO_2, 0, 0);
+    lastTime = system_get_time();
+    os_timer_setfn(&gReportTimer, reportSamplerate, NULL);
+    os_timer_arm(&gReportTimer, 500, true);
 }
 

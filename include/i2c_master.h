@@ -20,9 +20,7 @@
 #define I2C_MASTER_SDA_LOW_SCL_LOW()  \
     gpio_output_set(0, 1<<I2C_MASTER_SDA_GPIO | 1<<I2C_MASTER_SCL_GPIO, 1<<I2C_MASTER_SDA_GPIO | 1<<I2C_MASTER_SCL_GPIO, 0)
 
-#ifndef I2C_MASTER_DELAY
-#define I2C_MASTER_DELAY 5
-#endif
+#define I2C_MASTER_DELAY 2
 
 #define i2c_master_wait os_delay_us
 void i2c_master_gpio_init(void);

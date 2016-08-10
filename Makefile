@@ -189,7 +189,7 @@ libesphttpd/Makefile:
 	$(Q) git submodule update
 
 libesphttpd: libesphttpd/Makefile
-	$(Q) make -C libesphttpd USE_OPENSDK=$(USE_OPENSDK)
+	$(Q) make -C libesphttpd USE_OPENSDK=$(USE_OPENSDK) SDK_BASE=$(SDK_BASE)
 
 $(APP_AR): libesphttpd $(OBJ)
 	$(vecho) "AR $@"
