@@ -15,7 +15,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include "ets_sys.h"
 
 #include "i2c_master.h"
-#include "i2c_helper.h"
 #include "mpu6050.h"
 
 LOCAL int ICACHE_FLASH_ATTR mpuWriteRegister(const uint8_t addr,
@@ -119,7 +118,7 @@ int ICACHE_FLASH_ATTR mpuSetup(const uint8_t addr,
 
 LOCAL const int16_t MPU_GYRO_RANGE[] = { 250, 500, 1000, 2000 };
 LOCAL const int8_t MPU_ACCEL_RANGE[] = { 2, 4, 8, 16 };
-LOCAL const int16_t ANGLE_SCALE_FACTOR = 256;
+LOCAL const int16_t ANGLE_SCALE_FACTOR = 64;
 void ICACHE_FLASH_ATTR mpuSetupFilter(const mpuconfig * const config,
     mpufilter * const filter, const int16_t alpha) {
     filter->alpha = alpha;

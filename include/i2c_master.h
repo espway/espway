@@ -8,32 +8,45 @@
 #define I2C_MASTER_SDA_FUNC FUNC_GPIO4
 #define I2C_MASTER_SCL_FUNC FUNC_GPIO5
 
-#define I2C_MASTER_SDA_HIGH_SCL_HIGH()  \
-    gpio_output_set(0, 0, 0, 1<<I2C_MASTER_SDA_GPIO | 1<<I2C_MASTER_SCL_GPIO)
+#define SDA_HIGH() \
+    gpio_output_set(0, 0, 0, 1<<I2C_MASTER_SDA_GPIO)
+#define SCL_HIGH() \
+    gpio_output_set(0, 0, 0, 1<<I2C_MASTER_SCL_GPIO)
+#define SDA_LOW()  \
+    gpio_output_set(0, 1<<I2C_MASTER_SDA_GPIO, 1<<I2C_MASTER_SDA_GPIO, 0)
+#define SCL_LOW()  \
+    gpio_output_set(0, 1<<I2C_MASTER_SCL_GPIO, 1<<I2C_MASTER_SCL_GPIO, 0)
 
-#define I2C_MASTER_SDA_HIGH_SCL_LOW()  \
-    gpio_output_set(0, 1<<I2C_MASTER_SCL_GPIO, 1<<I2C_MASTER_SCL_GPIO, 1<<I2C_MASTER_SDA_GPIO)
+#define SDA_HIGH_SCL_HIGH() \
+    gpio_output_set(0, 0, 0, (1<<I2C_MASTER_SCL_GPIO) | (1<<I2C_MASTER_SDA_GPIO))
+#define SDA_HIGH_SCL_LOW() \
+    gpio_output_set(0, 1<<I2C_MASTER_SCL_GPIO, \
+    1<<I2C_MASTER_SCL_GPIO, 1<<I2C_MASTER_SDA_GPIO)
+#define SDA_LOW_SCL_HIGH() \
+    gpio_output_set(0, 1<<I2C_MASTER_SDA_GPIO, \
+    1<<I2C_MASTER_SDA_GPIO, 1<<I2C_MASTER_SCL_GPIO)
+#define SDA_LOW_SCL_LOW() \
+    gpio_output_set(0, (1<<I2C_MASTER_SDA_GPIO) | (1<<I2C_MASTER_SCL_GPIO), \
+    (1<<I2C_MASTER_SDA_GPIO) | (1<<I2C_MASTER_SCL_GPIO), 0)
 
-#define I2C_MASTER_SDA_LOW_SCL_HIGH()  \
-    gpio_output_set(0, 1<<I2C_MASTER_SDA_GPIO, 1<<I2C_MASTER_SDA_GPIO, 1<<I2C_MASTER_SCL_GPIO)
+#define I2C_MASTER_DELAY 0
 
-#define I2C_MASTER_SDA_LOW_SCL_LOW()  \
-    gpio_output_set(0, 1<<I2C_MASTER_SDA_GPIO | 1<<I2C_MASTER_SCL_GPIO, 1<<I2C_MASTER_SDA_GPIO | 1<<I2C_MASTER_SCL_GPIO, 0)
+#define i2c_master_wait() os_delay_us(I2C_MASTER_DELAY)
 
-#define I2C_MASTER_DELAY 2
-
-#define i2c_master_wait os_delay_us
 void i2c_master_gpio_init(void);
 
 void i2c_master_stop(void);
 void i2c_master_start(void);
-void i2c_master_setAck(uint8 level);
-uint8 i2c_master_getAck(void);
 uint8 i2c_master_readByte(void);
 void i2c_master_writeByte(uint8 wrdata);
 
 bool i2c_master_checkAck(void);
-void i2c_master_send_ack(void);
-void i2c_master_send_nack(void);
+void i2c_master_send_ack(bool);
+
+bool i2c_master_transmitTo(uint8_t addr);
+bool i2c_master_receiveFrom(uint8_t addr);
+bool i2c_master_writeBytes(uint8_t *buf, int len);
+bool i2c_master_readBytes(uint8_t *buf, int len);
+uint8_t i2c_master_readNextByte(bool ack);
 
 #endif

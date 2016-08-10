@@ -8,7 +8,6 @@
 #include "cgiwebsocket.h"
 
 #include "i2c_master.h"
-#include "i2c_helper.h"
 #include "mpu6050.h"
 
 const int LED_PIN = 2;
@@ -112,7 +111,7 @@ void ICACHE_FLASH_ATTR user_init(void) {
     mpuconfig mpuConfig = {
         .disableTemp = true,
         .lowpass = 3,
-        .sampleRateDivider = 0,
+        .sampleRateDivider = 2,
         .gyroRange = 3,
         .accelRange = 0,
         .enableInterrupt = true,
