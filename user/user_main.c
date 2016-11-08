@@ -111,18 +111,19 @@ void ICACHE_FLASH_ATTR user_init(void) {
     mpuconfig mpuConfig = {
         .disableTemp = true,
         .lowpass = 3,
-        .sampleRateDivider = 2,
-        .gyroRange = 3,
+        .sampleRateDivider = 0,
+        .gyroRange = 0,
         .accelRange = 0,
         .enableInterrupt = true,
-        .intActiveLow = true,
-        .intOpenDrain = true
+        .intActiveLow = false,
+        .intOpenDrain = false
     };
     mpuSetup(MPU_ADDR, &mpuConfig);
-    mpuSetupFilter(&mpuConfig, &gMpuFilter, 4);
+    mpuSetupFilter(&mpuConfig, &gMpuFilter, 1);
 
+    ETS_GPIO_INTR_DISABLE();
     ETS_GPIO_INTR_ATTACH(mpuInterrupt, NULL);
-    gpio_pin_intr_state_set(GPIO_ID_PIN(0), GPIO_PIN_INTR_NEGEDGE);
+    gpio_pin_intr_state_set(GPIO_ID_PIN(4), GPIO_PIN_INTR_POSEDGE);
     mpuReadIntStatus(MPU_ADDR);
 
     system_os_task(compute, USER_TASK_PRIO_2, gTaskQueue, N_TASKS_MAX);
@@ -130,5 +131,13 @@ void ICACHE_FLASH_ATTR user_init(void) {
     lastTime = system_get_time();
     os_timer_setfn(&gReportTimer, reportSamplerate, NULL);
     os_timer_arm(&gReportTimer, 500, true);
+
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_GPIO12);
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, FUNC_GPIO13);
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U, FUNC_GPIO14);
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15);
+    gpio_output_set(0, BIT12|BIT13|BIT14|BIT15, BIT12|BIT13|BIT14|BIT15, 0);
+
+    ETS_GPIO_INTR_ENABLE();
 }
 

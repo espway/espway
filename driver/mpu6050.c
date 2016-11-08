@@ -13,6 +13,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 */
 
 #include "ets_sys.h"
+#include "osapi.h"
 
 #include "i2c_master.h"
 #include "mpu6050.h"
@@ -116,22 +117,24 @@ int ICACHE_FLASH_ATTR mpuSetup(const uint8_t addr,
 
 // Pitch calculation by means of the complementary filter
 
-LOCAL const int16_t MPU_GYRO_RANGE[] = { 250, 500, 1000, 2000 };
+LOCAL const int16_t MPU_GYRO_RANGE[] = { 25, 50, 100, 200 };
 LOCAL const int8_t MPU_ACCEL_RANGE[] = { 2, 4, 8, 16 };
-LOCAL const int16_t ANGLE_SCALE_FACTOR = 64;
+LOCAL const int16_t ANGLE_SCALE_FACTOR = 128;
 void ICACHE_FLASH_ATTR mpuSetupFilter(const mpuconfig * const config,
     mpufilter * const filter, const int16_t alpha) {
     filter->alpha = alpha;
-    filter->alphaComplement = 512 - filter->alpha;
+    filter->alphaComplement = 1024 - filter->alpha;
 
-    int16_t g = (INT16_MAX / MPU_ACCEL_RANGE[config->accelRange]) >> 8;
+    int16_t arange = MPU_ACCEL_RANGE[config->accelRange];
+    int16_t g = INT8_MAX;
     filter->g2 = g*g;
-    filter->gThresh = g*g * 3 / 2;
+    filter->gThresh = g*g * 3 / 2 / (arange*arange);
 
-    int32_t c = (int32_t)(1 + config->sampleRateDivider) * g * 314 *
-                MPU_GYRO_RANGE[config->gyroRange] / INT16_MAX,
-            d = 18000L * 1000 / ANGLE_SCALE_FACTOR;
-    filter->gyroDivider = d / c;
+    filter->accelFactor = ANGLE_SCALE_FACTOR * arange;
+    int32_t a = (int32_t)(1 + config->sampleRateDivider) * g * 314 *
+        MPU_GYRO_RANGE[config->gyroRange] / INT16_MAX;
+    int32_t b = (int32_t)18000 * 1000 / ANGLE_SCALE_FACTOR;
+    filter->gyroDivider = b / a;
 }
 
 void ICACHE_FLASH_ATTR mpuUpdatePitch(mpufilter * const filter,
@@ -139,26 +142,22 @@ void ICACHE_FLASH_ATTR mpuUpdatePitch(mpufilter * const filter,
     // Use only the 8 most significant bits of the accelerometer readings to
     // take advantage from single-instruction multiplication (muls).
     // The readings won't have more than 8 bits of real information anyway.
-    int8_t *data8 = (int8_t*)data;
+    int8_t *data8 = (int8_t *)data;
     int8_t ax = data8[(MPU_ACC_X << 1) + 1],
            ay = data8[(MPU_ACC_Y << 1) + 1],
            az = data8[(MPU_ACC_Z << 1) + 1];
     int16_t gy = data[MPU_GYRO_Y];
 
-    int16_t ayz2 = ay*ay + az*az,
-            ax2 = ax*ax, a2 = ayz2 + ax2;
+    int16_t ax2 = ax*ax;
+    int32_t a2 = ax2 + ay*ay + az*az;
 
-    int16_t gyroTerm = *pitch + gy / filter->gyroDivider;
-    int16_t accTerm = 0;
+    int16_t gyroTerm = *pitch - gy / filter->gyroDivider;
     if (a2 < filter->gThresh) {
-        accTerm = ANGLE_SCALE_FACTOR * ax;
-#ifndef MPU6050_FIRST_ORDER
+        int16_t accTerm = filter->accelFactor * ax;
         accTerm = (int32_t)accTerm * (filter->g2 + ax2/6) / filter->g2;
-#endif
-        *pitch = ((int32_t)filter->alphaComplement * gyroTerm -
-            (int32_t)filter->alpha * accTerm) / 512;
+        *pitch = ((int32_t)filter->alphaComplement * gyroTerm +
+            (int32_t)filter->alpha * accTerm) / 1024;
     } else {
         *pitch = gyroTerm;
     }
 }
-

@@ -85,6 +85,7 @@ typedef struct {
 typedef struct {
     int16_t gThresh;
     int16_t g2;
+    int16_t accelFactor;
     int16_t gyroDivider;
     int16_t alpha;
     int16_t alphaComplement;
