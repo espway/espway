@@ -1,15 +1,20 @@
 /*
-A lightweight library for reading and processing motion information
-from a MPU-6050 sensor.
+    A lightweight library for reading and processing motion information
+    from a MPU-6050 sensor.
+    Copyright (C) 2016  Sakari Kapanen
 
-The MIT License (MIT)
-Copyright (c) 2016 Sakari Kapanen
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "ets_sys.h"
@@ -76,8 +81,11 @@ void ICACHE_FLASH_ATTR mpuApplyOffsets(int16_t * const data,
     }
 }
 
+LOCAL const int16_t MPU_GYRO_RANGE[] = { 250, 500, 1000, 2000 };
+LOCAL const int8_t MPU_ACCEL_RANGE[] = { 2, 4, 8, 16 };
+
 int ICACHE_FLASH_ATTR mpuSetup(const uint8_t addr,
-    const mpuconfig * const config) {
+    mpuconfig * const config) {
     int status;
     // Wake up and disable temperature measurement if asked for
     status = mpuWriteRegister(addr, MPU_PWR_MGMT_1,
@@ -112,52 +120,20 @@ int ICACHE_FLASH_ATTR mpuSetup(const uint8_t addr,
     uint8_t id;
     status = mpuReadRegisters(addr, MPU_WHO_AM_I, 1, &id);
     if (status != 0) return status;
+
+    config->sfreq = 1000.0f / (1 + config->sampleRateDivider);
+    config->gyroScale = M_PI * MPU_GYRO_RANGE[config->gyroRange] /
+        (180.0f * INT16_MAX);
+
     return id == addr ? 0 : -1;
 }
 
-// Pitch calculation by means of the complementary filter
-
-LOCAL const int16_t MPU_GYRO_RANGE[] = { 25, 50, 100, 200 };
-LOCAL const int8_t MPU_ACCEL_RANGE[] = { 2, 4, 8, 16 };
-LOCAL const int16_t ANGLE_SCALE_FACTOR = 128;
-void ICACHE_FLASH_ATTR mpuSetupFilter(const mpuconfig * const config,
-    mpufilter * const filter, const int16_t alpha) {
-    filter->alpha = alpha;
-    filter->alphaComplement = 1024 - filter->alpha;
-
-    int16_t arange = MPU_ACCEL_RANGE[config->accelRange];
-    int16_t g = INT8_MAX;
-    filter->g2 = g*g;
-    filter->gThresh = g*g * 3 / 2 / (arange*arange);
-
-    filter->accelFactor = ANGLE_SCALE_FACTOR * arange;
-    int32_t a = (int32_t)(1 + config->sampleRateDivider) * g * 314 *
-        MPU_GYRO_RANGE[config->gyroRange] / INT16_MAX;
-    int32_t b = (int32_t)18000 * 1000 / ANGLE_SCALE_FACTOR;
-    filter->gyroDivider = b / a;
+void ICACHE_FLASH_ATTR mpuUpdateQuaternion(const mpuconfig * const config,
+    int16_t * const data, quaternion * const quat) {
+    MadgwickAHRSupdateIMU(config->beta, config->sfreq,
+        data[MPU_GYRO_X] * config->gyroScale,
+        data[MPU_GYRO_Y] * config->gyroScale,
+        data[MPU_GYRO_Z] * config->gyroScale,
+        data[MPU_ACC_X], data[MPU_ACC_Y], data[MPU_ACC_Z], quat);
 }
 
-void ICACHE_FLASH_ATTR mpuUpdatePitch(mpufilter * const filter,
-    int16_t * const data, int16_t * const pitch) {
-    // Use only the 8 most significant bits of the accelerometer readings to
-    // take advantage from single-instruction multiplication (muls).
-    // The readings won't have more than 8 bits of real information anyway.
-    int8_t *data8 = (int8_t *)data;
-    int8_t ax = data8[(MPU_ACC_X << 1) + 1],
-           ay = data8[(MPU_ACC_Y << 1) + 1],
-           az = data8[(MPU_ACC_Z << 1) + 1];
-    int16_t gy = data[MPU_GYRO_Y];
-
-    int16_t ax2 = ax*ax;
-    int32_t a2 = ax2 + ay*ay + az*az;
-
-    int16_t gyroTerm = *pitch - gy / filter->gyroDivider;
-    if (a2 < filter->gThresh) {
-        int16_t accTerm = filter->accelFactor * ax;
-        accTerm = (int32_t)accTerm * (filter->g2 + ax2/6) / filter->g2;
-        *pitch = ((int32_t)filter->alphaComplement * gyroTerm +
-            (int32_t)filter->alpha * accTerm) / 1024;
-    } else {
-        *pitch = gyroTerm;
-    }
-}

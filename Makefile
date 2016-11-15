@@ -31,7 +31,7 @@ FW_BASE		= firmware
 XTENSA_TOOLS_ROOT ?= 
 
 # base directory of the ESP8266 SDK package, absolute
-SDK_BASE	?= $(HOME)/esp-open-sdk/sdk
+SDK_BASE	?= $(HOME)/builds/esp-open-sdk/sdk
 
 # Opensdk patches stdint.h when compiled with an internal SDK. If you run into compile problems pertaining to
 # redefinition of int types, try setting this to 'yes'.
@@ -55,7 +55,7 @@ MODULES		= user driver
 EXTRA_INCDIR	= include libesphttpd/include $(SDK_BASE)/driver_lib/include
 
 # libraries used in this project, mainly provided by the SDK
-LIBS		= c gcc phy pp net80211 wpa main lwip driver
+LIBS		= c gcc phy pp net80211 wpa main lwip driver m
 #Add in esphttpd lib
 LIBS += esphttpd
 

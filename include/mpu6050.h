@@ -1,5 +1,25 @@
-#ifndef MPU6050_H
-#define MPU6050_H
+/*
+    A lightweight library for reading and processing motion information
+    from a MPU-6050 sensor.
+    Copyright (C) 2016  Sakari Kapanen
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#pragma once
+
+#include "MadgwickAHRS.h"
 
 // Register addresses and bits as per the MPU-6050 datasheet
 // http://43zrtwysvxb2gf29r5o0athu.wpengine.netdna-cdn.com/wp-content/uploads/2015/02/MPU-6000-Register-Map1.pdf
@@ -80,16 +100,10 @@ typedef struct {
     bool enableInterrupt;
     bool intActiveLow;
     bool intOpenDrain;
+    float beta;
+    float sfreq;
+    float gyroScale;
 } mpuconfig;
-
-typedef struct {
-    int16_t gThresh;
-    int16_t g2;
-    int16_t accelFactor;
-    int16_t gyroDivider;
-    int16_t alpha;
-    int16_t alphaComplement;
-} mpufilter;
 
 /* mpuconfig mpuDefaultConfig = {
     .disableTemp = true,
@@ -99,17 +113,18 @@ typedef struct {
     .accelRange = 0,
     .enableInterrupt = true,
     .intActiveLow = false,
-    .intOpenDrain = false
+    .intOpenDrain = false,
+    .beta = 0.1f
 }; */
+
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846f
+#endif
 
 int mpuReadIntStatus(const uint8_t addr);
 int mpuReadRawData(const uint8_t addr, int16_t * const data);
 void mpuApplyOffsets(int16_t * const data, const int16_t * const offsets);
-int mpuSetup(const uint8_t addr, const mpuconfig * const config);
-void mpuSetupFilter(const mpuconfig * const config, mpufilter * const filter,
-    const int16_t alpha);
-void mpuUpdatePitch(mpufilter * const filter, int16_t * const data,
-    int16_t * const pitch);
-
-#endif
+int mpuSetup(const uint8_t addr, mpuconfig * const config);
+void mpuUpdateQuaternion(const mpuconfig * const config, int16_t * const data,
+    quaternion * const quat);
 

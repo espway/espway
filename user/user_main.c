@@ -1,3 +1,21 @@
+/*
+    Firmware for a segway-style robot using ESP8266.
+    Copyright (C) 2016  Sakari Kapanen
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <esp8266.h>
 #include "driver/uart.h"
 
@@ -18,8 +36,18 @@ const int MPU_ADDR = 0x68;
 os_event_t gTaskQueue[N_TASKS_MAX];
 os_timer_t gReportTimer;
 
-mpufilter gMpuFilter;
-int16_t gPitch;
+mpuconfig gConfig = {
+    .disableTemp = true,
+    .lowpass = 4,
+    .sampleRateDivider = 1,
+    .gyroRange = 0,
+    .accelRange = 3,
+    .enableInterrupt = true,
+    .intActiveLow = false,
+    .intOpenDrain = false,
+    .beta = 0.2f
+};
+quaternion gQuat = { 1.0f, 0.0f, 0.0f, 0.0f };
 int nSamples = 0;
 unsigned long lastTime = 0;
 
@@ -27,9 +55,14 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
     int16_t buf[7];
     mpuReadIntStatus(MPU_ADDR);
     if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
-    mpuUpdatePitch(&gMpuFilter, buf, &gPitch);
+    mpuUpdateQuaternion(&gConfig, buf, &gQuat);
+    vector3 g;
+    gravityVector(&gQuat, &g);
+    double roll = rollAngle(&g);
+    double pitch = pitchAngle(&g);
 
-    os_printf("%d\n", gPitch);
+    os_printf("%d, %d\n",
+        (int)(18000.0f / M_PI * pitch), (int)(18000.0f / M_PI * roll));
 
     nSamples += 1;
 }
@@ -108,20 +141,16 @@ void ICACHE_FLASH_ATTR user_init(void) {
     initAP();
     initHttpd();
 
-    mpuconfig mpuConfig = {
-        .disableTemp = true,
-        .lowpass = 3,
-        .sampleRateDivider = 0,
-        .gyroRange = 0,
-        .accelRange = 0,
-        .enableInterrupt = true,
-        .intActiveLow = false,
-        .intOpenDrain = false
-    };
-    mpuSetup(MPU_ADDR, &mpuConfig);
-    mpuSetupFilter(&mpuConfig, &gMpuFilter, 1);
+    mpuSetup(MPU_ADDR, &gConfig);
 
     ETS_GPIO_INTR_DISABLE();
+
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_GPIO12);
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, FUNC_GPIO13);
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U, FUNC_GPIO14);
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15);
+    gpio_output_set(0, BIT12|BIT13|BIT14|BIT15, BIT12|BIT13|BIT14|BIT15, 0);
+
     ETS_GPIO_INTR_ATTACH(mpuInterrupt, NULL);
     gpio_pin_intr_state_set(GPIO_ID_PIN(4), GPIO_PIN_INTR_POSEDGE);
     mpuReadIntStatus(MPU_ADDR);
@@ -131,12 +160,6 @@ void ICACHE_FLASH_ATTR user_init(void) {
     lastTime = system_get_time();
     os_timer_setfn(&gReportTimer, reportSamplerate, NULL);
     os_timer_arm(&gReportTimer, 500, true);
-
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_GPIO12);
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, FUNC_GPIO13);
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U, FUNC_GPIO14);
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15);
-    gpio_output_set(0, BIT12|BIT13|BIT14|BIT15, BIT12|BIT13|BIT14|BIT15, 0);
 
     ETS_GPIO_INTR_ENABLE();
 }

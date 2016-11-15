@@ -1,5 +1,22 @@
-#ifndef __I2C_MASTER_H__
-#define __I2C_MASTER_H__
+/*
+    I2C protocol implementation for ESP8266.
+    Copyright (C) 2016  Sakari Kapanen
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#pragma once
 
 #define I2C_MASTER_SDA_MUX PERIPHS_IO_MUX_GPIO0_U
 #define I2C_MASTER_SCL_MUX PERIPHS_IO_MUX_GPIO5_U
@@ -49,4 +66,3 @@ bool i2c_master_writeBytes(uint8_t *buf, int len);
 bool i2c_master_readBytes(uint8_t *buf, int len);
 uint8_t i2c_master_readNextByte(bool ack);
 
-#endif
