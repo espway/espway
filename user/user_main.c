@@ -93,18 +93,18 @@ void ICACHE_FLASH_ATTR initAP(void) {
     wifi_set_opmode(SOFTAP_MODE);
 }
 
-void socketSendLedStatus(Websock *ws) {
+void ICACHE_FLASH_ATTR socketSendLedStatus(Websock *ws) {
     char status = GPIO_INPUT_GET(GPIO_ID_PIN(LED_PIN));
     cgiWebsocketSend(ws, &status, 1, WEBSOCK_FLAG_BIN);
 }
 
-void socketReceive(Websock *ws, char *data, int len, int flags) {
+void ICACHE_FLASH_ATTR socketReceive(Websock *ws, char *data, int len, int flags) {
     if (len != 1) return;
     GPIO_OUTPUT_SET(GPIO_ID_PIN(LED_PIN), data[0]);
     socketSendLedStatus(ws);
 }
 
-void socketConnect(Websock *ws) {
+void ICACHE_FLASH_ATTR socketConnect(Websock *ws) {
     ws->recvCb = socketReceive;
     socketSendLedStatus(ws);
 }
@@ -116,7 +116,7 @@ HttpdBuiltInUrl builtInUrls[] = {
     {NULL, NULL, NULL}
 };
 
-void initHttpd(void) {
+void ICACHE_FLASH_ATTR initHttpd(void) {
 #ifdef ESPFS_POS
     espFsInit((void*)(0x40200000 + ESPFS_POS));
 #else
