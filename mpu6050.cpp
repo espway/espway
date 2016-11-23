@@ -17,74 +17,63 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "ets_sys.h"
-#include "osapi.h"
+#include <Wire.h>
 
-#include "i2c_master.h"
 #include "mpu6050.h"
 
-LOCAL int ICACHE_FLASH_ATTR mpuWriteRegister(const uint8_t addr,
+static int mpuWriteRegister(const uint8_t addr,
     const uint8_t reg, const uint8_t value, const bool stop) {
-    uint8_t regValue[] = { reg, value };
-    i2c_master_start();
-    bool ret = i2c_master_transmitTo(addr) &&
-        i2c_master_writeBytes(regValue, 2);
-    if (stop) i2c_master_stop();
-    return ret ? 0 : -1;
+    Wire.beginTransmission(addr);
+    if (Wire.write(reg) != 1) return -1;
+    if (Wire.write(value) != 1) return -2;
+    return Wire.endTransmission(stop);
 }
 
-LOCAL int ICACHE_FLASH_ATTR mpuReadRegisters(const uint8_t addr,
+static int mpuReadRegisters(const uint8_t addr,
     const uint8_t firstReg, const uint8_t len, uint8_t * const data) {
-    i2c_master_start();
-    bool ret = i2c_master_transmitTo(addr) &&
-        i2c_master_writeBytes((uint8_t *)&firstReg, 1);
-    i2c_master_start();
-    ret = ret && i2c_master_receiveFrom(addr) &&
-        i2c_master_readBytes(data, len);
-    i2c_master_stop();
-    return ret ? 0 : -1;
+    int status;
+    Wire.beginTransmission(addr);
+    if (Wire.write(firstReg) != 1) return -1;
+    status = Wire.endTransmission(false);
+    if (status != 0) return status;
+    if (Wire.requestFrom(addr, len, (uint8_t)true) != len) return -2;
+    for (uint8_t i = 0; i < len; i++) data[i] = Wire.read();
+    return 0;
 }
 
-int ICACHE_FLASH_ATTR mpuReadIntStatus(const uint8_t addr) {
+int mpuReadIntStatus(const uint8_t addr) {
     uint8_t tmp;
     mpuReadRegisters(addr, MPU_INT_STATUS, 1, &tmp);
     return tmp;
 }
 
-int ICACHE_FLASH_ATTR mpuReadRawData(const uint8_t addr, int16_t * const data) {
+int mpuReadRawData(const uint8_t addr, int16_t * const data) {
     uint8_t *myData = (uint8_t *)data;
-    uint8_t reg = MPU_ACCEL_XOUT_H;
-    i2c_master_start();
-    bool ret = i2c_master_transmitTo(addr) &&
-        i2c_master_writeBytes(&reg, 1);
-    i2c_master_start();
-    ret = ret && i2c_master_receiveFrom(addr);
-
-    if (ret) {
-        for (int8_t i = 0; i < 6; i++) {
-            *(myData + 1) = i2c_master_readNextByte(true);
-            *myData = i2c_master_readNextByte(true);
-            myData += 2;
-        }
-        *(myData + 1) = i2c_master_readNextByte(true);
-        *myData = i2c_master_readNextByte(false);
+    int status;
+    Wire.beginTransmission(addr);
+    if (Wire.write(MPU_ACCEL_XOUT_H) != 1) return -1;
+    status = Wire.endTransmission(false);
+    if (status != 0) return status;
+    if (Wire.requestFrom(addr, (uint8_t)14, (uint8_t)true) != 14) return -2;
+    for (int8_t i = 0; i < 7; i++) {
+        *(myData + 1) = Wire.read();
+        *myData = Wire.read();
+        myData += 2;
     }
-
-    i2c_master_stop();
-    return ret ? 0 : -1;
+    return 0;
 }
 
-void ICACHE_FLASH_ATTR mpuApplyOffsets(int16_t * const data,
+void mpuApplyOffsets(int16_t * const data,
     const int16_t * const offsets) {
     for (uint8_t i = 0; i < 7; i++) {
         data[i] += offsets[i];
     }
 }
 
-LOCAL const int16_t MPU_GYRO_RANGE[] = { 250, 500, 1000, 2000 };
-LOCAL const int8_t MPU_ACCEL_RANGE[] = { 2, 4, 8, 16 };
+static const int16_t MPU_GYRO_RANGE[] = { 250, 500, 1000, 2000 };
+static const int8_t MPU_ACCEL_RANGE[] = { 2, 4, 8, 16 };
 
-int ICACHE_FLASH_ATTR mpuSetup(const uint8_t addr,
+int mpuSetup(const uint8_t addr,
     mpuconfig * const config) {
     int status;
     // Wake up and disable temperature measurement if asked for
@@ -128,7 +117,7 @@ int ICACHE_FLASH_ATTR mpuSetup(const uint8_t addr,
     return id == addr ? 0 : -1;
 }
 
-void ICACHE_FLASH_ATTR mpuUpdateQuaternion(const mpuconfig * const config,
+void mpuUpdateQuaternion(const mpuconfig * const config,
     int16_t * const data, quaternion * const quat) {
     MadgwickAHRSupdateIMU(config->beta, config->sfreq,
         data[MPU_GYRO_X] * config->gyroScale,

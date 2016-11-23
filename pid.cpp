@@ -1,11 +1,10 @@
-#include "ets_sys.h"
 #include "pid.h"
 
 static inline float clamp(float x, float a, float b) {
     return x > a ? (x < b ? x : b) : a;
 }
 
-void ICACHE_FLASH_ATTR pid_initialize(float Kp, float Ki, float Kd, float dt,
+void pid_initialize(float Kp, float Ki, float Kd, float dt,
     float out_min, float out_max, pidsettings *settings, pidstate *state) {
     settings->Kp = Kp;
     settings->Ki = Ki;
@@ -17,7 +16,7 @@ void ICACHE_FLASH_ATTR pid_initialize(float Kp, float Ki, float Kd, float dt,
     settings->out_max = out_max;
 }
 
-float ICACHE_FLASH_ATTR pid_compute(float input, float setpoint,
+float pid_compute(float input, float setpoint,
     pidsettings *settings, pidstate *state) {
     float error = input - setpoint;
     float p_term = settings->Kp * error;
@@ -29,7 +28,7 @@ float ICACHE_FLASH_ATTR pid_compute(float input, float setpoint,
     return clamp(output, settings->out_min, settings->out_max);
 }
 
-void ICACHE_FLASH_ATTR pid_reset(float input, float setpoint, float output,
+void pid_reset(float input, float setpoint, float output,
     pidsettings *settings, pidstate *state) {
     state->i_term = clamp(output, settings->out_min,
         settings->out_max);

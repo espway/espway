@@ -16,12 +16,10 @@
 #include "MadgwickAHRS.h"
 #include <math.h>
 
-#include "ets_sys.h"
-
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
 
-LOCAL ICACHE_FLASH_ATTR float invSqrt(float x) {
+static float invSqrt(float x) {
 	float halfx = 0.5f * x;
 	float y = x;
 	long i = *(long*)&y;
@@ -34,7 +32,7 @@ LOCAL ICACHE_FLASH_ATTR float invSqrt(float x) {
 //---------------------------------------------------------------------------------------------------
 // IMU algorithm update
 
-void ICACHE_FLASH_ATTR MadgwickAHRSupdateIMU(float beta, float sfreq, float gx, float gy, float gz, float ax, float ay, float az, quaternion * const q) {
+void MadgwickAHRSupdateIMU(float beta, float sfreq, float gx, float gy, float gz, float ax, float ay, float az, quaternion * const q) {
 	float recipNorm;
 	float s0, s1, s2, s3;
 	float qDot1, qDot2, qDot3, qDot4;
@@ -103,7 +101,7 @@ void ICACHE_FLASH_ATTR MadgwickAHRSupdateIMU(float beta, float sfreq, float gx, 
 	q->q3 = q3 * recipNorm;
 }
 
-void ICACHE_FLASH_ATTR gravityVector(const quaternion * const q,
+void gravityVector(const quaternion * const q,
     vector3 * const g) {
     double q0 = q->q0, q1 = q->q1, q2 = q->q2, q3 = q->q3;
     g->x = 2.0f * (q1*q3 - q0*q2);
@@ -111,11 +109,11 @@ void ICACHE_FLASH_ATTR gravityVector(const quaternion * const q,
     g->z = q0*q0 - q1*q1 - q2*q2 + q3*q3;
 }
 
-double ICACHE_FLASH_ATTR pitchAngle(const vector3 * const g) {
+double pitchAngle(const vector3 * const g) {
     return atan(g->x / (g->y*g->y + g->z*g->z));
 }
 
-double ICACHE_FLASH_ATTR rollAngle(const vector3 * const g) {
+double rollAngle(const vector3 * const g) {
     return atan(g->y / (g->x*g->x + g->z*g->z));
 }
 
