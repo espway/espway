@@ -110,19 +110,19 @@ int mpuSetup(const uint8_t addr,
     status = mpuReadRegisters(addr, MPU_WHO_AM_I, 1, &id);
     if (status != 0) return status;
 
-    config->sfreq = 1000.0f / (1 + config->sampleRateDivider);
+    double sampleTime = (1 + config->sampleRateDivider) / 2000.0f;
     config->gyroScale = M_PI * MPU_GYRO_RANGE[config->gyroRange] /
         (180.0f * INT16_MAX);
+    config->gyroIntegrationFactor = config->gyroScale * sampleTime / 2.0f;
+    config->correctedBeta = 2.0f / config->gyroScale * config->beta;
 
     return id == addr ? 0 : -1;
 }
 
 void mpuUpdateQuaternion(const mpuconfig * const config,
-    int16_t * const data, quaternion * const quat) {
-    MadgwickAHRSupdateIMU(config->beta, config->sfreq,
-        data[MPU_GYRO_X] * config->gyroScale,
-        data[MPU_GYRO_Y] * config->gyroScale,
-        data[MPU_GYRO_Z] * config->gyroScale,
-        data[MPU_ACC_X], data[MPU_ACC_Y], data[MPU_ACC_Z], quat);
+    int16_t * const data) {
+    MadgwickAHRSupdateIMU(config->correctedBeta, config->gyroIntegrationFactor,
+        data[MPU_GYRO_X], data[MPU_GYRO_Y], data[MPU_GYRO_Z],
+        data[MPU_ACC_X], data[MPU_ACC_Y], data[MPU_ACC_Z]);
 }
 

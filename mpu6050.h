@@ -101,8 +101,9 @@ typedef struct {
     bool intActiveLow;
     bool intOpenDrain;
     float beta;
-    float sfreq;
     float gyroScale;
+    float gyroIntegrationFactor;
+    float correctedBeta;
 } mpuconfig;
 
 /* mpuconfig mpuDefaultConfig = {
@@ -125,6 +126,5 @@ int mpuReadIntStatus(const uint8_t addr);
 int mpuReadRawData(const uint8_t addr, int16_t * const data);
 void mpuApplyOffsets(int16_t * const data, const int16_t * const offsets);
 int mpuSetup(const uint8_t addr, mpuconfig * const config);
-void mpuUpdateQuaternion(const mpuconfig * const config, int16_t * const data,
-    quaternion * const quat);
+void mpuUpdateQuaternion(const mpuconfig * const config, int16_t * const data);
 

@@ -13,6 +13,8 @@
 //=====================================================================================================
 #pragma once
 
+#include <stdint.h>
+
 typedef struct {
     float q0;
     float q1;
@@ -26,9 +28,9 @@ typedef struct {
     float z;
 } vector3;
 
-void MadgwickAHRSupdateIMU(float beta, float sfreq, float gx, float gy, float gz, float ax, float ay, float az, quaternion * const q);
+void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor, int16_t gx, int16_t gy, int16_t gz, int16_t ax, int16_t ay, int16_t az);
 
-void gravityVector(const quaternion * const q, vector3 * const g);
-double pitchAngle(const vector3 * const g);
-double rollAngle(const vector3 * const g);
+void gravityVector();
+double pitchAngle();
+double rollAngle();
 
