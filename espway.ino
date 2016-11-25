@@ -6,7 +6,7 @@ const int MPU_ADDR = 0x68;
 mpuconfig gMpuConfig = {
     .disableTemp = true,
     .lowpass = 4,
-    .sampleRateDivider = 127,
+    .sampleRateDivider = 1,
     .gyroRange = 0,
     .accelRange = 3,
     .enableInterrupt = true,
@@ -30,10 +30,9 @@ void setup() {
 
     Wire.begin(0, 5);
     Wire.setClock(400000L);
-    if (mpuSetup(MPU_ADDR, &gMpuConfig) == 0) {
-        Serial.println("Setup succesful");
-    } else {
+    if (mpuSetup(MPU_ADDR, &gMpuConfig) != 0) {
         Serial.println("Setup failed");
+        return 0;
     }
 
     attachInterrupt(4, dataAvailable, RISING);
@@ -41,7 +40,7 @@ void setup() {
 
 void loop() {
     while (!gDataAvailable) yield();
+    gDataAvailable = false;
     mpuReadIntStatus(MPU_ADDR);
-    /* Serial.println("Got data"); */
 }
 
