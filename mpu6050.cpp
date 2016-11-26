@@ -116,7 +116,7 @@ int mpuSetup(const uint8_t addr,
     status = mpuReadRegisters(addr, MPU_WHO_AM_I, 1, &id);
     if (status != 0) return status;
 
-    double sampleTime = (1 + config->sampleRateDivider) / 1000.0f;
+    float sampleTime = (1 + config->sampleRateDivider) / 1000.0f;
     config->gyroScale = M_PI * MPU_GYRO_RANGE[config->gyroRange] /
         (180.0f * INT16_MAX);
     config->gyroIntegrationFactor = 0.5f * config->gyroScale * sampleTime;

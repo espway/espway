@@ -55,7 +55,7 @@ void loop() {
     while (!gDataAvailable) yield();
     gDataAvailable = false;
 
-    int16_t buf[7];
+    int16_t buf[6];
     mpuReadIntStatus(MPU_ADDR);
     if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
     mpuUpdateQuaternion(&gMpuConfig, buf);
