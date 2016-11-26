@@ -9,7 +9,7 @@
 // 29/09/2011	SOH Madgwick    Initial release
 // 02/10/2011	SOH Madgwick	Optimised for reduced CPU load
 // 19/02/2012	SOH Madgwick	Magnetometer measurement is normalised
-// 15/11/2016   Sakari Kapanen  Additions and adaptation to ESP8266: gravity, pitch and roll calculation
+// 15/11/2016	Sakari Kapanen	Additions and adaptation to ESP8266: gravity, pitch and roll calculation
 //
 //=====================================================================================================
 
@@ -36,12 +36,15 @@ static inline float invSqrt(float x) {
 // IMU algorithm update
 
 void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
-	int16_t gx, int16_t gy, int16_t gz,
-	int16_t ax, int16_t ay, int16_t az) {
+	int16_t data[]) {
 	float recipNorm;
 	float s0, s1, s2, s3;
 	float qDot0, qDot1, qDot2, qDot3;
 	float _2q1q1q2q2, tmpterm;
+
+	float gx = data[GYRO_X_IDX],
+		gy = data[GYRO_Y_IDX],
+		gz = data[GYRO_Z_IDX];
 
 	// Rate of change of quaternion from gyroscope
 	// NOTE these values are actually double the actual values but it
@@ -52,7 +55,11 @@ void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
 	qDot3 = q0 * gz + q1 * gy - q2 * gx;
 
 	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
-	if(!(ax == 0.0f && ay == 0.0f && az == 0.0f)) {
+	if (data[ACC_X_IDX] != 0 || data[ACC_Y_IDX] != 0 ||
+		data[ACC_Z_IDX] != 0) {
+		float ax = data[ACC_X_IDX],
+			ay = data[ACC_Y_IDX],
+			az = data[ACC_Z_IDX];
 		// Normalise accelerometer measurement
 		recipNorm = invSqrt(ax*ax + ay*ay + az*az);
 		ax *= recipNorm;
@@ -104,14 +111,22 @@ float rollAngle() {
 }
 
 float pitchAngleTaylor() {
+	// x is half of the unit gravitation vector x component gx/2
+	// (to save one multiplication).
+	// For the unit vector g,
+	// pitch = atan(gx / sqrt(gy^2 + gz^2)) = atan(gx / sqrt(1 - gx^2)).
+	// Therefore for g/2,
+	// pitch = atan(gx/2 / sqrt((1/2)^2 - (gx/2)^2)
+	//		 = atan(gx/2 / sqrt(1/4 - (gx/2)^2))
+	// The below fuction is a Taylor expansion of the latter form.
 	float x = q1*q3 - q0*q2;
 	float x2 = x*x;
-	return x * (1.0f + x2 * (0.16667f + x2 * 0.075f));
+	return x * (2.0f + x2 * (1.33333f + x2 * 2.4f));
 }
 
 float rollAngleTaylor() {
 	float y = q0*q1 + q2*q3;
 	float y2 = y*y;
-	return y * (1.0f + y2 * (0.16667f + y2 * 0.075f));
+	return y * (2.0f + y2 * (1.33333f + y2 * 2.4f));
 }
 
