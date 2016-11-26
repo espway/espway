@@ -68,13 +68,11 @@
 #define MPU_ACC_X 0
 #define MPU_ACC_Y 1
 #define MPU_ACC_Z 2
-#define MPU_TEMP 3
-#define MPU_GYRO_X 4
-#define MPU_GYRO_Y 5
-#define MPU_GYRO_Z 6
+#define MPU_GYRO_X 3
+#define MPU_GYRO_Y 4
+#define MPU_GYRO_Z 5
 
 typedef struct {
-    bool disableTemp;
     // Lowpass filter bandwidth
     // 0 = 260 Hz
     // 1 = 184 Hz
@@ -107,7 +105,6 @@ typedef struct {
 } mpuconfig;
 
 /* mpuconfig mpuDefaultConfig = {
-    .disableTemp = true,
     .lowpass = 3,
     .sampleRateDivider = 4,
     .gyroRange = 3,

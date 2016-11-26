@@ -4,9 +4,8 @@
 
 const int MPU_ADDR = 0x68;
 mpuconfig gMpuConfig = {
-    .disableTemp = true,
     .lowpass = 3,
-    .sampleRateDivider = 0,
+    .sampleRateDivider = 4,
     .gyroRange = 2,
     .accelRange = 3,
     .enableInterrupt = true,
