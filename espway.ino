@@ -6,12 +6,12 @@ const int MPU_ADDR = 0x68;
 mpuconfig gMpuConfig = {
     .lowpass = 3,
     .sampleRateDivider = 9,
-    .gyroRange = 2,
-    .accelRange = 3,
+    .gyroRange = 3,
+    .accelRange = 0,
     .enableInterrupt = true,
     .intActiveLow = false,
     .intOpenDrain = false,
-    .beta = 0.2f
+    .beta = 0.05f
 };
 
 volatile float roll, pitch;

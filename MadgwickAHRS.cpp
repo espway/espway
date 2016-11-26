@@ -125,6 +125,7 @@ float pitchAngleTaylor() {
 }
 
 float rollAngleTaylor() {
+	// See pitchAngleTaylor for explanation of the expansion
 	float y = q0*q1 + q2*q3;
 	float y2 = y*y;
 	return y * (2.0f + y2 * (1.33333f + y2 * 2.4f));
