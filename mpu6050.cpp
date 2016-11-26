@@ -110,11 +110,11 @@ int mpuSetup(const uint8_t addr,
     status = mpuReadRegisters(addr, MPU_WHO_AM_I, 1, &id);
     if (status != 0) return status;
 
-    double sampleTime = (1 + config->sampleRateDivider) / 2000.0f;
+    double sampleTime = (1 + config->sampleRateDivider) / 1000.0f;
     config->gyroScale = M_PI * MPU_GYRO_RANGE[config->gyroRange] /
         (180.0f * INT16_MAX);
-    config->gyroIntegrationFactor = config->gyroScale * sampleTime / 2.0f;
-    config->correctedBeta = 2.0f / config->gyroScale * config->beta;
+    config->gyroIntegrationFactor = 0.5f * config->gyroScale * sampleTime;
+    config->correctedBeta = config->beta / (0.5f * config->gyroScale);
 
     return id == addr ? 0 : -1;
 }

@@ -18,7 +18,6 @@
 #include "MadgwickAHRS.h"
 
 static float q0 = 1.0, q1 = 0.0, q2 = 0.0, q3 = 0.0;
-static float gravx = 0.0, gravy = 0.0, gravz = 0.0;
 
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
@@ -41,20 +40,19 @@ void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
 	int16_t ax, int16_t ay, int16_t az) {
 	float recipNorm;
 	float s0, s1, s2, s3;
-	float qDot1, qDot2, qDot3, qDot4;
-	float _q3q3az1, _2q1q1q2q2, tmpterm;
+	float qDot0, qDot1, qDot2, qDot3;
+	float _2q1q1q2q2, tmpterm;
 
 	// Rate of change of quaternion from gyroscope
-	// NOTE these values are actually double the actual values but will be
-	// divided by two later
-	qDot1 = -q1 * gx - q2 * gy - q3 * gz;
-	qDot2 = q0 * gx + q2 * gz - q3 * gy;
-	qDot3 = q0 * gy - q1 * gz + q3 * gx;
-	qDot4 = q0 * gz + q1 * gy - q2 * gx;
+	// NOTE these values are actually double the actual values but it
+	// does not matter
+	qDot0 = -q1 * gx - q2 * gy - q3 * gz;
+	qDot1 = q0 * gx + q2 * gz - q3 * gy;
+	qDot2 = q0 * gy - q1 * gz + q3 * gx;
+	qDot3 = q0 * gz + q1 * gy - q2 * gx;
 
 	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
 	if(!(ax == 0.0f && ay == 0.0f && az == 0.0f)) {
-
 		// Normalise accelerometer measurement
 		recipNorm = invSqrt(ax*ax + ay*ay + az*az);
 		ax *= recipNorm;
@@ -63,10 +61,9 @@ void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
 
 		// Auxiliary variables to avoid repeated arithmetic
 		_2q1q1q2q2 = q1*q1 + q2*q2;
-		_2q1q1q2q2 += _2q1q1q2q2;
-		_q3q3az1 = q3*q3 + az - 1.0f;
-		tmpterm = _q3q3az1 + _2q1q1q2q2 + q0*q0;
+		tmpterm = az + _2q1q1q2q2;
 		tmpterm += tmpterm;
+		_2q1q1q2q2 += _2q1q1q2q2;
 
 		// Gradient descent algorithm corrective step
 		s0 = q0 * _2q1q1q2q2 + q2 * ax - q1 * ay;
@@ -75,19 +72,18 @@ void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
 		s3 = q3 * _2q1q1q2q2 - q1 * ax - q2 * ay;
 
 		// Apply feedback step
-                double betaRecipNorm =
-                    beta * invSqrt(s0*s0 + s1*s1 + s2*s2 + s3*s3);
-		qDot1 -= betaRecipNorm * s0;
-		qDot2 -= betaRecipNorm * s1;
-		qDot3 -= betaRecipNorm * s2;
-		qDot4 -= betaRecipNorm * s3;
+		recipNorm = beta * invSqrt(s0*s0 + s1*s1 + s2*s2 + s3*s3);
+		qDot0 -= recipNorm * s0;
+		qDot1 -= recipNorm * s1;
+		qDot2 -= recipNorm * s2;
+		qDot3 -= recipNorm * s3;
 	}
 
 	// Integrate rate of change of quaternion to yield quaternion
-	q0 += qDot1 * gyroIntegrationFactor;
-	q1 += qDot2 * gyroIntegrationFactor;
-	q2 += qDot3 * gyroIntegrationFactor;
-	q3 += qDot4 * gyroIntegrationFactor;
+	q0 += qDot0 * gyroIntegrationFactor;
+	q1 += qDot1 * gyroIntegrationFactor;
+	q2 += qDot2 * gyroIntegrationFactor;
+	q3 += qDot3 * gyroIntegrationFactor;
 
 	// Normalise quaternion
 	recipNorm = invSqrt(q0*q0 + q1*q1 + q2*q2 + q3*q3);
@@ -97,19 +93,13 @@ void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
 	q3 *= recipNorm;
 }
 
-void gravityVector() {
-    gravx = q1*q3 - q0*q2;
-    gravx += gravx;
-    gravy = q0*q1 + q2*q3;
-    gravy += gravy;
-    gravz = q0*q0 - q1*q1 - q2*q2 + q3*q3;
-}
-
 double pitchAngle() {
-    return atan(gravx * invSqrt(gravy*gravy + gravz*gravz));
+	float half_gravx = q1*q3 - q0*q2;
+	return atan(half_gravx * invSqrt(0.5f - half_gravx*half_gravx));
 }
 
 double rollAngle() {
-    return atan(gravy * invSqrt(gravx*gravx + gravz*gravz));
+	float half_gravy = q0*q1 + q2*q3;
+	return atan(half_gravy * invSqrt(0.5f - half_gravy*half_gravy));
 }
 

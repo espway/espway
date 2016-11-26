@@ -5,18 +5,16 @@
 const int MPU_ADDR = 0x68;
 mpuconfig gMpuConfig = {
     .disableTemp = true,
-    .lowpass = 4,
+    .lowpass = 3,
     .sampleRateDivider = 0,
-    .gyroRange = 0,
+    .gyroRange = 2,
     .accelRange = 3,
     .enableInterrupt = true,
     .intActiveLow = false,
     .intOpenDrain = false,
-    .beta = 0.4f
+    .beta = 0.2f
 };
 
-quaternion gQuat = { 1.0, 0.0, 0.0, 0.0 };
-vector3 g;
 float roll, pitch;
 
 const bool TRACK_UPDATE_FREQUENCY = true;
@@ -63,7 +61,6 @@ void loop() {
     if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
     mpuUpdateQuaternion(&gMpuConfig, buf);
 
-    gravityVector();
     roll = rollAngle();
     pitch = pitchAngle();
 
