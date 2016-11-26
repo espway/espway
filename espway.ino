@@ -5,7 +5,7 @@
 const int MPU_ADDR = 0x68;
 mpuconfig gMpuConfig = {
     .lowpass = 3,
-    .sampleRateDivider = 4,
+    .sampleRateDivider = 9,
     .gyroRange = 2,
     .accelRange = 3,
     .enableInterrupt = true,
@@ -28,12 +28,12 @@ void dataAvailable() {
 void setup() {
     Serial.begin(115200);
 
+#if defined(ESP8266)
     for (int i = 12; i <= 15; ++i) {
         pinMode(i, OUTPUT);
         digitalWrite(i, LOW);
     }
 
-#if defined(ESP8266)
     Wire.begin(0, 5);
 #else
     Wire.begin();

@@ -102,12 +102,12 @@ void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
 
 float pitchAngle() {
 	float half_gravx = q1*q3 - q0*q2;
-	return atan(half_gravx * invSqrt(0.5f - half_gravx*half_gravx));
+	return atan(half_gravx * invSqrt(0.25f - half_gravx*half_gravx));
 }
 
 float rollAngle() {
 	float half_gravy = q0*q1 + q2*q3;
-	return atan(half_gravy * invSqrt(0.5f - half_gravy*half_gravy));
+	return atan(half_gravy * invSqrt(0.25f - half_gravy*half_gravy));
 }
 
 float pitchAngleTaylor() {

@@ -128,7 +128,6 @@ int mpuSetup(const uint8_t addr,
 void mpuUpdateQuaternion(const mpuconfig * const config,
     int16_t * const data) {
     MadgwickAHRSupdateIMU(config->correctedBeta, config->gyroIntegrationFactor,
-        data[MPU_GYRO_X], data[MPU_GYRO_Y], data[MPU_GYRO_Z],
-        data[MPU_ACC_X], data[MPU_ACC_Y], data[MPU_ACC_Z]);
+        data);
 }
 
