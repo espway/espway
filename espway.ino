@@ -15,9 +15,9 @@ mpuconfig gMpuConfig = {
     .beta = 0.2f
 };
 
-float roll, pitch;
+volatile float roll, pitch;
 
-const bool TRACK_UPDATE_FREQUENCY = true;
+const bool TRACK_UPDATE_FREQUENCY = false;
 unsigned int gNumCalculations = 0;
 unsigned long gLastReportTime = 0;
 
@@ -29,7 +29,7 @@ void dataAvailable() {
 void setup() {
     Serial.begin(115200);
 
-    for (int i = 12; i <= 15; i++) {
+    for (int i = 12; i <= 15; ++i) {
         pinMode(i, OUTPUT);
         digitalWrite(i, LOW);
     }
@@ -61,9 +61,8 @@ void loop() {
     if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
     mpuUpdateQuaternion(&gMpuConfig, buf);
 
-    roll = rollAngle();
-    pitch = pitchAngle();
-
+    roll = rollAngleTaylor();
+    pitch = pitchAngleTaylor();
 
     if (TRACK_UPDATE_FREQUENCY) {
         if (++gNumCalculations == 1000) {

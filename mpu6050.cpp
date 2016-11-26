@@ -37,7 +37,7 @@ static int mpuReadRegisters(const uint8_t addr,
     status = Wire.endTransmission(false);
     if (status != 0) return status;
     if (Wire.requestFrom(addr, len, (uint8_t)true) != len) return -2;
-    for (uint8_t i = 0; i < len; i++) data[i] = Wire.read();
+    for (uint8_t i = 0; i < len; ++i) data[i] = Wire.read();
     return 0;
 }
 
@@ -55,7 +55,7 @@ int mpuReadRawData(const uint8_t addr, int16_t * const data) {
     status = Wire.endTransmission(false);
     if (status != 0) return status;
     if (Wire.requestFrom(addr, (uint8_t)14, (uint8_t)true) != 14) return -2;
-    for (int8_t i = 0; i < 7; i++) {
+    for (int8_t i = 0; i < 7; ++i) {
         *(myData + 1) = Wire.read();
         *myData = Wire.read();
         myData += 2;
@@ -65,7 +65,7 @@ int mpuReadRawData(const uint8_t addr, int16_t * const data) {
 
 void mpuApplyOffsets(int16_t * const data,
     const int16_t * const offsets) {
-    for (uint8_t i = 0; i < 7; i++) {
+    for (uint8_t i = 0; i < 7; ++i) {
         data[i] += offsets[i];
     }
 }
