@@ -1,11 +1,15 @@
 #include <Wire.h>
+#include <ESP8266WiFi.h>
+#include <ArduinoOTA.h>
+
+#define ENABLE_FOTA
 
 #include "mpu6050.h"
 
 const int MPU_ADDR = 0x68;
 mpuconfig gMpuConfig = {
     .lowpass = 3,
-    .sampleRateDivider = 9,
+    .sampleRateDivider = 0,
     .gyroRange = 3,
     .accelRange = 0,
     .enableInterrupt = true,
@@ -16,7 +20,7 @@ mpuconfig gMpuConfig = {
 
 volatile float roll, pitch;
 
-const bool TRACK_UPDATE_FREQUENCY = false;
+const bool TRACK_UPDATE_FREQUENCY = true;
 unsigned int gNumCalculations = 0;
 unsigned long gLastReportTime = 0;
 
@@ -27,32 +31,32 @@ void dataAvailable() {
 
 void setup() {
     Serial.begin(115200);
+    WiFi.softAP("ESPway");
 
-#if defined(ESP8266)
     for (int i = 12; i <= 15; ++i) {
         pinMode(i, OUTPUT);
         digitalWrite(i, LOW);
     }
 
     Wire.begin(0, 5);
-#else
-    Wire.begin();
-#endif
     Wire.setClock(400000L);
     if (mpuSetup(MPU_ADDR, &gMpuConfig) != 0) {
         Serial.println("Setup failed");
         return;
     }
 
-#if defined(ESP8266)
     attachInterrupt(4, dataAvailable, RISING);
-#else
-    attachInterrupt(digitalPinToInterrupt(2), dataAvailable, RISING);
+
+#ifdef ENABLE_FOTA
+    ArduinoOTA.begin();
 #endif
 }
 
 void loop() {
-    while (!gDataAvailable) yield();
+    while (!gDataAvailable) {
+        ArduinoOTA.handle();
+        yield();
+    }
     gDataAvailable = false;
 
     int16_t buf[6];
