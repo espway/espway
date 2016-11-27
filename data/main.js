@@ -7,6 +7,8 @@
         let ws = new WebSocket('ws://' + location.host + '/ws')
         ws.binaryType = 'arraybuffer'
 
+        alert("Javascript works, host: " + location.host)
+
         ws.addEventListener('message', e => {
             let arr = new Uint8Array(e.data)
             if (arr[0] == 1) {
