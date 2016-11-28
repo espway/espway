@@ -40,35 +40,18 @@ void onRequest(AsyncWebServerRequest *request){
     request->send(404);
 }
 
-void onBody(AsyncWebServerRequest *request, uint8_t *data, size_t len,
-    size_t index, size_t total){
-    //Handle body
-    // Dummy handler just to catch and ignore those requests
-}
-
-void onUpload(AsyncWebServerRequest *request, String filename, size_t index,
-    uint8_t *data, size_t len, bool final){
-    //Handle upload
-    // Dummy handler just to catch and ignore those requests
-}
-
 void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client,
     AwsEventType type, void * arg, uint8_t *data, size_t len) {
     // Handle binary WebSocket data from client
-    Serial.println("WS event");
+
     if (type == WS_EVT_CONNECT) {
-        Serial.println("WS client connected");
         client->ping();
-    }
-    if (type != WS_EVT_DATA) {
-        Serial.println("Not a WS data event");
         return;
     }
+    if (type != WS_EVT_DATA) return;
+
     AwsFrameInfo *info = (AwsFrameInfo *)arg;
     if (info->opcode != WS_BINARY) return;
-
-    Serial.println("Data event captured");
-
     if (len > 0) digitalWrite(LED_BUILTIN, data[0]);
 }
 
@@ -81,18 +64,10 @@ void setup() {
     ws.onEvent(onEvent);
     server.addHandler(&ws);
 
-    // serve the index page when root is requested
-    server.on("/", HTTP_ANY, [](AsyncWebServerRequest *request){
-        request->send(SPIFFS, "/index.html");
-    });
-    server.serveStatic("/", SPIFFS, "/");
+    server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 
-    // Catch-All Handlers
-    // Any request that can not find a Handler that canHandle it
-    // ends in the callbacks below.
+    // Handle any other requests
     server.onNotFound(onRequest);
-    server.onFileUpload(onUpload);
-    server.onRequestBody(onBody);
 
     server.begin();
 
