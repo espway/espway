@@ -28,7 +28,7 @@ volatile float roll, pitch;
 const bool TRACK_UPDATE_FREQUENCY = true;
 unsigned int gNumCalculations = 0;
 unsigned long gLastReportTime = 0;
-extern const char *indexHtml;
+extern const char *indexHtml PROGMEM;
 
 volatile bool gDataAvailable = false;
 void dataAvailable() {
@@ -64,7 +64,7 @@ void setup() {
     server.addHandler(&ws);
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(200, "text/html", indexHtml);
+        request->send_P(200, "text/html", indexHtml);
     });
 
     // Handle any other requests
@@ -133,7 +133,7 @@ void loop() {
     }
 }
 
-const char *indexHtml = R"(
+const char *indexHtml PROGMEM = R"(
 <!doctype html>
 
 <html>
