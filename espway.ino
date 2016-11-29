@@ -76,10 +76,12 @@ void setup() {
     server.begin();
 
     pinMode(LED_BUILTIN, OUTPUT);
-    for (int i = 12; i <= 15; ++i) {
+    for (int i = 12; i <= 14; ++i) {
         pinMode(i, OUTPUT);
         digitalWrite(i, LOW);
     }
+    pinMode(16, OUTPUT);
+    digitalWrite(16, LOW);
 
     Wire.begin(0, 5);
     Wire.setClock(400000L);
