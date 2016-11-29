@@ -1,6 +1,5 @@
 #include <Wire.h>
 #include <ESP8266WiFi.h>
-#include <FS.h>
 #include <ArduinoOTA.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -60,7 +59,6 @@ void setup() {
     Serial.begin(115200);
     WiFi.mode(WIFI_AP);
     WiFi.softAP("ESPway");
-    SPIFFS.begin();
 
     ws.onEvent(onEvent);
     server.addHandler(&ws);
@@ -91,8 +89,6 @@ void setup() {
 
 #ifdef ENABLE_FOTA
     ArduinoOTA.onStart([]() {
-        SPIFFS.end();
-
         // Disable client connections
         ws.enable(false);
 
