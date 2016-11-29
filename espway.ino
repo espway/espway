@@ -64,7 +64,10 @@ void setup() {
     server.addHandler(&ws);
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send_P(200, "text/html", indexHtml);
+        AsyncWebServerResponse *response = request->beginResponse_P(200,
+            "text/html", indexHtml);
+        response->addHeader("Connection", "close");
+        request->send(response);
     });
 
     // Handle any other requests
