@@ -5,8 +5,10 @@
 #include <ESPAsyncWebServer.h>
 
 #define ENABLE_FOTA
+#define SERIAL_DEBUG
 
 #include "mpu6050.h"
+#include "motor.h"
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
@@ -21,6 +23,17 @@ mpuconfig gMpuConfig = {
     .intActiveLow = false,
     .intOpenDrain = false,
     .beta = 0.05f
+};
+
+motor motorLeft = {
+    .pwmPin = 13,
+    .directionPin = 16,
+    .reverse = false
+};
+motor motorRight = {
+    .pwmPin = 12,
+    .directionPin = 14,
+    .reverse = false
 };
 
 volatile float roll, pitch;
@@ -62,50 +75,50 @@ void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client,
 }
 
 void setup() {
+#ifdef SERIAL_DEBUG
     Serial.begin(115200);
+#endif
+
+    // WiFi AP setup
     WiFi.mode(WIFI_AP);
     WiFi.softAP("ESPway");
 
+    // Server setup
     ws.onEvent(onEvent);
     server.addHandler(&ws);
-
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         AsyncWebServerResponse *response = request->beginResponse_P(200,
             "text/html", indexHtml);
         response->addHeader("Connection", "close");
         request->send(response);
     });
-
     // Handle any other requests
     server.onNotFound(onRequest);
-
     server.begin();
 
-    pinMode(LED_BUILTIN, OUTPUT);
-    for (int i = 12; i <= 14; ++i) {
-        pinMode(i, OUTPUT);
-        digitalWrite(i, LOW);
-    }
-    pinMode(16, OUTPUT);
-    digitalWrite(16, LOW);
-
+    // IMU setup
     Wire.begin(0, 5);
     Wire.setClock(400000L);
     if (mpuSetup(MPU_ADDR, &gMpuConfig) != 0) {
+#ifdef SERIAL_DEBUG
         Serial.println("Setup failed");
+#endif
         return;
     }
-
     attachInterrupt(4, dataAvailable, RISING);
+
+    pinMode(LED_BUILTIN, OUTPUT);
+
+    // Motor setup
+    setupMotorPwm(motorLeft);
+    setupMotorPwm(motorRight);
 
 #ifdef ENABLE_FOTA
     ArduinoOTA.onStart([]() {
         // Disable client connections
         ws.enable(false);
-
         // Advertise connected clients what's going on
         ws.textAll("OTA Update Started");
-
         // Close them
         ws.closeAll();
     });
@@ -134,13 +147,17 @@ void loop() {
         if (++gNumCalculations == 1000) {
             gNumCalculations = 0;
             unsigned long time = millis();
+#ifdef SERIAL_DEBUG
             Serial.println(1000000L / (time - gLastReportTime));
+#endif
             gLastReportTime = time;
         }
     } else {
+#ifdef SERIAL_DEBUG
         Serial.print(100.0f * roll);
         Serial.print(',');
         Serial.println(100.0f * pitch);
+#endif
     }
 }
 

@@ -1,5 +1,13 @@
 #pragma once
 
-const uint32_t MOTOR_PWM_PERIOD = 1000;  // period in us
+const unsigned long MOTOR_PWM_PERIOD = 1000;  // period in us
 
-void setup_motor_pwm();
+struct motor {
+    int pwmPin;
+    int directionPin;
+    bool reverse;
+};
+
+void setupMotorPwm(motor m);
+void setMotorVelocity(motor m, double velocity);
+
