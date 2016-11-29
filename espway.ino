@@ -14,7 +14,7 @@ AsyncWebSocket ws("/ws");
 const int MPU_ADDR = 0x68;
 mpuconfig gMpuConfig = {
     .lowpass = 3,
-    .sampleRateDivider = 0,
+    .sampleRateDivider = 1,
     .gyroRange = 3,
     .accelRange = 0,
     .enableInterrupt = true,
@@ -40,12 +40,17 @@ void onRequest(AsyncWebServerRequest *request){
     request->send(404);
 }
 
+void sendLedStatus(AsyncWebSocketClient *client) {
+    uint8_t data[] = { digitalRead(LED_BUILTIN) };
+    client->binary(data, 1);
+}
+
 void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client,
     AwsEventType type, void * arg, uint8_t *data, size_t len) {
     // Handle binary WebSocket data from client
 
     if (type == WS_EVT_CONNECT) {
-        client->ping();
+        sendLedStatus(client);
         return;
     }
     if (type != WS_EVT_DATA) return;
@@ -53,6 +58,7 @@ void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client,
     AwsFrameInfo *info = (AwsFrameInfo *)arg;
     if (info->opcode != WS_BINARY) return;
     if (len > 0) digitalWrite(LED_BUILTIN, data[0]);
+    sendLedStatus(client);
 }
 
 void setup() {
@@ -108,7 +114,7 @@ void setup() {
 }
 
 void loop() {
-    while (true) {//!gDataAvailable) {
+    while (!gDataAvailable) {
 #ifdef ENABLE_FOTA
         ArduinoOTA.handle();
 #endif
@@ -168,7 +174,7 @@ const char *indexHtml PROGMEM = R"(
     </head>
 
     <body>
-        <h1>Led is <span id='ledStatus'></span></h1>
+        <h1>Led is <br /><span id='ledStatus'></span></h1>
         <button id='btnOn'>on</button>
         <button id='btnOff'>off</button>
 
