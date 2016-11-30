@@ -22,12 +22,15 @@
 
 #include <stdint.h>
 
-void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
-	int16_t data[]);
+struct quaternion {
+	float q0, q1, q2, q3;
+};
 
-void gravityVector();
-float pitchAngle();
-float rollAngle();
-float pitchAngleTaylor();
-float rollAngleTaylor();
+void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
+	int16_t data[], quaternion * const q);
+
+float pitchAngle(quaternion * const q);
+float rollAngle(quaternion * const q);
+float pitchAngleTaylor(quaternion * const q);
+float rollAngleTaylor(quaternion * const q);
 

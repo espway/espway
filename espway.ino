@@ -26,6 +26,7 @@ mpuconfig gMpuConfig = {
     .intOpenDrain = false,
     .beta = 0.05f
 };
+quaternion gQuat = { 1.0, 0.0, 0.0, 0.0 };
 
 motor motorLeft = {
     .pwmPin = 13,
@@ -40,9 +41,12 @@ motor motorRight = {
 
 volatile float roll, pitch;
 
-const bool TRACK_UPDATE_FREQUENCY = true;
+const bool TRACK_UPDATE_FREQUENCY = false;
 unsigned int gNumCalculations = 0;
 unsigned long gLastReportTime = 0;
+
+const unsigned int ORIENTATION_SEND_DT = 50;
+unsigned long gLastOrientationTime = 0;
 
 volatile bool gDataAvailable = false;
 void dataAvailable() {
@@ -61,6 +65,7 @@ void sendLedStatus(AsyncWebSocketClient *client) {
 
 void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client,
     AwsEventType type, void * arg, uint8_t *data, size_t len) {
+    return;
     // Handle binary WebSocket data from client
 
     if (type == WS_EVT_CONNECT) {
@@ -109,6 +114,7 @@ void setup() {
     attachInterrupt(4, dataAvailable, RISING);
 
     pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, LOW);
 
     // Motor setup
     setupMotorPwm(motorLeft);
@@ -135,25 +141,34 @@ void loop() {
         yield();
     }
     gDataAvailable = false;
+    unsigned long time = millis();
 
     int16_t buf[6];
     mpuReadIntStatus(MPU_ADDR);
     if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
-    mpuUpdateQuaternion(&gMpuConfig, buf);
+    mpuUpdateQuaternion(&gMpuConfig, buf, &gQuat);
 
-    roll = rollAngleTaylor();
-    pitch = pitchAngleTaylor();
+    roll = rollAngleTaylor(&gQuat);
+    pitch = pitchAngleTaylor(&gQuat);
 
     if (TRACK_UPDATE_FREQUENCY) {
         if (++gNumCalculations == 1000) {
             gNumCalculations = 0;
-            unsigned long time = millis();
 #ifdef SERIAL_DEBUG
             Serial.println(1000000L / (time - gLastReportTime));
 #endif
             gLastReportTime = time;
         }
     } else {
+        if (time - gLastOrientationTime > ORIENTATION_SEND_DT) {
+            gLastOrientationTime = time;
+            float scale = 1000.0f;
+            int16_t data[] = { scale * gQuat.q0,
+                               scale * gQuat.q1,
+                               scale * gQuat.q2,
+                               scale * gQuat.q3 };
+            ws.binaryAll((uint8_t *)data, 8);
+        }
 #ifdef SERIAL_DEBUG
         Serial.print(100.0f * roll);
         Serial.print(',');

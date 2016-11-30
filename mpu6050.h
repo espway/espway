@@ -123,5 +123,6 @@ int mpuReadIntStatus(const uint8_t addr);
 int mpuReadRawData(const uint8_t addr, int16_t * const data);
 void mpuApplyOffsets(int16_t * const data, const int16_t * const offsets);
 int mpuSetup(const uint8_t addr, mpuconfig * const config);
-void mpuUpdateQuaternion(const mpuconfig * const config, int16_t * const data);
+void mpuUpdateQuaternion(const mpuconfig * const config, int16_t * const data,
+    quaternion * const q);
 

@@ -17,8 +17,6 @@
 
 #include "MadgwickAHRS.h"
 
-static float q0 = 1.0, q1 = 0.0, q2 = 0.0, q3 = 0.0;
-
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
 
@@ -36,11 +34,17 @@ static inline float invSqrt(float x) {
 // IMU algorithm update
 
 void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
-	int16_t data[]) {
+	int16_t data[], quaternion * const q) {
 	float recipNorm;
+	float q0, q1, q2, q3;
 	float s0, s1, s2, s3;
 	float qDot0, qDot1, qDot2, qDot3;
 	float _2q1q1q2q2, tmpterm;
+
+	q0 = q->q0;
+        q1 = q->q1;
+	q2 = q->q2;
+	q3 = q->q3;
 
 	float gx = data[GYRO_X_IDX],
 		gy = data[GYRO_Y_IDX],
@@ -94,23 +98,23 @@ void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
 
 	// Normalise quaternion
 	recipNorm = invSqrt(q0*q0 + q1*q1 + q2*q2 + q3*q3);
-	q0 *= recipNorm;
-	q1 *= recipNorm;
-	q2 *= recipNorm;
-	q3 *= recipNorm;
+	q->q0 = q0 * recipNorm;
+	q->q1 = q1 * recipNorm;
+	q->q2 = q2 * recipNorm;
+	q->q3 = q3 * recipNorm;
 }
 
-float pitchAngle() {
-	float half_gravx = q1*q3 - q0*q2;
+float pitchAngle(quaternion * const q) {
+	float half_gravx = q->q1 * q->q3 - q->q0 * q->q2;
 	return atan(half_gravx * invSqrt(0.25f - half_gravx*half_gravx));
 }
 
-float rollAngle() {
-	float half_gravy = q0*q1 + q2*q3;
+float rollAngle(quaternion * const q) {
+	float half_gravy = q->q0 * q->q1 + q->q2 * q->q3;
 	return atan(half_gravy * invSqrt(0.25f - half_gravy*half_gravy));
 }
 
-float pitchAngleTaylor() {
+float pitchAngleTaylor(quaternion * const q) {
 	// x is half of the unit gravitation vector x component gx/2
 	// (to save one multiplication).
 	// For the unit vector g,
@@ -119,14 +123,14 @@ float pitchAngleTaylor() {
 	// pitch = atan(gx/2 / sqrt((1/2)^2 - (gx/2)^2)
 	//		 = atan(gx/2 / sqrt(1/4 - (gx/2)^2))
 	// The below fuction is a Taylor expansion of the latter form.
-	float x = q1*q3 - q0*q2;
+	float x = q->q1 * q->q3 - q->q0 * q->q2;
 	float x2 = x*x;
 	return x * (2.0f + x2 * (1.33333f + x2 * 2.4f));
 }
 
-float rollAngleTaylor() {
+float rollAngleTaylor(quaternion * const q) {
 	// See pitchAngleTaylor for explanation of the expansion
-	float y = q0*q1 + q2*q3;
+	float y = q->q0 * q->q1 + q->q2 * q->q3;
 	float y2 = y*y;
 	return y * (2.0f + y2 * (1.33333f + y2 * 2.4f));
 }
