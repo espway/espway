@@ -1,0 +1,3 @@
+[submodule "libesphttpd"]
+	path = libesphttpd
+	url = https://github.com/Spritetm/libesphttpd.git

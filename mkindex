@@ -1,6 +1,0 @@
-#!/bin/sh
-
-echo "const char *indexHtml PROGMEM = R\"(" > indexhtml.h
-cat "index.html" >> indexhtml.h
-echo ")\";" >> indexhtml.h
-

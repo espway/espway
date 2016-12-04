@@ -17,28 +17,29 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <Wire.h>
-
+#include "i2c_master.h"
 #include "mpu6050.h"
 
 static int mpuWriteRegister(const uint8_t addr,
     const uint8_t reg, const uint8_t value, const bool stop) {
-    Wire.beginTransmission(addr);
-    if (Wire.write(reg) != 1) return -1;
-    if (Wire.write(value) != 1) return -2;
-    return Wire.endTransmission(stop);
+    uint8_t regValue[] = { reg, value };
+    i2c_master_start();
+    bool ret = i2c_master_transmitTo(addr) &&
+        i2c_master_writeBytes(regValue, 2);
+    if (stop) i2c_master_stop();
+    return ret ? 0 : -1;
 }
 
 static int mpuReadRegisters(const uint8_t addr,
     const uint8_t firstReg, const uint8_t len, uint8_t * const data) {
-    int status;
-    Wire.beginTransmission(addr);
-    if (Wire.write(firstReg) != 1) return -1;
-    status = Wire.endTransmission(false);
-    if (status != 0) return status;
-    if (Wire.requestFrom(addr, len, (uint8_t)true) != len) return -2;
-    for (uint8_t i = 0; i < len; ++i) data[i] = Wire.read();
-    return 0;
+    i2c_master_start();
+    bool ret = i2c_master_transmitTo(addr) &&
+        i2c_master_writeBytes((uint8_t *)&firstReg, 1);
+    i2c_master_start();
+    ret = ret && i2c_master_receiveFrom(addr) &&
+        i2c_master_readBytes(data, len);
+    i2c_master_stop();
+    return ret ? 0 : -1;
 }
 
 int mpuReadIntStatus(const uint8_t addr) {
@@ -49,24 +50,25 @@ int mpuReadIntStatus(const uint8_t addr) {
 
 int mpuReadRawData(const uint8_t addr, int16_t * const data) {
     uint8_t *myData = (uint8_t *)data;
-    int status;
-    Wire.beginTransmission(addr);
-    if (Wire.write(MPU_ACCEL_XOUT_H) != 1) return -1;
-    status = Wire.endTransmission(false);
-    if (status != 0) return status;
-    if (Wire.requestFrom(addr, (uint8_t)14, (uint8_t)true) != 14) return -2;
-    for (int8_t i = 0; i < 3; ++i) {
-        *(myData + 1) = Wire.read();
-        *myData = Wire.read();
-        myData += 2;
+    uint8_t reg = MPU_ACCEL_XOUT_H;
+    i2c_master_start();
+    bool ret = i2c_master_transmitTo(addr) &&
+        i2c_master_writeBytes(&reg, 1);
+    i2c_master_start();
+    ret = ret && i2c_master_receiveFrom(addr);
+
+    if (ret) {
+        for (int8_t i = 0; i < 6; i++) {
+            *(myData + 1) = i2c_master_readNextByte(true);
+            *myData = i2c_master_readNextByte(true);
+            myData += 2;
+        }
+        *(myData + 1) = i2c_master_readNextByte(true);
+        *myData = i2c_master_readNextByte(false);
     }
-    Wire.read(); Wire.read();  // Ignore temperature data
-    for (int8_t i = 0; i < 3; ++i) {
-        *(myData + 1) = Wire.read();
-        *myData = Wire.read();
-        myData += 2;
-    }
-    return 0;
+
+    i2c_master_stop();
+    return ret ? 0 : -1;
 }
 
 void mpuApplyOffsets(int16_t * const data,

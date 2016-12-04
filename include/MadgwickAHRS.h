@@ -22,9 +22,9 @@
 
 #include <stdint.h>
 
-struct quaternion {
+typedef struct {
 	float q0, q1, q2, q3;
-};
+} quaternion;
 
 void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
 	int16_t data[], quaternion * const q);
