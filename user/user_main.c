@@ -26,6 +26,7 @@
 #include "espfs.h"
 #include "webpages-espfs.h"
 #include "cgiwebsocket.h"
+#include "cgiflash.h"
 
 #include "i2c_master.h"
 #include "mpu6050.h"
@@ -58,8 +59,6 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
     mpuReadIntStatus(MPU_ADDR);
     if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
     mpuUpdateQuaternion(&gConfig, buf, &gQuat);
-    float roll = rollAngle(&gQuat);
-    float pitch = pitchAngle(&gQuat);
 
     /* os_printf("%d, %d\n", (int)(18000.0f / M_PI * pitch), (int)(18000.0f / M_PI * roll)); */
     float scale = 1000.0f;
@@ -72,7 +71,7 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
 
     unsigned long time = system_get_time();
     if (time - gLastQuatUpdate > gQuatUpdateInterval) {
-        cgiWebsockBroadcast("/ws", (uint8_t *)qbuf, 8, WEBSOCK_FLAG_BIN);
+        cgiWebsockBroadcast("/ws", (char *)qbuf, 8, WEBSOCK_FLAG_BIN);
         gLastQuatUpdate = time;
     }
 
