@@ -1,3 +1,0 @@
-export SDK_PATH="$HOME/builds/ESP8266_RTOS_SDK"
-export BIN_PATH="$HOME/tmp/ESP8266_BIN"
-
