@@ -32,36 +32,43 @@
 const int LED_PIN = 2;
 const int MPU_ADDR = 0x68;
 
-#define N_TASKS_MAX 2
-
-/* os_event_t gTaskQueue[N_TASKS_MAX]; */
-
 mpuconfig gConfig = {
-    .lowpass = 4,
-    .sampleRateDivider = 1,
-    .gyroRange = 0,
-    .accelRange = 3,
+    .lowpass = 3,
+    .sampleRateDivider = 0,
+    .gyroRange = 3,
+    .accelRange = 0,
     .enableInterrupt = true,
     .intActiveLow = false,
     .intOpenDrain = false,
-    .beta = 0.2f
+    .beta = 0.05f
 };
 quaternion gQuat = { 1.0f, 0.0f, 0.0f, 0.0f };
 int nSamples = 0;
 unsigned long lastTime = 0;
 
-void ICACHE_FLASH_ATTR compute(void) {
+xTaskHandle gComputeTask;
+
+void ICACHE_FLASH_ATTR compute(void *pvParameters) {
     int16_t buf[7];
-    mpuReadIntStatus(MPU_ADDR);
-    if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
-    mpuUpdateQuaternion(&gConfig, buf, &gQuat);
-    float roll = rollAngle(&gQuat);
-    float pitch = pitchAngle(&gQuat);
+    while (true) {
+        vTaskSuspend(NULL);
+        mpuReadIntStatus(MPU_ADDR);
+        if (mpuReadRawData(MPU_ADDR, buf) != 0) continue;
+        mpuUpdateQuaternion(&gConfig, buf, &gQuat);
+        float roll = rollAngle(&gQuat);
+        float pitch = pitchAngle(&gQuat);
 
-    printf("%d, %d\n",
-        (int)(18000.0f / M_PI * pitch), (int)(18000.0f / M_PI * roll));
+        /* printf("%d, %d\n", */
+        /*     (int)(18000.0f / M_PI * pitch), (int)(18000.0f / M_PI * roll)); */
 
-    nSamples += 1;
+        nSamples += 1;
+        if (nSamples == 1000) {
+            unsigned long time = system_get_time();
+            printf("%u\n", nSamples * 1000000UL / (time - lastTime));
+            lastTime = time;
+            nSamples = 0;
+        }
+    }
 }
 
 void ICACHE_FLASH_ATTR initAP(void) {
@@ -105,15 +112,16 @@ void ICACHE_FLASH_ATTR initHttpd(void) {
     httpdInit(builtInUrls, 80);
 }
 
-void mpuInterrupt(uint32_t intr_mask, void *args) {
+void mpuInterrupt(void *args) {
     uint32_t gpio_status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
     GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, gpio_status);
 
-    /* system_os_post(USER_TASK_PRIO_2, 0, 0); */
+    portBASE_TYPE xShouldYield = xTaskResumeFromISR(gComputeTask);
+    portEND_SWITCHING_ISR(xShouldYield);
 }
 
 void ICACHE_FLASH_ATTR user_init(void) {
-    /* system_update_cpu_freq(SYS_CPU_160MHZ); */
+    system_update_cpu_freq(160);
     i2c_master_gpio_init();
     UART_SetBaudrate(UART0, 115200);
 
@@ -126,12 +134,13 @@ void ICACHE_FLASH_ATTR user_init(void) {
     GPIO_OUTPUT(BIT12|BIT13|BIT14|BIT15, 0);
 
     gpio_intr_handler_register(mpuInterrupt, NULL);
-    gpio_pin_intr_state_set(GPIO_ID_PIN(4), GPIO_PIN_INTR_POSEDGE);
+    gpio_pin_intr_state_set(4, GPIO_PIN_INTR_POSEDGE);
+    _xt_isr_unmask(1 << ETS_GPIO_INUM);
     mpuReadIntStatus(MPU_ADDR);
 
-    /* system_os_task(compute, USER_TASK_PRIO_2, gTaskQueue, N_TASKS_MAX); */
-    /* system_os_post(USER_TASK_PRIO_2, 0, 0); */
     lastTime = system_get_time();
+
+    xTaskCreate(compute, "compute", 200, NULL, 9, &gComputeTask);
 }
 
 /******************************************************************************

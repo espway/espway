@@ -19,6 +19,7 @@
 
 #include "i2c_master.h"
 #include "mpu6050.h"
+#include <esp8266.h>
 
 static int mpuWriteRegister(const uint8_t addr,
     const uint8_t reg, const uint8_t value, const bool stop) {
@@ -49,6 +50,7 @@ int mpuReadIntStatus(const uint8_t addr) {
 }
 
 int mpuReadRawData(const uint8_t addr, int16_t * const data) {
+    ETS_INTR_LOCK();
     uint8_t *myData = (uint8_t *)data;
     uint8_t reg = MPU_ACCEL_XOUT_H;
     i2c_master_start();
@@ -68,6 +70,7 @@ int mpuReadRawData(const uint8_t addr, int16_t * const data) {
     }
 
     i2c_master_stop();
+    ETS_INTR_UNLOCK();
     return ret ? 0 : -1;
 }
 
