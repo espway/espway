@@ -114,7 +114,7 @@ should be placed above the URLs they protect.
 */
 HttpdBuiltInUrl builtInUrls[]={
 	{"*", cgiRedirectApClientToHostname, "esp8266.nonet"},
-	{"/", cgiRedirect, "/index.tpl"},
+	{"/", cgiRedirect, "/index.html"},
 	{"/led.tpl", cgiEspFsTemplate, tplLed},
 	{"/index.tpl", cgiEspFsTemplate, tplCounter},
 	{"/led.cgi", cgiLed, NULL},
@@ -149,7 +149,7 @@ HttpdBuiltInUrl builtInUrls[]={
 };
 
 void ICACHE_FLASH_ATTR initAP(void) {
-	char *ssid = "ESPway1";
+	char *ssid = "ESPway";
 	struct softap_config conf;
 	wifi_softap_get_config(&conf);
 

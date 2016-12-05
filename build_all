@@ -1,0 +1,7 @@
+#!/bin/sh
+
+source "./envvars"
+make clean
+make -C libesphttpd
+make
+
