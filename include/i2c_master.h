@@ -19,6 +19,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define I2C_MASTER_SDA_MUX PERIPHS_IO_MUX_GPIO0_U
 #define I2C_MASTER_SCL_MUX PERIPHS_IO_MUX_GPIO5_U
@@ -28,24 +29,24 @@
 #define I2C_MASTER_SCL_FUNC FUNC_GPIO5
 
 #define SDA_HIGH() \
-    gpio_output_set(0, 0, 0, 1<<I2C_MASTER_SDA_GPIO)
+    gpio_output_conf(0, 0, 0, 1<<I2C_MASTER_SDA_GPIO)
 #define SCL_HIGH() \
-    gpio_output_set(0, 0, 0, 1<<I2C_MASTER_SCL_GPIO)
+    gpio_output_conf(0, 0, 0, 1<<I2C_MASTER_SCL_GPIO)
 #define SDA_LOW()  \
-    gpio_output_set(0, 1<<I2C_MASTER_SDA_GPIO, 1<<I2C_MASTER_SDA_GPIO, 0)
+    gpio_output_conf(0, 1<<I2C_MASTER_SDA_GPIO, 1<<I2C_MASTER_SDA_GPIO, 0)
 #define SCL_LOW()  \
-    gpio_output_set(0, 1<<I2C_MASTER_SCL_GPIO, 1<<I2C_MASTER_SCL_GPIO, 0)
+    gpio_output_conf(0, 1<<I2C_MASTER_SCL_GPIO, 1<<I2C_MASTER_SCL_GPIO, 0)
 
 #define SDA_HIGH_SCL_HIGH() \
-    gpio_output_set(0, 0, 0, (1<<I2C_MASTER_SCL_GPIO) | (1<<I2C_MASTER_SDA_GPIO))
+    gpio_output_conf(0, 0, 0, (1<<I2C_MASTER_SCL_GPIO) | (1<<I2C_MASTER_SDA_GPIO))
 #define SDA_HIGH_SCL_LOW() \
-    gpio_output_set(0, 1<<I2C_MASTER_SCL_GPIO, \
+    gpio_output_conf(0, 1<<I2C_MASTER_SCL_GPIO, \
     1<<I2C_MASTER_SCL_GPIO, 1<<I2C_MASTER_SDA_GPIO)
 #define SDA_LOW_SCL_HIGH() \
-    gpio_output_set(0, 1<<I2C_MASTER_SDA_GPIO, \
+    gpio_output_conf(0, 1<<I2C_MASTER_SDA_GPIO, \
     1<<I2C_MASTER_SDA_GPIO, 1<<I2C_MASTER_SCL_GPIO)
 #define SDA_LOW_SCL_LOW() \
-    gpio_output_set(0, (1<<I2C_MASTER_SDA_GPIO) | (1<<I2C_MASTER_SCL_GPIO), \
+    gpio_output_conf(0, (1<<I2C_MASTER_SDA_GPIO) | (1<<I2C_MASTER_SCL_GPIO), \
     (1<<I2C_MASTER_SDA_GPIO) | (1<<I2C_MASTER_SCL_GPIO), 0)
 
 #define I2C_MASTER_DELAY 0

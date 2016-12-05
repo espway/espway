@@ -1,5 +1,3 @@
-#include <Arduino.h>
-
 #include "motor.h"
 
 void setupMotorPwm(motor m) {

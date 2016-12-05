@@ -49,13 +49,13 @@ GEN_IMAGES= eagle.app.v6.out
 GEN_BINS= eagle.app.v6.bin
 SPECIAL_MKTARGETS=$(APP_MKTARGETS)
 SUBDIRS=    \
-	user
+	user driver
 
 endif # } PDIR
 
 LDDIR = $(SDK_PATH)/ld
 
-CCFLAGS += -Os
+CCFLAGS += -Os -std=c99
 
 TARGET_LDFLAGS =		\
 	-nostdlib		\
@@ -86,7 +86,7 @@ blankflash:
 	$(ESPTOOL) $(ESPTOOL_OPTS) write_flash $(ESPTOOL_FLASHDEF) $(ESP_TGT_BLANK)
 
 COMPONENTS_eagle.app.v6 = \
-	user/libuser.a
+	user/libuser.a driver/libdriver_user.a
 
 DEPENDS_eagle.app.v6 = \
 				$(LD_FILE) \
@@ -94,7 +94,7 @@ DEPENDS_eagle.app.v6 = \
 				libesphttpd/libwebpages-espfs.a
 
 
-SDKLIBS=minic gcc hal phy pp net80211 wpa crypto main freertos lwip
+SDKLIBS=minic gcc hal phy pp net80211 wpa crypto main freertos lwip driver mirom
 LINKFLAGS_eagle.app.v6 = \
 	-L$(SDK_PATH)/lib        \
 	-Wl,--gc-sections   \

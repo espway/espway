@@ -16,8 +16,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "ets_sys.h"
-#include "osapi.h"
+#include <esp8266.h>
+#include "esp8266/ets_sys.h"
 #include "gpio.h"
 
 #include "i2c_master.h"
@@ -25,7 +25,7 @@
 void ICACHE_FLASH_ATTR
 i2c_master_gpio_init(void)
 {
-    ETS_GPIO_INTR_DISABLE() ;
+    ETS_INTR_LOCK() ;
 
     PIN_FUNC_SELECT(I2C_MASTER_SDA_MUX, I2C_MASTER_SDA_FUNC);
     PIN_FUNC_SELECT(I2C_MASTER_SCL_MUX, I2C_MASTER_SCL_FUNC);
@@ -45,7 +45,7 @@ i2c_master_gpio_init(void)
 
     SDA_HIGH_SCL_HIGH();
 
-    ETS_GPIO_INTR_ENABLE() ;
+    ETS_INTR_UNLOCK() ;
 }
 
 void ICACHE_FLASH_ATTR
