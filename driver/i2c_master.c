@@ -17,7 +17,6 @@
 */
 
 #include <esp8266.h>
-#include "esp8266/ets_sys.h"
 #include "gpio.h"
 
 #include "i2c_master.h"

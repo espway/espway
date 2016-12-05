@@ -17,7 +17,8 @@
 */
 
 #include <esp8266.h>
-#include "uart.h"
+#include "user_interface.h"
+#include "driver/uart.h"
 #include "gpio.h"
 
 #include "httpd.h"
@@ -29,12 +30,14 @@
 #include "i2c_master.h"
 #include "mpu6050.h"
 
+#define QUEUE_LEN 1
+
 const int LED_PIN = 2;
 const int MPU_ADDR = 0x68;
 
 mpuconfig gConfig = {
     .lowpass = 3,
-    .sampleRateDivider = 0,
+    .sampleRateDivider = 1,
     .gyroRange = 3,
     .accelRange = 0,
     .enableInterrupt = true,
@@ -45,29 +48,39 @@ mpuconfig gConfig = {
 quaternion gQuat = { 1.0f, 0.0f, 0.0f, 0.0f };
 int nSamples = 0;
 unsigned long lastTime = 0;
+const unsigned long gQuatUpdateInterval = 100000;
+unsigned long gLastQuatUpdate = 0;
 
-xTaskHandle gComputeTask;
+os_event_t gTaskQueue[QUEUE_LEN];
 
-void ICACHE_FLASH_ATTR compute(void *pvParameters) {
-    int16_t buf[7];
-    while (true) {
-        vTaskSuspend(NULL);
-        mpuReadIntStatus(MPU_ADDR);
-        if (mpuReadRawData(MPU_ADDR, buf) != 0) continue;
-        mpuUpdateQuaternion(&gConfig, buf, &gQuat);
-        float roll = rollAngle(&gQuat);
-        float pitch = pitchAngle(&gQuat);
+void ICACHE_FLASH_ATTR compute(os_event_t *e) {
+    int16_t buf[6];
+    mpuReadIntStatus(MPU_ADDR);
+    if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
+    mpuUpdateQuaternion(&gConfig, buf, &gQuat);
+    float roll = rollAngle(&gQuat);
+    float pitch = pitchAngle(&gQuat);
 
-        /* printf("%d, %d\n", */
-        /*     (int)(18000.0f / M_PI * pitch), (int)(18000.0f / M_PI * roll)); */
+    /* os_printf("%d, %d\n", (int)(18000.0f / M_PI * pitch), (int)(18000.0f / M_PI * roll)); */
+    float scale = 1000.0f;
+    int16_t qbuf[] = {
+        gQuat.q0 * scale,
+        gQuat.q1 * scale,
+        gQuat.q2 * scale,
+        gQuat.q3 * scale
+    };
 
-        nSamples += 1;
-        if (nSamples == 1000) {
-            unsigned long time = system_get_time();
-            printf("%u\n", nSamples * 1000000UL / (time - lastTime));
-            lastTime = time;
-            nSamples = 0;
-        }
+    unsigned long time = system_get_time();
+    if (time - gLastQuatUpdate > gQuatUpdateInterval) {
+        cgiWebsockBroadcast("/ws", (uint8_t *)qbuf, 8, WEBSOCK_FLAG_BIN);
+        gLastQuatUpdate = time;
+    }
+
+    nSamples += 1;
+    if (nSamples == 1000) {
+        /* os_printf("%lu\n", nSamples * 1000000UL / (time - lastTime)); */
+        lastTime = time;
+        nSamples = 0;
     }
 }
 
@@ -76,12 +89,12 @@ void ICACHE_FLASH_ATTR initAP(void) {
     struct softap_config conf;
     wifi_softap_get_config(&conf);
 
-    memset(conf.ssid, 0, 32);
-    memset(conf.password, 0, 64);
-    memcpy(conf.ssid, ssid, strlen(ssid));
+    os_memset(conf.ssid, 0, 32);
+    os_memset(conf.password, 0, 64);
+    os_memcpy(conf.ssid, ssid, strlen(ssid));
     conf.ssid_len = 0;
     conf.beacon_interval = 100;
-    conf.max_connection = 1;
+    conf.max_connection = 2;
     conf.authmode = AUTH_OPEN;
 
     wifi_softap_set_config(&conf);
@@ -112,78 +125,37 @@ void ICACHE_FLASH_ATTR initHttpd(void) {
     httpdInit(builtInUrls, 80);
 }
 
-void mpuInterrupt(void *args) {
+void mpuInterrupt(uint32_t mask, void *args) {
     uint32_t gpio_status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
     GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, gpio_status);
 
-    portBASE_TYPE xShouldYield = xTaskResumeFromISR(gComputeTask);
-    portEND_SWITCHING_ISR(xShouldYield);
+    system_os_post(2, 0, 0);
 }
 
 void ICACHE_FLASH_ATTR user_init(void) {
-    system_update_cpu_freq(160);
+    system_update_cpu_freq(80);
     i2c_master_gpio_init();
     UART_SetBaudrate(UART0, 115200);
 
     initAP();
     initHttpd();
 
-    mpuSetup(MPU_ADDR, &gConfig);
+    if (mpuSetup(MPU_ADDR, &gConfig) != 0) {
+        os_printf("MPU config failed!\n");
+    }
 
-    GPIO_AS_OUTPUT(BIT12|BIT13|BIT14|BIT15);
-    GPIO_OUTPUT(BIT12|BIT13|BIT14|BIT15, 0);
+    ETS_GPIO_INTR_DISABLE();
 
-    gpio_intr_handler_register(mpuInterrupt, NULL);
+    gpio_output_set(0, BIT12|BIT13|BIT14|BIT15, BIT12|BIT13|BIT14|BIT15, 0);
+
+    ETS_GPIO_INTR_ATTACH(mpuInterrupt, NULL);
     gpio_pin_intr_state_set(4, GPIO_PIN_INTR_POSEDGE);
-    _xt_isr_unmask(1 << ETS_GPIO_INUM);
     mpuReadIntStatus(MPU_ADDR);
+
+    ETS_GPIO_INTR_ENABLE();
 
     lastTime = system_get_time();
 
-    xTaskCreate(compute, "compute", 200, NULL, 9, &gComputeTask);
-}
-
-/******************************************************************************
- * FunctionName : user_rf_cal_sector_set
- * Description  : SDK just reversed 4 sectors, used for rf init data and paramters.
- *                We add this function to force users to set rf cal sector, since
- *                we don't know which sector is free in user's application.
- *                sector map for last several sectors : ABCCC
- *                A : rf cal
- *                B : rf init data
- *                C : sdk parameters
- * Parameters   : none
- * Returns      : rf cal sector
-*******************************************************************************/
-uint32 user_rf_cal_sector_set(void)
-{
-    flash_size_map size_map = system_get_flash_size_map();
-    uint32 rf_cal_sec = 0;
-
-    switch (size_map) {
-        case FLASH_SIZE_4M_MAP_256_256:
-            rf_cal_sec = 128 - 5;
-            break;
-
-        case FLASH_SIZE_8M_MAP_512_512:
-            rf_cal_sec = 256 - 5;
-            break;
-
-        case FLASH_SIZE_16M_MAP_512_512:
-        case FLASH_SIZE_16M_MAP_1024_1024:
-            rf_cal_sec = 512 - 5;
-            break;
-
-        case FLASH_SIZE_32M_MAP_512_512:
-        case FLASH_SIZE_32M_MAP_1024_1024:
-            rf_cal_sec = 1024 - 5;
-            break;
-
-        default:
-            rf_cal_sec = 0;
-            break;
-    }
-
-    return rf_cal_sec;
+    system_os_task(compute, 2, gTaskQueue, QUEUE_LEN);
 }
 

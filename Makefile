@@ -1,159 +1,211 @@
-#############################################################
-# Required variables for each makefile
-# Discard this section from all parent makefiles
-# Expected variables (with automatic defaults):
-#   CSRCS (all "C" files in the dir)
-#   SUBDIRS (all subdirs with a Makefile)
-#   GEN_LIBS - list of libs to be generated ()
-#   GEN_IMAGES - list of object file images to be generated ()
-#   GEN_BINS - list of binaries to be generated ()
-#   COMPONENTS_xxx - a list of libs/objs in the form
-#     subdir/lib to be extracted and rolled up into
-#     a generated lib/image xxx.a ()
-#
-TARGET = eagle
-#FLAVOR = release
-FLAVOR = debug
+#You can build this example in three ways:
+# 'separate' - Separate espfs and binaries, no OTA upgrade
+# 'combined' - Combined firmware blob, no OTA upgrade
+# 'ota' - Combined firmware blob with OTA upgrades.
+#Please do a 'make clean' after changing this.
+#OUTPUT_TYPE=separate
+OUTPUT_TYPE=combined
+#OUTPUT_TYPE=ota
 
-#ESP8266 config
-BOOT=new
-APP=1
-SPI_SPEED=80
-SPI_MODE=QIO
-SPI_SIZE_MAP=6
+#SPI flash size, in K
+ESP_SPI_FLASH_SIZE_K=4096
+#0: QIO, 1: QOUT, 2: DIO, 3: DOUT
+ESP_FLASH_MODE=0
+#0: 40MHz, 1: 26MHz, 2: 20MHz, 15: 80MHz
+ESP_FLASH_FREQ_DIV=15
 
-#Tag for OTA images. 0-27 characters. Change to eg your projects title.
-OTA_TAGNAME ?= espway
 
-ESPTOOL ?= esptool.py
-ESPPORT ?= /dev/ttyUSB0
+ifeq ("$(OUTPUT_TYPE)","separate")
+#In case of separate ESPFS and binaries, set the pos and length of the ESPFS here. 
+ESPFS_POS = 0x18000
+ESPFS_SIZE = 0x28000
+endif
+
+# Output directors to store intermediate compiled files
+# relative to the project directory
+BUILD_BASE	= build
+FW_BASE		= firmware
+
+# Base directory for the compiler. Needs a / at the end; if not set it'll use the tools that are in
+# the PATH.
+XTENSA_TOOLS_ROOT ?= 
+
+# base directory of the ESP8266 SDK package, absolute
+SDK_BASE	?= $(HOME)/builds/esp-open-sdk/sdk
+
+# Opensdk patches stdint.h when compiled with an internal SDK. If you run into compile problems pertaining to
+# redefinition of int types, try setting this to 'yes'.
+USE_OPENSDK?=yes
+
+#Esptool.py path and port
+ESPTOOL		?= esptool.py
+ESPPORT		?= /dev/ttyUSB0
+#ESPDELAY indicates seconds to wait between flashing the two binary images
 ESPDELAY	?= 3
 ESPBAUD		?= 460800
+
+#Appgen path and name
+APPGEN		?= $(SDK_BASE)/tools/gen_appbin.py
+
+# name for the target project
+TARGET		= espway
+
+# which modules (subdirectories) of the project to include in compiling
+MODULES		= user driver
+EXTRA_INCDIR	= include libesphttpd/include $(SDK_BASE)/driver_lib/include
+
+# libraries used in this project, mainly provided by the SDK
+LIBS		= c gcc phy pp net80211 wpa main lwip driver m
+#Add in esphttpd lib
+LIBS += esphttpd
+
+# compiler flags using during compilation of source files
+CFLAGS		= -Os -std=gnu99 -Wpointer-arith -Wundef -Wall -Wl,-EL -fno-inline-functions \
+		-nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH \
+		-Wno-address
+
+# linker flags used to generate the main object file
+LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
+
+
+# various paths from the SDK used in this project
+SDK_LIBDIR	= lib
+SDK_LDDIR	= ld
+SDK_INCDIR	= include include/json
+
+# select which tools to use as compiler, librarian and linker
+CC		:= $(XTENSA_TOOLS_ROOT)xtensa-lx106-elf-gcc
+AR		:= $(XTENSA_TOOLS_ROOT)xtensa-lx106-elf-ar
+LD		:= $(XTENSA_TOOLS_ROOT)xtensa-lx106-elf-gcc
+OBJCOPY	:= $(XTENSA_TOOLS_ROOT)xtensa-lx106-elf-objcopy
+
+#Additional (maybe generated) ld scripts to link in
+EXTRA_LD_SCRIPTS:=
+
+
+####
+#### no user configurable options below here
+####
+SRC_DIR		:= $(MODULES)
+BUILD_DIR	:= $(addprefix $(BUILD_BASE)/,$(MODULES))
+
+SDK_LIBDIR	:= $(addprefix $(SDK_BASE)/,$(SDK_LIBDIR))
+SDK_INCDIR	:= $(addprefix -I$(SDK_BASE)/,$(SDK_INCDIR))
+
+SRC		:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.c))
+ASMSRC		= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.S))
+OBJ		= $(patsubst %.c,$(BUILD_BASE)/%.o,$(SRC))
+OBJ		+= $(patsubst %.S,$(BUILD_BASE)/%.o,$(ASMSRC))
+APP_AR		:= $(addprefix $(BUILD_BASE)/,$(TARGET)_app.a)
+
+
+V ?= $(VERBOSE)
+ifeq ("$(V)","1")
+Q :=
+vecho := @true
+else
+Q := @
+vecho := @echo
+endif
+
+ifeq ("$(USE_OPENSDK)","yes")
+CFLAGS		+= -DUSE_OPENSDK
+else
+CFLAGS		+= -D_STDINT_H
+endif
+
+ifeq ("$(GZIP_COMPRESSION)","yes")
+CFLAGS		+= -DGZIP_COMPRESSION
+endif
+
+ifeq ("$(USE_HEATSHRINK)","yes")
+CFLAGS		+= -DESPFS_HEATSHRINK
+endif
+
+ifeq ("$(ESPFS_POS)","")
+#No hardcoded espfs position: link it in with the binaries.
+LIBS += webpages-espfs
+else
+#Hardcoded espfs location: Pass espfs position to rest of code
+CFLAGS += -DESPFS_POS=$(ESPFS_POS) -DESPFS_SIZE=$(ESPFS_SIZE)
+endif
+
+ifeq ("$(OUTPUT_TYPE)","ota")
+CFLAGS += -DOTA_FLASH_SIZE_K=$(ESP_SPI_FLASH_SIZE_K)
+endif
+
+
+#Define default target. If not defined here the one in the included Makefile is used as the default one.
+default-tgt: all
 
 define maplookup
 $(patsubst $(strip $(1)):%,%,$(filter $(strip $(1)):%,$(2)))
 endef
 
-ESPTOOL_SIZE=$(call maplookup,$(SPI_SIZE_MAP),0:4m 2:8m 3:16m 4:32m 5:16m 6:32m)
-ESPTOOL_MODE=$(call maplookup,$(SPI_MODE),QIO:qio QOUT:qout DIO:dio DOUT:dout)
-ESPTOOL_FLASHDEF=--flash_freq $(SPI_SPEED)m --flash_mode $(ESPTOOL_MODE) --flash_size $(ESPTOOL_SIZE)
-ESPTOOL_OPTS=--port $(ESPPORT) --baud $(ESPBAUD)
-OTA_FLASH_SIZE_K=$(call maplookup,$(SPI_SIZE_MAP),0:4096 2:8192 3:16384 4:32768 5:16384 6:32768)
-ESP_TGT_BLANK=0x3FE000 "$(SDK_PATH)/bin/blank.bin" 0x3FC000 $(SDK_PATH)/bin/esp_init_data_default.bin
-ESP_TGT_FLASH=0x00000 "$(SDK_PATH)/bin/boot_v1.6.bin" 0x1000 $(BIN_PATH)/upgrade/$(BIN_NAME).bin
-ESPTOOL_OPTS=--port $(ESPPORT) --baud $(ESPBAUD)
-EXTRA_CCFLAGS += -DOTA_FLASH_SIZE_K=$(OTA_FLASH_SIZE_K) -DOTA_TAGNAME="\"$(OTA_TAGNAME)\""
 
-ifndef PDIR # {
-GEN_IMAGES= eagle.app.v6.out
-GEN_BINS= eagle.app.v6.bin
-SPECIAL_MKTARGETS=$(APP_MKTARGETS)
-SUBDIRS=    \
-	user driver
+#Include options and target specific to the OUTPUT_TYPE
+include Makefile.$(OUTPUT_TYPE)
 
-endif # } PDIR
-
-LDDIR = $(SDK_PATH)/ld
-
-CCFLAGS += -Os -std=c99
-
-TARGET_LDFLAGS =		\
-	-nostdlib		\
-	-Wl,-EL \
-	--longcalls \
-	--text-section-literals
-
-ifeq ($(FLAVOR),debug)
-    TARGET_LDFLAGS += -ggdb -Og
+#Add all prefixes to paths
+LIBS		:= $(addprefix -l,$(LIBS))
+ifeq ("$(LD_SCRIPT_USR1)", "")
+LD_SCRIPT	:= $(addprefix -T$(SDK_BASE)/$(SDK_LDDIR)/,$(LD_SCRIPT))
+else
+LD_SCRIPT_USR1	:= $(addprefix -T$(SDK_BASE)/$(SDK_LDDIR)/,$(LD_SCRIPT_USR1))
+LD_SCRIPT_USR2	:= $(addprefix -T$(SDK_BASE)/$(SDK_LDDIR)/,$(LD_SCRIPT_USR2))
 endif
+INCDIR	:= $(addprefix -I,$(SRC_DIR))
+EXTRA_INCDIR	:= $(addprefix -I,$(EXTRA_INCDIR))
+MODULE_INCDIR	:= $(addsuffix /include,$(INCDIR))
 
-ifeq ($(FLAVOR),release)
-    TARGET_LDFLAGS += -ggdb -O2
-endif
+ESP_FLASH_SIZE_IX=$(call maplookup,$(ESP_SPI_FLASH_SIZE_K),512:0 1024:2 2048:5 4096:6)
+ESPTOOL_FREQ=$(call maplookup,$(ESP_FLASH_FREQ_DIV),0:40m 1:26m 2:20m 0xf:80m 15:80m)
+ESPTOOL_MODE=$(call maplookup,$(ESP_FLASH_MODE),0:qio 1:qout 2:dio 3:dout)
+ESPTOOL_SIZE=$(call maplookup,$(ESP_SPI_FLASH_SIZE_K),512:4m 256:2m 1024:8m 2048:16m 4096:32m)
 
-dummy: all
+ESPTOOL_OPTS=--port $(ESPPORT) --baud $(ESPBAUD)
+ESPTOOL_FLASHDEF=--flash_freq $(ESPTOOL_FREQ) --flash_mode $(ESPTOOL_MODE) --flash_size $(ESPTOOL_SIZE)
 
-libesphttpd/libesphttpd.a: libesphttpd/Makefile
-	make -C libesphttpd libesphttpd.a FREERTOS=yes
+vpath %.c $(SRC_DIR)
+vpath %.S $(SRC_DIR)
 
-libesphttpd/libwebpages-espfs.a: libesphttpd/Makefile
-	make -C libesphttpd libwebpages-espfs.a FREERTOS=yes
+define compile-objects
+$1/%.o: %.c
+	$(vecho) "CC $$<"
+	$(Q) $(CC) $(INCDIR) $(MODULE_INCDIR) $(EXTRA_INCDIR) $(SDK_INCDIR) $(CFLAGS)  -c $$< -o $$@
 
-flash: $(GEN_IMAGES) $(TARGET_OUT)
-	$(ESPTOOL) $(ESPTOOL_OPTS) write_flash $(ESPTOOL_FLASHDEF) $(ESP_TGT_FLASH)
+$1/%.o: %.S
+	$(vecho) "CC $$<"
+	$(Q) $(CC) $(INCDIR) $(MODULE_INCDIR) $(EXTRA_INCDIR) $(SDK_INCDIR) $(CFLAGS)  -c $$< -o $$@
+endef
 
-blankflash:
-	$(ESPTOOL) $(ESPTOOL_OPTS) write_flash $(ESPTOOL_FLASHDEF) $(ESP_TGT_BLANK)
+.PHONY: all checkdirs clean libesphttpd default-tgt
 
-COMPONENTS_eagle.app.v6 = \
-	user/libuser.a driver/libdriver_user.a
+all: checkdirs $(TARGET_OUT) $(FW_BASE)
 
-DEPENDS_eagle.app.v6 = \
-				$(LD_FILE) \
-				libesphttpd/libesphttpd.a \
-				libesphttpd/libwebpages-espfs.a
+libesphttpd/Makefile:
+	$(Q) echo "No libesphttpd submodule found. Using git to fetch it..."
+	$(Q) git submodule init
+	$(Q) git submodule update
 
+libesphttpd: libesphttpd/Makefile
+	$(Q) make -C libesphttpd USE_OPENSDK=$(USE_OPENSDK) SDK_BASE=$(SDK_BASE)
 
-SDKLIBS=minic gcc hal phy pp net80211 wpa crypto main freertos lwip driver mirom
-LINKFLAGS_eagle.app.v6 = \
-	-L$(SDK_PATH)/lib        \
-	-Wl,--gc-sections   \
-	-nostdlib	\
-    -T$(LD_FILE)   \
-	-Wl,--no-check-sections	\
-    -u call_user_start	\
-	-Wl,-static						\
-	-Wl,--start-group					\
-	$(addprefix -l,$(SDKLIBS)) \
-	-L./libesphttpd \
-	-lesphttpd \
-	-lwebpages-espfs \
-	$(DEP_LIBS_eagle.app.v6)					\
-	-Wl,--end-group \
-	-Wl,-Map=mapfile.txt
+$(APP_AR): libesphttpd $(OBJ)
+	$(vecho) "AR $@"
+	$(Q) $(AR) cru $@ $(OBJ)
 
+checkdirs: $(BUILD_DIR)
 
+$(BUILD_DIR):
+	$(Q) mkdir -p $@
 
-#############################################################
-# Configuration i.e. compile options etc.
-# Target specific stuff (defines etc.) goes in here!
-# Generally values applying to a tree are captured in the
-#   makefile at its root level - these are then overridden
-#   for a subtree within the makefile rooted therein
-#
+clean:
+	$(Q) make -C libesphttpd clean
+	$(Q) rm -f $(APP_AR)
+	$(Q) rm -f $(TARGET_OUT)
+	$(Q) find $(BUILD_BASE) -type f | xargs rm -f
+	$(Q) rm -rf $(FW_BASE)
+	
 
-#UNIVERSAL_TARGET_DEFINES =		\
-
-# Other potential configuration flags include:
-#	-DTXRX_TXBUF_DEBUG
-#	-DTXRX_RXBUF_DEBUG
-#	-DWLAN_CONFIG_CCX
-CONFIGURATION_DEFINES =	-DICACHE_FLASH -DFREERTOS
-
-DEFINES +=				\
-	$(UNIVERSAL_TARGET_DEFINES)	\
-	$(CONFIGURATION_DEFINES)
-
-DDEFINES +=				\
-	$(UNIVERSAL_TARGET_DEFINES)	\
-	$(CONFIGURATION_DEFINES)
-
-
-#############################################################
-# Recursion Magic - Don't touch this!!
-#
-# Each subtree potentially has an include directory
-#   corresponding to the common APIs applicable to modules
-#   rooted at that subtree. Accordingly, the INCLUDE PATH
-#   of a module can only contain the include directories up
-#   its parent path, and not its siblings
-#
-# Required for each makefile to inherit from the parent
-#
-
-INCLUDES := $(INCLUDES) -I $(PDIR)include -I $(PDIR)libesphttpd/include -I $(PDIR)libesphttpd/espfs
-sinclude $(SDK_PATH)/Makefile
-
-.PHONY: FORCE
-FORCE:
-
+$(foreach bdir,$(BUILD_DIR),$(eval $(call compile-objects,$(bdir))))

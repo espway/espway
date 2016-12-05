@@ -20,6 +20,7 @@
 #include "i2c_master.h"
 #include "mpu6050.h"
 #include <esp8266.h>
+#include "ets_sys.h"
 
 static int mpuWriteRegister(const uint8_t addr,
     const uint8_t reg, const uint8_t value, const bool stop) {
@@ -60,7 +61,14 @@ int mpuReadRawData(const uint8_t addr, int16_t * const data) {
     ret = ret && i2c_master_receiveFrom(addr);
 
     if (ret) {
-        for (int8_t i = 0; i < 6; i++) {
+        for (int8_t i = 0; i < 3; i++) {
+            *(myData + 1) = i2c_master_readNextByte(true);
+            *myData = i2c_master_readNextByte(true);
+            myData += 2;
+        }
+        i2c_master_readNextByte(true);
+        i2c_master_readNextByte(true);
+        for (int8_t i = 0; i < 2; i++) {
             *(myData + 1) = i2c_master_readNextByte(true);
             *myData = i2c_master_readNextByte(true);
             myData += 2;

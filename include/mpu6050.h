@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 #include "MadgwickAHRS.h"
 
 // Register addresses and bits as per the MPU-6050 datasheet
