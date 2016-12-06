@@ -47,33 +47,21 @@ mpuconfig gConfig = {
     .beta = 0.05f
 };
 quaternion gQuat = { 1.0f, 0.0f, 0.0f, 0.0f };
+int16_t buf[6];
 int nSamples = 0;
 unsigned long lastTime = 0;
-const unsigned long gQuatUpdateInterval = 100000;
-unsigned long gLastQuatUpdate = 0;
 
 os_event_t gTaskQueue[QUEUE_LEN];
 
 void ICACHE_FLASH_ATTR compute(os_event_t *e) {
-    int16_t buf[6];
     mpuReadIntStatus(MPU_ADDR);
     if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
     mpuUpdateQuaternion(&gConfig, buf, &gQuat);
+    float pitch = pitchAngle(&gQuat);
 
-    /* os_printf("%d, %d\n", (int)(18000.0f / M_PI * pitch), (int)(18000.0f / M_PI * roll)); */
-    float scale = 1000.0f;
-    int16_t qbuf[] = {
-        gQuat.q0 * scale,
-        gQuat.q1 * scale,
-        gQuat.q2 * scale,
-        gQuat.q3 * scale
-    };
-
+    uint32_t heap = system_get_free_heap_size();
+    os_printf("%d, %u\n", (int)(18000.0f / M_PI * pitch), heap);
     unsigned long time = system_get_time();
-    if (time - gLastQuatUpdate > gQuatUpdateInterval) {
-        cgiWebsockBroadcast("/ws", (char *)qbuf, 8, WEBSOCK_FLAG_BIN);
-        gLastQuatUpdate = time;
-    }
 
     nSamples += 1;
     if (nSamples == 1000) {
@@ -93,7 +81,7 @@ void ICACHE_FLASH_ATTR initAP(void) {
     os_memcpy(conf.ssid, ssid, strlen(ssid));
     conf.ssid_len = 0;
     conf.beacon_interval = 100;
-    conf.max_connection = 2;
+    conf.max_connection = 4;
     conf.authmode = AUTH_OPEN;
 
     wifi_softap_set_config(&conf);
@@ -101,7 +89,14 @@ void ICACHE_FLASH_ATTR initAP(void) {
 }
 
 void ICACHE_FLASH_ATTR socketReceive(Websock *ws, char *data, int len, int flags) {
-    return;
+    float scale = 1000.0f;
+    int16_t qbuf[] = {
+        gQuat.q0 * scale,
+        gQuat.q1 * scale,
+        gQuat.q2 * scale,
+        gQuat.q3 * scale
+    };
+    cgiWebsocketSend(ws, (char *)qbuf, 8, WEBSOCK_FLAG_BIN);
 }
 
 void ICACHE_FLASH_ATTR socketConnect(Websock *ws) {
