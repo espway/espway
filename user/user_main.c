@@ -16,7 +16,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <esp8266.h>
+#include "user_interface.h"
+#include "osapi.h"
+#include "espmissingincludes.h"
 #include "driver/uart.h"
 #include "gpio.h"
 

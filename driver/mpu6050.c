@@ -17,10 +17,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "ets_sys.h"
+
 #include "i2c_master.h"
 #include "mpu6050.h"
-#include <esp8266.h>
-#include "ets_sys.h"
 
 static int mpuWriteRegister(const uint8_t addr,
     const uint8_t reg, const uint8_t value, const bool stop) {
