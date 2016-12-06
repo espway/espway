@@ -24,6 +24,7 @@
 
 #include "i2c_master.h"
 #include "mpu6050.h"
+#include "robotd.h"
 
 #define QUEUE_LEN 1
 
@@ -82,6 +83,7 @@ void ICACHE_FLASH_ATTR user_init(void) {
     UART_SetBaudrate(UART0, 115200);
 
     initAP();
+    robotd_init(80);
 
     if (mpuSetup(MPU_ADDR, &gConfig) != 0) {
         os_printf("MPU config failed!\n");

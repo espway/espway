@@ -29,7 +29,7 @@ ESP_FLASHDEF	?= --flash_freq 80m --flash_mode qio --flash_size 32m
 TARGET		= espway
 
 # which modules (subdirectories) of the project to include in compiling
-MODULES		= driver user
+MODULES		= driver user lib
 EXTRA_INCDIR    = include $(SDK_BASE)/include $(SDK_BASE)/driver_lib/include
 
 # libraries used in this project, mainly provided by the SDK
