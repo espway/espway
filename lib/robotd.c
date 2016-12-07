@@ -11,7 +11,7 @@
 
 #include "robotd.h"
 
-#define RESPONSE_BUF_SIZE 1460  // MUST be a multiple of 4
+#define RESPONSE_BUF_SIZE 1024  // MUST be a multiple of 4
 #define URI_MAX_LENGTH 128
 
 LOCAL struct espconn esp_conn;
@@ -141,7 +141,6 @@ tcp_server_recv_cb(void *arg, char *pusrdata, unsigned short length)
     //received some data from tcp connection
 
     struct espconn *pespconn = arg;
-    os_printf("tcp recv : %s \r\n", pusrdata);
 
     parse_http_request(pusrdata, length, &gReq);
 
@@ -199,7 +198,6 @@ LOCAL void ICACHE_FLASH_ATTR
 tcp_server_listen(void *arg)
 {
     struct espconn *pesp_conn = arg;
-    os_printf("tcp_server_listen !!! \r\n");
 
     espconn_regist_recvcb(pesp_conn, tcp_server_recv_cb);
     espconn_regist_reconcb(pesp_conn, tcp_server_recon_cb);
