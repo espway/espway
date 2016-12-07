@@ -7,7 +7,9 @@
 #include "espconn.h"
 #include "espmissingincludes.h"
 
-#define RESPONSE_BUF_SIZE 1024
+#include "robotd.h"
+
+#define RESPONSE_BUF_SIZE 1460
 #define URI_MAX_LENGTH 128
 LOCAL struct espconn esp_conn;
 LOCAL esp_tcp esptcp;
@@ -63,9 +65,9 @@ tcp_server_sent_cb(void *arg)
     os_printf("tcp sent cb \r\n");
 }
 
-static const char TEST_OK_RESPONSE[] ICACHE_RODATA_ATTR = "HTTP/1.1 200 OK\r\nContent-Length: 11\r\nContent-Encoding: text/plain\r\nConnection: close\r\n\r\nHello, ESP!";
-static const char NOT_FOUND_RESPONSE[] ICACHE_RODATA_ATTR = "HTTP/1.1 404 Not Found\r\nContent-Length: 14\r\nContent-Encoding: text/plain\r\nConnection: close\r\n\r\nFile not found";
-static const char NOT_IMPLEMENTED_RESPONSE[] ICACHE_RODATA_ATTR = "HTTP/1.1 501 Not Implemented\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+static const char TEST_OK_RESPONSE[] ICACHE_RODATA_ATTR = "HTTP/1.1 200 OK\r\nContent-Length: 11\r\nContent-Type: text/plain; charset=us-ascii\r\nConnection: close\r\n\r\nHello, ESP!";
+static const char NOT_FOUND_RESPONSE[] ICACHE_RODATA_ATTR = "HTTP/1.1 404 Not Found\r\nContent-Length: 14\r\nContent-Type: text/plain; charset=us-ascii\r\nConnection: close\r\n\r\nFile not found";
+static const char NOT_IMPLEMENTED_RESPONSE[] ICACHE_RODATA_ATTR = "HTTP/1.1 501 Not Implemented\r\nContent-Length: 23\r\nContent-Type: text/plain; charset=us-ascii\r\nConnection: close\r\n\r\nThis is not implemented";
 
 /******************************************************************************
  * FunctionName : tcp_server_recv_cb
@@ -88,20 +90,17 @@ tcp_server_recv_cb(void *arg, char *pusrdata, unsigned short length)
    if (gReq.type == REQ_GET_FILE) {
        if (os_strcmp(gReq.uri, "/") == 0) {
            response = TEST_OK_RESPONSE;
-           res_len = sizeof(TEST_OK_RESPONSE);
-           os_printf("Sent test content\n");
+           os_printf("Sent test content, size %u\n", res_len);
        } else {
            response = NOT_FOUND_RESPONSE;
-           res_len = sizeof(NOT_FOUND_RESPONSE);
-           os_printf("Sent 404 not found\n");
+           os_printf("Sent 404 not found, size %u\n", res_len);
        }
    } else {
        response = NOT_IMPLEMENTED_RESPONSE;
-       res_len = sizeof(NOT_IMPLEMENTED_RESPONSE);
    }
 
-   os_memcpy(response_buf, response, res_len);
-   espconn_send(pespconn, response_buf, res_len);
+   res_len = GET_ALIGN_STRING_LEN(response);
+   espconn_send(pespconn, (char *)response, res_len);
 }
 
 /******************************************************************************
