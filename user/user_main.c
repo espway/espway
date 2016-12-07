@@ -93,8 +93,8 @@ void ICACHE_FLASH_ATTR user_init(void) {
 
     gpio_output_set(0, BIT12|BIT13|BIT14|BIT15, BIT12|BIT13|BIT14|BIT15, 0);
 
-    /* ETS_GPIO_INTR_ATTACH(mpuInterrupt, NULL); */
-    /* gpio_pin_intr_state_set(4, GPIO_PIN_INTR_POSEDGE); */
+    ETS_GPIO_INTR_ATTACH(mpuInterrupt, NULL);
+    gpio_pin_intr_state_set(4, GPIO_PIN_INTR_POSEDGE);
     mpuReadIntStatus(MPU_ADDR);
 
     ETS_GPIO_INTR_ENABLE();
