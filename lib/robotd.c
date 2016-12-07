@@ -23,13 +23,10 @@ typedef struct {
 
 LOCAL parsed_request gReq;
 
-char response_buf[RESPONSE_BUF_SIZE];
-
-// FIXME send character encoding in header
+static char response_buf[RESPONSE_BUF_SIZE];
 
 void ICACHE_FLASH_ATTR parse_http_request(char *data, unsigned short length,
     parsed_request *pReq) {
-    // FIXME prefer os methods over strtok
     char *method = strtok(data, " ");
     if (os_strcmp(method, "GET") == 0) {
         os_printf("got a GET request\n");
@@ -161,5 +158,9 @@ robotd_init(uint32_t port)
     sint8 ret = espconn_accept(&esp_conn);
 
     os_printf("espconn_accept [%d] !!! \r\n", ret);
+}
+
+void ICACHE_FLASH_ATTR
+robotd_deinit() {
 }
 
