@@ -53,23 +53,6 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
     float pitch = pitchAngle(&gQuat);
 }
 
-void ICACHE_FLASH_ATTR initAP(void) {
-    char *ssid = "ESPway";
-    struct softap_config conf;
-    wifi_softap_get_config(&conf);
-
-    os_memset(conf.ssid, 0, 32);
-    os_memset(conf.password, 0, 64);
-    os_memcpy(conf.ssid, ssid, strlen(ssid));
-    conf.ssid_len = 0;
-    conf.beacon_interval = 100;
-    conf.max_connection = 4;
-    conf.authmode = AUTH_OPEN;
-
-    wifi_softap_set_config(&conf);
-    wifi_set_opmode(SOFTAP_MODE);
-}
-
 void mpuInterrupt(uint32_t mask, void *args) {
     uint32_t gpio_status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
     GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, gpio_status);
@@ -82,7 +65,7 @@ void ICACHE_FLASH_ATTR user_init(void) {
     i2c_master_gpio_init();
     UART_SetBaudrate(UART0, 115200);
 
-    initAP();
+    robotd_init_ap("ESPway");
     robotd_init(80);
 
     if (mpuSetup(MPU_ADDR, &gConfig) != 0) {

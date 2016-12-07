@@ -9,8 +9,9 @@
 
 #include "robotd.h"
 
-#define RESPONSE_BUF_SIZE 1460
+#define RESPONSE_BUF_SIZE 1460  // MUST be a multiple of 4
 #define URI_MAX_LENGTH 128
+
 LOCAL struct espconn esp_conn;
 LOCAL esp_tcp esptcp;
 
@@ -158,6 +159,23 @@ robotd_init(uint32_t port)
     sint8 ret = espconn_accept(&esp_conn);
 
     os_printf("espconn_accept [%d] !!! \r\n", ret);
+}
+
+void ICACHE_FLASH_ATTR
+robotd_init_ap(char *ssid) {
+    struct softap_config conf;
+    wifi_softap_get_config(&conf);
+
+    os_memset(conf.ssid, 0, 32);
+    os_memset(conf.password, 0, 64);
+    os_memcpy(conf.ssid, ssid, strlen(ssid));
+    conf.ssid_len = 0;
+    conf.beacon_interval = 100;
+    conf.max_connection = 1;
+    conf.authmode = AUTH_OPEN;
+
+    wifi_softap_set_config(&conf);
+    wifi_set_opmode(SOFTAP_MODE);
 }
 
 void ICACHE_FLASH_ATTR
