@@ -1,0 +1,12 @@
+#!/bin/sh
+
+printf "static const char $1[] ICACHE_RODATA_ATTR ="
+
+IFS='
+'
+for line in $(cat $2); do
+    printf '\n\"%s\\n\"' $line
+done
+
+printf ";"
+

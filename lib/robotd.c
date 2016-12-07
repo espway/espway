@@ -7,6 +7,8 @@
 #include "espconn.h"
 #include "espmissingincludes.h"
 
+#include "indexhtml.inc"
+
 #include "robotd.h"
 
 #define RESPONSE_BUF_SIZE 1460  // MUST be a multiple of 4
@@ -22,23 +24,71 @@ typedef struct {
     char uri[URI_MAX_LENGTH];
 } parsed_request;
 
+typedef struct {
+    const char *data;
+    const char *mimetype;
+    size_t data_len;
+} rodata_file;
+
 LOCAL parsed_request gReq;
 
 static char response_buf[RESPONSE_BUF_SIZE];
+static const char *send_file_pointer = NULL;
+static size_t to_be_sent = 0;
+
+static const char RESPONSE_OK[] = "200 OK",
+                  NOT_FOUND[] = "404 Not Found",
+                  NOT_IMPLEMENTED[] = "501 Not Implemented";
+static const char MIME_TEXT_PLAIN[] = "text/plain; charset=us-ascii";
+static const char MIME_TEXT_HTML[] = "text/html; charset=us-ascii";
+
+static const char HEADER_FORMAT[] =
+    "HTTP/1.1 %s\r\n"
+    "Content-Length: %u\r\n"
+    "Content-Type: %s\r\n"
+    "Connection: close\r\n\r\n";
+
+static const char TEST_FILE_DATA[] ICACHE_RODATA_ATTR =
+    "Hello, World!";
+static const rodata_file TEST_FILE =
+    { INDEX_HTML, MIME_TEXT_HTML, sizeof(INDEX_HTML) - 1 };
+static const rodata_file NOT_IMPLEMENTED_FILE =
+    { NOT_IMPLEMENTED, MIME_TEXT_PLAIN, sizeof(NOT_IMPLEMENTED) - 1 };
+static const rodata_file NOT_FOUND_FILE =
+    { NOT_FOUND, MIME_TEXT_PLAIN, sizeof(NOT_FOUND) - 1 };
+
+void ICACHE_FLASH_ATTR send_header(struct espconn *pespconn,
+    const char *res_code, const char *mimetype, size_t data_len) {
+    os_sprintf(response_buf, HEADER_FORMAT, res_code, data_len, mimetype);
+    os_printf(response_buf);
+    espconn_send(pespconn, response_buf, os_strlen(response_buf));
+}
+
+void ICACHE_FLASH_ATTR send_file(struct espconn *pespconn,
+    const char *res_code, const rodata_file *file) {
+    to_be_sent = file->data_len;
+    send_file_pointer = file->data;
+    os_printf("Going to send %u bytes of data\n", file->data_len);
+    send_header(pespconn, res_code, file->mimetype, file->data_len);
+}
+
+void ICACHE_FLASH_ATTR send_404(struct espconn *pespconn) {
+    send_file(pespconn, NOT_FOUND, &NOT_FOUND_FILE);
+}
+
+void ICACHE_FLASH_ATTR send_501(struct espconn *pespconn) {
+    send_file(pespconn, NOT_IMPLEMENTED, &NOT_IMPLEMENTED_FILE);
+}
 
 void ICACHE_FLASH_ATTR parse_http_request(char *data, unsigned short length,
     parsed_request *pReq) {
     char *method = strtok(data, " ");
     if (os_strcmp(method, "GET") == 0) {
-        os_printf("got a GET request\n");
         char *uri = strtok(NULL, " ");
-        os_printf("URI: %s\n", uri);
         char *version = strtok(NULL, "\r");
-        os_printf("Protocol version: %s\n", version);
 
         if (os_strcmp(version, "HTTP/1.1") == 0 &&
             os_strlen(uri) < URI_MAX_LENGTH) {
-            os_printf("Can handle the request\n");
             pReq->type = REQ_GET_FILE;
             strncpy(pReq->uri, uri, URI_MAX_LENGTH);
             return;
@@ -46,7 +96,6 @@ void ICACHE_FLASH_ATTR parse_http_request(char *data, unsigned short length,
     }
 
     pReq->type = REQ_IGNORE;
-    os_printf("got ignored request\n");
 }
 
 /******************************************************************************
@@ -59,13 +108,26 @@ LOCAL void ICACHE_FLASH_ATTR
 tcp_server_sent_cb(void *arg)
 {
    //data sent successfully
+   struct espconn *pespconn = (struct espconn *)arg;
 
     os_printf("tcp sent cb \r\n");
-}
 
-static const char TEST_OK_RESPONSE[] ICACHE_RODATA_ATTR = "HTTP/1.1 200 OK\r\nContent-Length: 11\r\nContent-Type: text/plain; charset=us-ascii\r\nConnection: close\r\n\r\nHello, ESP!";
-static const char NOT_FOUND_RESPONSE[] ICACHE_RODATA_ATTR = "HTTP/1.1 404 Not Found\r\nContent-Length: 14\r\nContent-Type: text/plain; charset=us-ascii\r\nConnection: close\r\n\r\nFile not found";
-static const char NOT_IMPLEMENTED_RESPONSE[] ICACHE_RODATA_ATTR = "HTTP/1.1 501 Not Implemented\r\nContent-Length: 23\r\nContent-Type: text/plain; charset=us-ascii\r\nConnection: close\r\n\r\nThis is not implemented";
+    if (send_file_pointer != NULL && to_be_sent != 0) {
+        os_printf("%u bytes of data to be sent\n", to_be_sent);
+
+        size_t data_len = to_be_sent > RESPONSE_BUF_SIZE ? RESPONSE_BUF_SIZE :
+            to_be_sent;
+        os_memcpy(response_buf, send_file_pointer, GET_ALIGNED_SIZE(data_len));
+        espconn_send(pespconn, response_buf, data_len);
+
+        to_be_sent -= data_len;
+        send_file_pointer += data_len;
+
+        if (to_be_sent == 0) {
+            send_file_pointer = NULL;
+        }
+    }
+}
 
 /******************************************************************************
  * FunctionName : tcp_server_recv_cb
@@ -76,29 +138,27 @@ static const char NOT_IMPLEMENTED_RESPONSE[] ICACHE_RODATA_ATTR = "HTTP/1.1 501 
 LOCAL void ICACHE_FLASH_ATTR
 tcp_server_recv_cb(void *arg, char *pusrdata, unsigned short length)
 {
-   //received some data from tcp connection
-   
-   struct espconn *pespconn = arg;
-   os_printf("tcp recv : %s \r\n", pusrdata);
+    //received some data from tcp connection
 
-   parse_http_request(pusrdata, length, &gReq);
+    struct espconn *pespconn = arg;
+    os_printf("tcp recv : %s \r\n", pusrdata);
 
-   const char *response;
-   size_t res_len = 0;
-   if (gReq.type == REQ_GET_FILE) {
-       if (os_strcmp(gReq.uri, "/") == 0) {
-           response = TEST_OK_RESPONSE;
-           os_printf("Sent test content, size %u\n", res_len);
-       } else {
-           response = NOT_FOUND_RESPONSE;
-           os_printf("Sent 404 not found, size %u\n", res_len);
-       }
-   } else {
-       response = NOT_IMPLEMENTED_RESPONSE;
-   }
+    parse_http_request(pusrdata, length, &gReq);
 
-   res_len = GET_ALIGN_STRING_LEN(response);
-   espconn_send(pespconn, (char *)response, res_len);
+    const char *response;
+    size_t res_len = 0;
+    if (gReq.type == REQ_GET_FILE) {
+        if (os_strcmp(gReq.uri, "/") == 0) {
+            send_file(pespconn, RESPONSE_OK, &TEST_FILE);
+            os_printf("Sent test content\n", res_len);
+        } else {
+            send_404(pespconn);
+            os_printf("Sent 404\n", res_len);
+        }
+    } else {
+        send_501(pespconn);
+        os_printf("Sent 501\n", res_len);
+    }
 }
 
 /******************************************************************************
