@@ -24,8 +24,8 @@
 #define WS_OPCODE_PING 0x09
 #define WS_OPCODE_PONG 0x0A
 
-LOCAL struct espconn esp_conn;
-LOCAL esp_tcp esptcp;
+static struct espconn esp_conn;
+static esp_tcp esptcp;
 
 typedef enum { REQ_GET_FILE, REQ_WS_UPGRADE, REQ_IGNORE } req_type;
 typedef enum { CLIENT_NONE, CLIENT_FILE, CLIENT_WS } client_type;
@@ -50,7 +50,7 @@ typedef struct {
     const char *data_pointer;
 } robotd_client;
 
-LOCAL parsed_request gReq;
+static parsed_request gReq;
 
 static char tmp_buf[TMP_BUF_SIZE];
 static robotd_client clients[MAX_NUM_CLIENTS];
@@ -75,7 +75,7 @@ static const char WEBSOCKET_MAGIC_STRING[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B
 
 static SHA1_CTX sha1_ctx;
 
-LOCAL void ICACHE_FLASH_ATTR
+static void ICACHE_FLASH_ATTR
 robotd_send_header(struct espconn *pespconn,
     const char *res_code, const char *mimetype, size_t data_len,
     const char *data) {
@@ -87,25 +87,25 @@ robotd_send_header(struct espconn *pespconn,
     espconn_send(pespconn, tmp_buf, os_strlen(tmp_buf));
 }
 
-LOCAL void ICACHE_FLASH_ATTR
+static void ICACHE_FLASH_ATTR
 send_404(struct espconn *pespconn) {
     robotd_send_header(pespconn, NOT_FOUND, MIME_TEXT_PLAIN,
         sizeof(NOT_FOUND - 1), NOT_FOUND);
 }
 
-LOCAL void ICACHE_FLASH_ATTR
+static void ICACHE_FLASH_ATTR
 send_501(struct espconn *pespconn) {
     robotd_send_header(pespconn, NOT_IMPLEMENTED, MIME_TEXT_PLAIN,
         sizeof(NOT_IMPLEMENTED - 1), NOT_IMPLEMENTED);
 }
 
-LOCAL void ICACHE_FLASH_ATTR
+static void ICACHE_FLASH_ATTR
 send_503(struct espconn *pespconn) {
     robotd_send_header(pespconn, SERVICE_UNAVAILABLE, MIME_TEXT_PLAIN,
         sizeof(SERVICE_UNAVAILABLE - 1), SERVICE_UNAVAILABLE);
 }
 
-LOCAL robotd_client * ICACHE_FLASH_ATTR
+static robotd_client * ICACHE_FLASH_ATTR
 robotd_insert_client(struct espconn *pespconn) {
     robotd_client *pret = NULL;
     for (size_t i = 0; i < MAX_NUM_CLIENTS; ++i) {
@@ -122,7 +122,7 @@ robotd_insert_client(struct espconn *pespconn) {
     return pret;
 }
 
-LOCAL void ICACHE_FLASH_ATTR
+static void ICACHE_FLASH_ATTR
 robotd_send_file(struct espconn *pespconn,
     const char *res_code, const rodata_file *file) {
     robotd_client *pclient = robotd_insert_client(pespconn);
@@ -138,7 +138,7 @@ robotd_send_file(struct espconn *pespconn,
     robotd_send_header(pespconn, res_code, file->mimetype, file->data_len, NULL);
 }
 
-LOCAL robotd_client * ICACHE_FLASH_ATTR
+static robotd_client * ICACHE_FLASH_ATTR
 robotd_find_client(struct espconn *pespconn) {
     robotd_client *ret_client = NULL;
     robotd_client *curr_client;
@@ -158,7 +158,7 @@ robotd_find_client(struct espconn *pespconn) {
     return ret_client;
 }
 
-LOCAL void ICACHE_FLASH_ATTR robotd_delete_client(struct espconn *pespconn) {
+static void ICACHE_FLASH_ATTR robotd_delete_client(struct espconn *pespconn) {
     os_printf("deleting client...\n");
     robotd_client *pclient = robotd_find_client(pespconn);
     if (pclient != NULL) {
@@ -166,7 +166,7 @@ LOCAL void ICACHE_FLASH_ATTR robotd_delete_client(struct espconn *pespconn) {
     }
 }
 
-LOCAL void ICACHE_FLASH_ATTR
+static void ICACHE_FLASH_ATTR
 robotd_do_websocket_handshake(struct espconn *pespconn, const char *ws_key) {
     os_memcpy(tmp_buf, ws_key, 24);
     os_memcpy(&tmp_buf[24], WEBSOCKET_MAGIC_STRING, 36);
@@ -191,7 +191,7 @@ robotd_do_websocket_handshake(struct espconn *pespconn, const char *ws_key) {
     espconn_send(pespconn, tmp_buf, os_strlen(tmp_buf));
 }
 
-LOCAL void ICACHE_FLASH_ATTR robotd_parse_http_request(char *data,
+static void ICACHE_FLASH_ATTR robotd_parse_http_request(char *data,
     unsigned short length, parsed_request *pReq) {
     char *method = strtok(data, " ");
     if (os_strcmp(method, "GET") == 0) {
@@ -240,7 +240,7 @@ LOCAL void ICACHE_FLASH_ATTR robotd_parse_http_request(char *data,
     pReq->type = REQ_IGNORE;
 }
 
-LOCAL void ICACHE_FLASH_ATTR robotd_sent_cb(void *arg) {
+static void ICACHE_FLASH_ATTR robotd_sent_cb(void *arg) {
     //data sent successfully
     struct espconn *pespconn = (struct espconn *)arg;
 
@@ -265,7 +265,7 @@ LOCAL void ICACHE_FLASH_ATTR robotd_sent_cb(void *arg) {
     }
 }
 
-LOCAL void ICACHE_FLASH_ATTR
+static void ICACHE_FLASH_ATTR
 robotd_websocket_send(robotd_client *pclient, uint8_t opcode,
     char *data, size_t len) {
     uint8_t *tmp = (uint8_t *)tmp_buf;
@@ -288,7 +288,7 @@ robotd_websocket_send(robotd_client *pclient, uint8_t opcode,
     espconn_send(pclient->conn, tmp_buf, offset + len);
 }
 
-LOCAL void ICACHE_FLASH_ATTR
+static void ICACHE_FLASH_ATTR
 robotd_handle_websocket_frame(robotd_client *pclient, char *data,
     unsigned short length) {
     if (length < 4) return;
@@ -321,7 +321,7 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
         uint8_t *pmask = pdata;
         pdata += 4;
         int imod4 = 0;
-        for (size_t i = 0; i < len; i++) {
+        for (size_t i = 0; i < len; ++i) {
             pdata[i] ^= pmask[imod4];
             if (++imod4 == 4) {
                 imod4 = 0;
@@ -333,18 +333,22 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
         pdata[len] = '\0';
         os_printf("Received text: %s\n", pdata);
     } else if (opcode == WS_OPCODE_BIN) {
-        os_printf("Received binary data:\n");
-        for (size_t i = 0; i < len; i++) {
+        os_printf("Received binary data: ");
+        for (size_t i = 0; i < len; ++i) {
             os_printf("0x%x ", pdata[i]);
         }
         os_printf("\n");
     } else if (opcode == WS_OPCODE_PING) {
         os_printf("Received ping, sent pong\n");
-        robotd_websock_send(pclient, WS_OPCODE_PONG, pdata, len);
+        robotd_websocket_send(pclient, WS_OPCODE_PONG, pdata, len);
+    } else if (opcode == WS_OPCODE_PONG) {
+        os_printf("Received pong\n");
+    } else if (opcode == WS_OPCODE_CONTINUATION) {
+        os_printf("Received continuation\n");
     }
 }
 
-LOCAL void ICACHE_FLASH_ATTR
+static void ICACHE_FLASH_ATTR
 robotd_recv_cb(void *arg, char *pusrdata, unsigned short length)
 {
     struct espconn *pespconn = arg;
@@ -374,19 +378,19 @@ robotd_recv_cb(void *arg, char *pusrdata, unsigned short length)
     }
 }
 
-LOCAL void ICACHE_FLASH_ATTR
+static void ICACHE_FLASH_ATTR
 robotd_discon_cb(void *arg)
 {
     robotd_delete_client((struct espconn *)arg);
 }
 
-LOCAL void ICACHE_FLASH_ATTR
+static void ICACHE_FLASH_ATTR
 robotd_recon_cb(void *arg, sint8 err)
 {
     robotd_delete_client((struct espconn *)arg);
 }
 
-LOCAL void ICACHE_FLASH_ATTR
+static void ICACHE_FLASH_ATTR
 robotd_listen(void *arg)
 {
     struct espconn *pesp_conn = arg;
