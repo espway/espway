@@ -265,9 +265,20 @@ static void ICACHE_FLASH_ATTR robotd_sent_cb(void *arg) {
     }
 }
 
+static struct espconn * ICACHE_FLASH_ATTR
+robotd_find_espconn(robotd_client *pclient) {
+    struct espconn *conn = NULL;
+
+
+    return conn;
+}
+
 static void ICACHE_FLASH_ATTR
 robotd_websocket_send(robotd_client *pclient, uint8_t opcode,
     char *data, size_t len) {
+    struct espconn *pespconn = robotd_find_espconn(pclient);
+    if (pespconn == NULL) return;
+
     uint8_t *tmp = (uint8_t *)tmp_buf;
     tmp[0] = opcode & 0x0f;
     tmp[0] |= 0x80;
@@ -285,7 +296,7 @@ robotd_websocket_send(robotd_client *pclient, uint8_t opcode,
     }
 
     os_memcpy(tmp_buf, data, offset + len);
-    espconn_send(pclient->conn, tmp_buf, offset + len);
+    espconn_send(pespconn, tmp_buf, offset + len);
 }
 
 static void ICACHE_FLASH_ATTR
@@ -415,6 +426,7 @@ robotd_init(uint32_t port)
     espconn_regist_connectcb(&esp_conn, robotd_listen);
 
     sint8 ret = espconn_accept(&esp_conn);
+    espconn_tcp_set_max_con_allow(&esp_conn, MAX_NUM_CLIENTS);
 }
 
 void ICACHE_FLASH_ATTR
