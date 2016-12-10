@@ -42,6 +42,7 @@ typedef struct {
 } rodata_file;
 
 typedef struct {
+    struct espconn *conn;
     client_type type;
     uint8_t ip[4];
     int port;
@@ -111,6 +112,7 @@ robotd_insert_client(struct espconn *pespconn) {
         if (clients[i].type == CLIENT_NONE) {
             os_printf("inserted client at %u\n", i);
             pret = &clients[i];
+            pret->conn = pespconn;
             pret->port = pespconn->proto.tcp->remote_port;
             os_memcpy(&pret->ip, &pespconn->proto.tcp->remote_ip, 4);
             break;
@@ -264,6 +266,29 @@ LOCAL void ICACHE_FLASH_ATTR robotd_sent_cb(void *arg) {
 }
 
 LOCAL void ICACHE_FLASH_ATTR
+robotd_websocket_send(robotd_client *pclient, uint8_t opcode,
+    char *data, size_t len) {
+    uint8_t *tmp = (uint8_t *)tmp_buf;
+    tmp[0] = opcode & 0x0f;
+    tmp[0] |= 0x80;
+    size_t offset = 2;
+    if (len > 125) {
+        if (len > UINT16_MAX) {
+            os_printf("Websocket: too long data buffer\n");
+        }
+        tmp[1] = 126;
+        tmp[2] = len && 0xff;
+        tmp[3] = (len && 0xff00) >> 8;
+        offset = 4;
+    } else {
+        tmp_buf[1] = len;
+    }
+
+    os_memcpy(tmp_buf, data, offset + len);
+    espconn_send(pclient->conn, tmp_buf, offset + len);
+}
+
+LOCAL void ICACHE_FLASH_ATTR
 robotd_handle_websocket_frame(robotd_client *pclient, char *data,
     unsigned short length) {
     if (length < 4) return;
@@ -297,7 +322,7 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
         pdata += 4;
         int imod4 = 0;
         for (size_t i = 0; i < len; i++) {
-            tmp_buf[i] = pdata[i] ^ pmask[imod4];
+            pdata[i] ^= pmask[imod4];
             if (++imod4 == 4) {
                 imod4 = 0;
             }
@@ -305,17 +330,17 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
     }
 
     if (opcode == WS_OPCODE_TEXT) {
-        tmp_buf[len] = '\0';
-        os_printf("Received text: %s\n", tmp_buf);
+        pdata[len] = '\0';
+        os_printf("Received text: %s\n", pdata);
     } else if (opcode == WS_OPCODE_BIN) {
         os_printf("Received binary data:\n");
         for (size_t i = 0; i < len; i++) {
-            os_printf("0x%x ", tmp_buf[i]);
+            os_printf("0x%x ", pdata[i]);
         }
         os_printf("\n");
     } else if (opcode == WS_OPCODE_PING) {
-        // TODO pong back
-        os_printf("Received ping\n");
+        os_printf("Received ping, sent pong\n");
+        robotd_websock_send(pclient, WS_OPCODE_PONG, pdata, len);
     }
 }
 
@@ -352,14 +377,12 @@ robotd_recv_cb(void *arg, char *pusrdata, unsigned short length)
 LOCAL void ICACHE_FLASH_ATTR
 robotd_discon_cb(void *arg)
 {
-    //tcp disconnect successfully
     robotd_delete_client((struct espconn *)arg);
 }
 
 LOCAL void ICACHE_FLASH_ATTR
 robotd_recon_cb(void *arg, sint8 err)
 {
-    //error occured , tcp connection broke.
     robotd_delete_client((struct espconn *)arg);
 }
 
