@@ -185,6 +185,7 @@ robotd_do_websocket_handshake(struct espconn *pespconn, const char *ws_key) {
 
     robotd_client *pclient = robotd_insert_client(pespconn);
     pclient->type = CLIENT_WS;
+    espconn_regist_time(pespconn, 7200, 1);
     espconn_send(pespconn, tmp_buf, os_strlen(tmp_buf));
 }
 
