@@ -17,6 +17,13 @@
 #define REQ_DATA_MAX_LENGTH 128
 #define MAX_NUM_CLIENTS 4
 
+#define WS_OPCODE_CONTINUATION 0x00
+#define WS_OPCODE_TEXT 0x01
+#define WS_OPCODE_BIN 0x02
+#define WS_OPCODE_CLOSE 0x08
+#define WS_OPCODE_PING 0x09
+#define WS_OPCODE_PONG 0x0A
+
 LOCAL struct espconn esp_conn;
 LOCAL esp_tcp esptcp;
 
@@ -166,8 +173,9 @@ robotd_do_websocket_handshake(struct espconn *pespconn, const char *ws_key) {
     sha1_update(&sha1_ctx, tmp_buf, 60);
     sha1_final(&sha1_ctx, &tmp_buf[60]);
 
-    char b64_buf[28];
+    char b64_buf[29];
     size_t hash_size = base64_encode(&tmp_buf[60], b64_buf, 20, 0);
+    b64_buf[28] = '\0';
     os_sprintf(tmp_buf,
         "HTTP/1.1 101 Switching Protocols\r\n"
         "Upgrade: websocket\r\n"
@@ -255,8 +263,59 @@ LOCAL void ICACHE_FLASH_ATTR robotd_sent_cb(void *arg) {
 }
 
 LOCAL void ICACHE_FLASH_ATTR
-robotd_handle_websocket_frame(robotd_client *pclient, char *pusrdata,
+robotd_handle_websocket_frame(robotd_client *pclient, char *data,
     unsigned short length) {
+    if (length < 4) return;
+    bool fin = (data[0] & 0x80) >> 7;
+    uint8_t opcode = data[0] & 0x0f;
+    bool mask = (data[1] & 0x80) >> 7;
+    uint8_t len1 = data[1] & 0x7f;
+    size_t len = len1;
+    char *pdata = &data[2];
+    if (len1 == 126) {
+        len = data[2];
+        len |= (size_t)data[3] << 8;
+        pdata = &data[4];
+    } else {
+        len = len1;
+    }
+
+    if (len1 == 127 || len > TMP_BUF_SIZE) {
+        os_printf("Websocket error: too long data\n");
+    }
+
+    os_printf(
+        "Decoded ws frame:\n"
+        "FIN: %d\n"
+        "opcode: 0x%x\n"
+        "mask: %d\n"
+        "length: %u\n", fin, opcode, mask, len);
+
+    if (mask) {
+        uint8_t *pmask = pdata;
+        pdata += 4;
+        int imod4 = 0;
+        for (size_t i = 0; i < len; i++) {
+            tmp_buf[i] = pdata[i] ^ pmask[imod4];
+            if (++imod4 == 4) {
+                imod4 = 0;
+            }
+        }
+    }
+
+    if (opcode == WS_OPCODE_TEXT) {
+        tmp_buf[len] = '\0';
+        os_printf("Received text: %s\n", tmp_buf);
+    } else if (opcode == WS_OPCODE_BIN) {
+        os_printf("Received binary data:\n");
+        for (size_t i = 0; i < len; i++) {
+            os_printf("0x%x ", tmp_buf[i]);
+        }
+        os_printf("\n");
+    } else if (opcode == WS_OPCODE_PING) {
+        // TODO pong back
+        os_printf("Received ping\n");
+    }
 }
 
 LOCAL void ICACHE_FLASH_ATTR

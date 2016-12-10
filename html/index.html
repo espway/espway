@@ -134,6 +134,7 @@
 
                 function raf() {
                     cube.style.transform = gTransform
+                    ws.send('Hello WebSocket!')
                     // request new data
                     sendBytes([0])
                 }
