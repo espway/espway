@@ -11,8 +11,8 @@
 
 #include "robotd.h"
 
-#define RESPONSE_BUF_SIZE 1024  // MUST be a multiple of 4
-#define URI_MAX_LENGTH 128
+#define TMP_BUF_SIZE 1024  // MUST be a multiple of 4
+#define REQ_DATA_MAX_LENGTH 128
 #define MAX_NUM_CLIENTS 4
 
 LOCAL struct espconn esp_conn;
@@ -23,7 +23,7 @@ typedef enum { CLIENT_NONE, CLIENT_FILE, CLIENT_WS } client_type;
 
 typedef struct {
     req_type type;
-    char uri[URI_MAX_LENGTH];
+    char data[REQ_DATA_MAX_LENGTH];
 } parsed_request;
 
 typedef struct {
@@ -42,7 +42,7 @@ typedef struct {
 
 LOCAL parsed_request gReq;
 
-static char response_buf[RESPONSE_BUF_SIZE];
+static char tmp_buf[TMP_BUF_SIZE];
 static robotd_client clients[MAX_NUM_CLIENTS];
 
 static const char RESPONSE_OK[] = "200 OK",
@@ -61,15 +61,17 @@ static const char HEADER_FORMAT[] =
 static const rodata_file TEST_FILE =
     { INDEX_HTML, MIME_TEXT_HTML, sizeof(INDEX_HTML) - 1 };
 
+static const char WEBSOCK_MAGIC_STRING[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
 void ICACHE_FLASH_ATTR robotd_send_header(struct espconn *pespconn,
     const char *res_code, const char *mimetype, size_t data_len,
     const char *data) {
     if (data == NULL) {
         data = "";
     }
-    os_sprintf(response_buf, HEADER_FORMAT, res_code, data_len, mimetype, data);
-    os_printf(response_buf);
-    espconn_send(pespconn, response_buf, os_strlen(response_buf));
+    os_sprintf(tmp_buf, HEADER_FORMAT, res_code, data_len, mimetype, data);
+    os_printf(tmp_buf);
+    espconn_send(pespconn, tmp_buf, os_strlen(tmp_buf));
 }
 
 void ICACHE_FLASH_ATTR send_404(struct espconn *pespconn) {
@@ -142,17 +144,48 @@ void ICACHE_FLASH_ATTR robotd_delete_client(struct espconn *pespconn) {
     }
 }
 
-void ICACHE_FLASH_ATTR parse_http_request(char *data, unsigned short length,
-    parsed_request *pReq) {
+void ICACHE_FLASH_ATTR robotd_do_websocket_handshake(struct espconn *pespconn,
+    const char *ws_key) {
+}
+
+void ICACHE_FLASH_ATTR robotd_parse_http_request(char *data,
+    unsigned short length, parsed_request *pReq) {
     char *method = strtok(data, " ");
     if (os_strcmp(method, "GET") == 0) {
         char *uri = strtok(NULL, " ");
         char *version = strtok(NULL, "\r");
 
         if (os_strcmp(version, "HTTP/1.1") == 0 &&
-            os_strlen(uri) < URI_MAX_LENGTH) {
-            pReq->type = REQ_GET_FILE;
-            strncpy(pReq->uri, uri, URI_MAX_LENGTH);
+            os_strlen(uri) < REQ_DATA_MAX_LENGTH) {
+            if (os_strcmp(uri, "/ws") == 0) {
+                os_printf("websock handler\n");
+                char *row = strtok(NULL, "\n");
+                bool found_key = false;
+                bool version_13 = false;
+                while (row != NULL) {
+                    if (!found_key && os_strlen(row) == 44 &&
+                        os_strncmp(row, "Sec-WebSocket-Key: ", 19) == 0) {
+                        os_memcpy(pReq->data, &row[19], 24);
+                        pReq->data[24] = '\0';
+                        found_key = true;
+                        os_printf("Found websock key: %s\n", pReq->data);
+                    }
+                    if (!version_13 &&
+                        os_strcmp(row, "Sec-WebSocket-Version: 13\r") == 0) {
+                        os_printf("Right websock version\n");
+                        version_13 = true;
+                    }
+
+                    if (found_key && version_13) {
+                        pReq->type = REQ_WS_UPGRADE;
+                        break;
+                    }
+                    row = strtok(NULL, "\n");
+                }
+            } else {
+                pReq->type = REQ_GET_FILE;
+                strncpy(pReq->data, uri, REQ_DATA_MAX_LENGTH);
+            }
             return;
         }
     }
@@ -171,11 +204,11 @@ LOCAL void ICACHE_FLASH_ATTR tcp_server_sent_cb(void *arg) {
         pclient->data_pointer != NULL && pclient->to_be_sent != 0) {
         os_printf("%u bytes of data to be sent\n", pclient->to_be_sent);
 
-        size_t data_len = pclient->to_be_sent > RESPONSE_BUF_SIZE ?
-            RESPONSE_BUF_SIZE : pclient->to_be_sent;
-        os_memcpy(response_buf, pclient->data_pointer,
+        size_t data_len = pclient->to_be_sent > TMP_BUF_SIZE ?
+            TMP_BUF_SIZE : pclient->to_be_sent;
+        os_memcpy(tmp_buf, pclient->data_pointer,
             GET_ALIGNED_SIZE(data_len));
-        espconn_send(pespconn, response_buf, data_len);
+        espconn_send(pespconn, tmp_buf, data_len);
 
         pclient->to_be_sent -= data_len;
         pclient->data_pointer += data_len;
@@ -189,22 +222,22 @@ LOCAL void ICACHE_FLASH_ATTR tcp_server_sent_cb(void *arg) {
 LOCAL void ICACHE_FLASH_ATTR
 tcp_server_recv_cb(void *arg, char *pusrdata, unsigned short length)
 {
-    //received some data from tcp connection
-
     struct espconn *pespconn = arg;
 
-    parse_http_request(pusrdata, length, &gReq);
+    robotd_parse_http_request(pusrdata, length, &gReq);
 
     const char *response;
     size_t res_len = 0;
     if (gReq.type == REQ_GET_FILE) {
-        if (os_strcmp(gReq.uri, "/") == 0) {
+        if (os_strcmp(gReq.data, "/") == 0) {
             robotd_send_file(pespconn, RESPONSE_OK, &TEST_FILE);
             os_printf("Sent test content\n", res_len);
         } else {
             send_404(pespconn);
             os_printf("Sent 404\n", res_len);
         }
+    } else if (gReq.type == REQ_WS_UPGRADE) {
+        robotd_do_websocket_handshake(pespconn, gReq.data);
     } else {
         send_501(pespconn);
         os_printf("Sent 501\n", res_len);
