@@ -6,6 +6,8 @@
 #include "user_interface.h"
 #include "espconn.h"
 #include "espmissingincludes.h"
+#include "sha1.h"
+#include "base64.h"
 
 #include "indexhtml.inc"
 
@@ -61,7 +63,9 @@ static const char HEADER_FORMAT[] =
 static const rodata_file TEST_FILE =
     { INDEX_HTML, MIME_TEXT_HTML, sizeof(INDEX_HTML) - 1 };
 
-static const char WEBSOCK_MAGIC_STRING[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+static const char WEBSOCKET_MAGIC_STRING[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+static SHA1_CTX sha1_ctx;
 
 void ICACHE_FLASH_ATTR robotd_send_header(struct espconn *pespconn,
     const char *res_code, const char *mimetype, size_t data_len,
@@ -93,6 +97,7 @@ robotd_client * ICACHE_FLASH_ATTR robotd_insert_client(struct espconn *pespconn)
     robotd_client *pret = NULL;
     for (size_t i = 0; i < MAX_NUM_CLIENTS; ++i) {
         if (clients[i].type == CLIENT_NONE) {
+            os_printf("inserted client at %u\n", i);
             pret = &clients[i];
             pret->port = pespconn->proto.tcp->remote_port;
             os_memcpy(&pret->ip, &pespconn->proto.tcp->remote_ip, 4);
@@ -128,6 +133,7 @@ robotd_client * ICACHE_FLASH_ATTR robotd_find_client(struct espconn *pespconn) {
 
         if (curr_client->port == pespconn->proto.tcp->remote_port &&
             os_memcmp(&curr_client->ip[0], &pespconn->proto.tcp->remote_ip[0], 4) == 0) {
+            os_printf("found client at slot %u\n", i);
             ret_client = curr_client;
             break;
         }
@@ -137,6 +143,7 @@ robotd_client * ICACHE_FLASH_ATTR robotd_find_client(struct espconn *pespconn) {
 }
 
 void ICACHE_FLASH_ATTR robotd_delete_client(struct espconn *pespconn) {
+    os_printf("deleting client...\n");
     robotd_client *pclient = robotd_find_client(pespconn);
     if (pclient != NULL) {
         pclient->type = CLIENT_NONE;
@@ -145,6 +152,25 @@ void ICACHE_FLASH_ATTR robotd_delete_client(struct espconn *pespconn) {
 
 void ICACHE_FLASH_ATTR robotd_do_websocket_handshake(struct espconn *pespconn,
     const char *ws_key) {
+    os_memcpy(tmp_buf, ws_key, 24);
+    os_memcpy(&tmp_buf[24], WEBSOCKET_MAGIC_STRING, 36);
+
+    sha1_init(&sha1_ctx);
+    sha1_update(&sha1_ctx, tmp_buf, 60);
+    sha1_final(&sha1_ctx, &tmp_buf[60]);
+
+    char b64_buf[28];
+    size_t hash_size = base64_encode(&tmp_buf[60], b64_buf, 20, 0);
+    os_sprintf(tmp_buf,
+        "HTTP/1.1 Switching Protocols\r\n"
+        "Upgrade: websocket\r\n"
+        "Connection: upgrade\r\n"
+        "Sec-Websocket-Accept: %s\r\n\r\n", b64_buf);
+    os_printf(tmp_buf);
+
+    robotd_client *pclient = robotd_insert_client(pespconn);
+    pclient->type = CLIENT_WS;
+    espconn_send(pespconn, tmp_buf, os_strlen(tmp_buf));
 }
 
 void ICACHE_FLASH_ATTR robotd_parse_http_request(char *data,
@@ -166,7 +192,6 @@ void ICACHE_FLASH_ATTR robotd_parse_http_request(char *data,
                     if (!found_key && os_strlen(row) == 44 &&
                         os_strncmp(row, "Sec-WebSocket-Key: ", 19) == 0) {
                         os_memcpy(pReq->data, &row[19], 24);
-                        pReq->data[24] = '\0';
                         found_key = true;
                     } else if (!version_13 &&
                         os_strcmp(row, "Sec-WebSocket-Version: 13\r") == 0) {
