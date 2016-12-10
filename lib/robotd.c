@@ -129,7 +129,6 @@ robotd_client * ICACHE_FLASH_ATTR robotd_find_client(struct espconn *pespconn) {
         if (curr_client->port == pespconn->proto.tcp->remote_port &&
             os_memcmp(&curr_client->ip[0], &pespconn->proto.tcp->remote_ip[0], 4) == 0) {
             ret_client = curr_client;
-            os_printf("match to slot %u\n", i);
             break;
         }
     }
@@ -193,7 +192,7 @@ void ICACHE_FLASH_ATTR robotd_parse_http_request(char *data,
     pReq->type = REQ_IGNORE;
 }
 
-LOCAL void ICACHE_FLASH_ATTR tcp_server_sent_cb(void *arg) {
+LOCAL void ICACHE_FLASH_ATTR robotd_sent_cb(void *arg) {
     //data sent successfully
     struct espconn *pespconn = (struct espconn *)arg;
 
@@ -220,7 +219,7 @@ LOCAL void ICACHE_FLASH_ATTR tcp_server_sent_cb(void *arg) {
 }
 
 LOCAL void ICACHE_FLASH_ATTR
-tcp_server_recv_cb(void *arg, char *pusrdata, unsigned short length)
+robotd_recv_cb(void *arg, char *pusrdata, unsigned short length)
 {
     struct espconn *pespconn = arg;
 
@@ -245,7 +244,7 @@ tcp_server_recv_cb(void *arg, char *pusrdata, unsigned short length)
 }
 
 LOCAL void ICACHE_FLASH_ATTR
-tcp_server_discon_cb(void *arg)
+robotd_discon_cb(void *arg)
 {
     //tcp disconnect successfully
     robotd_delete_client((struct espconn *)arg);
@@ -254,7 +253,7 @@ tcp_server_discon_cb(void *arg)
 }
 
 LOCAL void ICACHE_FLASH_ATTR
-tcp_server_recon_cb(void *arg, sint8 err)
+robotd_recon_cb(void *arg, sint8 err)
 {
     //error occured , tcp connection broke.
     robotd_delete_client((struct espconn *)arg);
@@ -263,14 +262,14 @@ tcp_server_recon_cb(void *arg, sint8 err)
 }
 
 LOCAL void ICACHE_FLASH_ATTR
-tcp_server_listen(void *arg)
+robotd_listen(void *arg)
 {
     struct espconn *pesp_conn = arg;
 
-    espconn_regist_recvcb(pesp_conn, tcp_server_recv_cb);
-    espconn_regist_reconcb(pesp_conn, tcp_server_recon_cb);
-    espconn_regist_disconcb(pesp_conn, tcp_server_discon_cb);
-    espconn_regist_sentcb(pesp_conn, tcp_server_sent_cb);
+    espconn_regist_recvcb(pesp_conn, robotd_recv_cb);
+    espconn_regist_reconcb(pesp_conn, robotd_recon_cb);
+    espconn_regist_disconcb(pesp_conn, robotd_discon_cb);
+    espconn_regist_sentcb(pesp_conn, robotd_sent_cb);
 }
 
 void ICACHE_FLASH_ATTR
@@ -284,7 +283,7 @@ robotd_init(uint32_t port)
     esp_conn.state = ESPCONN_NONE;
     esp_conn.proto.tcp = &esptcp;
     esp_conn.proto.tcp->local_port = port;
-    espconn_regist_connectcb(&esp_conn, tcp_server_listen);
+    espconn_regist_connectcb(&esp_conn, robotd_listen);
 
     sint8 ret = espconn_accept(&esp_conn);
 
