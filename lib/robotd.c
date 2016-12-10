@@ -157,10 +157,11 @@ void ICACHE_FLASH_ATTR robotd_parse_http_request(char *data,
         if (os_strcmp(version, "HTTP/1.1") == 0 &&
             os_strlen(uri) < REQ_DATA_MAX_LENGTH) {
             if (os_strcmp(uri, "/ws") == 0) {
-                os_printf("websock handler\n");
                 char *row = strtok(NULL, "\n");
                 bool found_key = false;
                 bool version_13 = false;
+                bool found_connection_upgrade = false;
+                bool found_upgrade_websocket = false;
                 while (row != NULL) {
                     if (!found_key && os_strlen(row) == 44 &&
                         os_strncmp(row, "Sec-WebSocket-Key: ", 19) == 0) {
@@ -168,14 +169,19 @@ void ICACHE_FLASH_ATTR robotd_parse_http_request(char *data,
                         pReq->data[24] = '\0';
                         found_key = true;
                         os_printf("Found websock key: %s\n", pReq->data);
-                    }
-                    if (!version_13 &&
+                    } else if (!version_13 &&
                         os_strcmp(row, "Sec-WebSocket-Version: 13\r") == 0) {
-                        os_printf("Right websock version\n");
                         version_13 = true;
+                    } else if (!found_connection_upgrade &&
+                        os_strcmp(row, "Connection: upgrade\r")) {
+                        found_connection_upgrade = true;
+                    } else if (!found_upgrade_websocket &&
+                        os_strcmp(row, "Upgrade: websocket\r")) {
+                        found_upgrade_websocket = true;
                     }
 
-                    if (found_key && version_13) {
+                    if (found_key && version_13 && found_upgrade_websocket &&
+                        found_connection_upgrade) {
                         pReq->type = REQ_WS_UPGRADE;
                         break;
                     }
@@ -201,7 +207,6 @@ LOCAL void ICACHE_FLASH_ATTR robotd_sent_cb(void *arg) {
 
     if (pclient->type == CLIENT_FILE &&
         pclient->data_pointer != NULL && pclient->to_be_sent != 0) {
-        os_printf("%u bytes of data to be sent\n", pclient->to_be_sent);
 
         size_t data_len = pclient->to_be_sent > TMP_BUF_SIZE ?
             TMP_BUF_SIZE : pclient->to_be_sent;
@@ -248,8 +253,6 @@ robotd_discon_cb(void *arg)
 {
     //tcp disconnect successfully
     robotd_delete_client((struct espconn *)arg);
-
-    os_printf("tcp disconnect succeed !!! \r\n");
 }
 
 LOCAL void ICACHE_FLASH_ATTR
@@ -257,8 +260,6 @@ robotd_recon_cb(void *arg, sint8 err)
 {
     //error occured , tcp connection broke.
     robotd_delete_client((struct espconn *)arg);
-
-    os_printf("reconnect callback, error code %d !!! \r\n",err);
 }
 
 LOCAL void ICACHE_FLASH_ATTR
@@ -286,8 +287,6 @@ robotd_init(uint32_t port)
     espconn_regist_connectcb(&esp_conn, robotd_listen);
 
     sint8 ret = espconn_accept(&esp_conn);
-
-    os_printf("espconn_accept [%d] !!! \r\n", ret);
 }
 
 void ICACHE_FLASH_ATTR
