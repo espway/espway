@@ -168,7 +168,6 @@ void ICACHE_FLASH_ATTR robotd_parse_http_request(char *data,
                         os_memcpy(pReq->data, &row[19], 24);
                         pReq->data[24] = '\0';
                         found_key = true;
-                        os_printf("Found websock key: %s\n", pReq->data);
                     } else if (!version_13 &&
                         os_strcmp(row, "Sec-WebSocket-Version: 13\r") == 0) {
                         version_13 = true;
@@ -183,15 +182,15 @@ void ICACHE_FLASH_ATTR robotd_parse_http_request(char *data,
                     if (found_key && version_13 && found_upgrade_websocket &&
                         found_connection_upgrade) {
                         pReq->type = REQ_WS_UPGRADE;
-                        break;
+                        return;
                     }
                     row = strtok(NULL, "\n");
                 }
             } else {
                 pReq->type = REQ_GET_FILE;
                 strncpy(pReq->data, uri, REQ_DATA_MAX_LENGTH);
+                return;
             }
-            return;
         }
     }
 
