@@ -67,7 +67,8 @@ static const char WEBSOCKET_MAGIC_STRING[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B
 
 static SHA1_CTX sha1_ctx;
 
-void ICACHE_FLASH_ATTR robotd_send_header(struct espconn *pespconn,
+LOCAL void ICACHE_FLASH_ATTR
+robotd_send_header(struct espconn *pespconn,
     const char *res_code, const char *mimetype, size_t data_len,
     const char *data) {
     if (data == NULL) {
@@ -78,22 +79,26 @@ void ICACHE_FLASH_ATTR robotd_send_header(struct espconn *pespconn,
     espconn_send(pespconn, tmp_buf, os_strlen(tmp_buf));
 }
 
-void ICACHE_FLASH_ATTR send_404(struct espconn *pespconn) {
+LOCAL void ICACHE_FLASH_ATTR
+send_404(struct espconn *pespconn) {
     robotd_send_header(pespconn, NOT_FOUND, MIME_TEXT_PLAIN,
         sizeof(NOT_FOUND - 1), NOT_FOUND);
 }
 
-void ICACHE_FLASH_ATTR send_501(struct espconn *pespconn) {
+LOCAL void ICACHE_FLASH_ATTR
+send_501(struct espconn *pespconn) {
     robotd_send_header(pespconn, NOT_IMPLEMENTED, MIME_TEXT_PLAIN,
         sizeof(NOT_IMPLEMENTED - 1), NOT_IMPLEMENTED);
 }
 
-void ICACHE_FLASH_ATTR send_503(struct espconn *pespconn) {
+LOCAL void ICACHE_FLASH_ATTR
+send_503(struct espconn *pespconn) {
     robotd_send_header(pespconn, SERVICE_UNAVAILABLE, MIME_TEXT_PLAIN,
         sizeof(SERVICE_UNAVAILABLE - 1), SERVICE_UNAVAILABLE);
 }
 
-robotd_client * ICACHE_FLASH_ATTR robotd_insert_client(struct espconn *pespconn) {
+LOCAL robotd_client * ICACHE_FLASH_ATTR
+robotd_insert_client(struct espconn *pespconn) {
     robotd_client *pret = NULL;
     for (size_t i = 0; i < MAX_NUM_CLIENTS; ++i) {
         if (clients[i].type == CLIENT_NONE) {
@@ -108,7 +113,8 @@ robotd_client * ICACHE_FLASH_ATTR robotd_insert_client(struct espconn *pespconn)
     return pret;
 }
 
-void ICACHE_FLASH_ATTR robotd_send_file(struct espconn *pespconn,
+LOCAL void ICACHE_FLASH_ATTR
+robotd_send_file(struct espconn *pespconn,
     const char *res_code, const rodata_file *file) {
     robotd_client *pclient = robotd_insert_client(pespconn);
     if (pclient == NULL) {
@@ -123,7 +129,8 @@ void ICACHE_FLASH_ATTR robotd_send_file(struct espconn *pespconn,
     robotd_send_header(pespconn, res_code, file->mimetype, file->data_len, NULL);
 }
 
-robotd_client * ICACHE_FLASH_ATTR robotd_find_client(struct espconn *pespconn) {
+LOCAL robotd_client * ICACHE_FLASH_ATTR
+robotd_find_client(struct espconn *pespconn) {
     robotd_client *ret_client = NULL;
     robotd_client *curr_client;
 
@@ -142,7 +149,7 @@ robotd_client * ICACHE_FLASH_ATTR robotd_find_client(struct espconn *pespconn) {
     return ret_client;
 }
 
-void ICACHE_FLASH_ATTR robotd_delete_client(struct espconn *pespconn) {
+LOCAL void ICACHE_FLASH_ATTR robotd_delete_client(struct espconn *pespconn) {
     os_printf("deleting client...\n");
     robotd_client *pclient = robotd_find_client(pespconn);
     if (pclient != NULL) {
@@ -150,8 +157,8 @@ void ICACHE_FLASH_ATTR robotd_delete_client(struct espconn *pespconn) {
     }
 }
 
-void ICACHE_FLASH_ATTR robotd_do_websocket_handshake(struct espconn *pespconn,
-    const char *ws_key) {
+LOCAL void ICACHE_FLASH_ATTR
+robotd_do_websocket_handshake(struct espconn *pespconn, const char *ws_key) {
     os_memcpy(tmp_buf, ws_key, 24);
     os_memcpy(&tmp_buf[24], WEBSOCKET_MAGIC_STRING, 36);
 
@@ -162,7 +169,7 @@ void ICACHE_FLASH_ATTR robotd_do_websocket_handshake(struct espconn *pespconn,
     char b64_buf[28];
     size_t hash_size = base64_encode(&tmp_buf[60], b64_buf, 20, 0);
     os_sprintf(tmp_buf,
-        "HTTP/1.1 Switching Protocols\r\n"
+        "HTTP/1.1 101 Switching Protocols\r\n"
         "Upgrade: websocket\r\n"
         "Connection: upgrade\r\n"
         "Sec-Websocket-Accept: %s\r\n\r\n", b64_buf);
@@ -173,7 +180,7 @@ void ICACHE_FLASH_ATTR robotd_do_websocket_handshake(struct espconn *pespconn,
     espconn_send(pespconn, tmp_buf, os_strlen(tmp_buf));
 }
 
-void ICACHE_FLASH_ATTR robotd_parse_http_request(char *data,
+LOCAL void ICACHE_FLASH_ATTR robotd_parse_http_request(char *data,
     unsigned short length, parsed_request *pReq) {
     char *method = strtok(data, " ");
     if (os_strcmp(method, "GET") == 0) {
@@ -248,27 +255,37 @@ LOCAL void ICACHE_FLASH_ATTR robotd_sent_cb(void *arg) {
 }
 
 LOCAL void ICACHE_FLASH_ATTR
+robotd_handle_websocket_frame(robotd_client *pclient, char *pusrdata,
+    unsigned short length) {
+}
+
+LOCAL void ICACHE_FLASH_ATTR
 robotd_recv_cb(void *arg, char *pusrdata, unsigned short length)
 {
     struct espconn *pespconn = arg;
 
-    robotd_parse_http_request(pusrdata, length, &gReq);
+    robotd_client *pclient = robotd_find_client(pespconn);
 
-    const char *response;
-    size_t res_len = 0;
-    if (gReq.type == REQ_GET_FILE) {
-        if (os_strcmp(gReq.data, "/") == 0) {
-            robotd_send_file(pespconn, RESPONSE_OK, &TEST_FILE);
-            os_printf("Sent test content\n", res_len);
+    if (pclient == NULL) {
+        robotd_parse_http_request(pusrdata, length, &gReq);
+        const char *response;
+        size_t res_len = 0;
+        if (gReq.type == REQ_GET_FILE) {
+            if (os_strcmp(gReq.data, "/") == 0) {
+                robotd_send_file(pespconn, RESPONSE_OK, &TEST_FILE);
+                os_printf("Sent test content\n", res_len);
+            } else {
+                send_404(pespconn);
+                os_printf("Sent 404\n", res_len);
+            }
+        } else if (gReq.type == REQ_WS_UPGRADE) {
+            robotd_do_websocket_handshake(pespconn, gReq.data);
         } else {
-            send_404(pespconn);
-            os_printf("Sent 404\n", res_len);
+            send_501(pespconn);
+            os_printf("Sent 501\n", res_len);
         }
-    } else if (gReq.type == REQ_WS_UPGRADE) {
-        robotd_do_websocket_handshake(pespconn, gReq.data);
-    } else {
-        send_501(pespconn);
-        os_printf("Sent 501\n", res_len);
+    } else if (pclient->type == CLIENT_WS) {
+        robotd_handle_websocket_frame(pclient, pusrdata, length);
     }
 }
 
