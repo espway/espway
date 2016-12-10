@@ -8,27 +8,17 @@
 #include "espmissingincludes.h"
 #include "sha1.h"
 #include "base64.h"
+#include "robotd.h"
 
 #include "indexhtml.inc"
 
-#include "robotd.h"
-
-#define TMP_BUF_SIZE 1024  // MUST be a multiple of 4
-#define REQ_DATA_MAX_LENGTH 128
-#define MAX_NUM_CLIENTS 4
-
-#define WS_OPCODE_CONTINUATION 0x00
-#define WS_OPCODE_TEXT 0x01
-#define WS_OPCODE_BIN 0x02
-#define WS_OPCODE_CLOSE 0x08
-#define WS_OPCODE_PING 0x09
-#define WS_OPCODE_PONG 0x0A
+#define GET_ALIGNED_STRING_LEN(str) ((os_strlen(str) + 3) & ~3)
+#define GET_ALIGNED_SIZE(s) (((s) + 3) & ~3)
 
 static struct espconn esp_conn;
 static esp_tcp esptcp;
 
 typedef enum { REQ_GET_FILE, REQ_WS_UPGRADE, REQ_IGNORE } req_type;
-typedef enum { CLIENT_NONE, CLIENT_FILE, CLIENT_WS } client_type;
 
 typedef struct {
     req_type type;
@@ -40,15 +30,6 @@ typedef struct {
     const char *mimetype;
     size_t data_len;
 } rodata_file;
-
-typedef struct {
-    struct espconn *conn;
-    client_type type;
-    uint8_t ip[4];
-    int port;
-    size_t to_be_sent;
-    const char *data_pointer;
-} robotd_client;
 
 static parsed_request gReq;
 
@@ -265,7 +246,7 @@ static void ICACHE_FLASH_ATTR robotd_sent_cb(void *arg) {
     }
 }
 
-static void ICACHE_FLASH_ATTR
+void ICACHE_FLASH_ATTR
 robotd_websocket_send(robotd_client *pclient, uint8_t opcode,
     char *data, size_t len) {
     uint8_t *tmp = (uint8_t *)tmp_buf;
