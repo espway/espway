@@ -246,9 +246,8 @@ static void ICACHE_FLASH_ATTR robotd_sent_cb(void *arg) {
     }
 }
 
-void ICACHE_FLASH_ATTR
-robotd_websocket_send(robotd_client *pclient, uint8_t opcode,
-    char *data, size_t len) {
+static size_t ICACHE_FLASH_ATTR
+robotd_websocket_prepare_header(uint8_t opcode, size_t len) {
     uint8_t *tmp = (uint8_t *)tmp_buf;
     tmp[0] = opcode & 0x0f;
     tmp[0] |= 0x80;
@@ -265,6 +264,24 @@ robotd_websocket_send(robotd_client *pclient, uint8_t opcode,
         tmp_buf[1] = len;
     }
 
+    return offset;
+}
+
+void ICACHE_FLASH_ATTR
+robotd_websocket_send_all(uint8_t opcode, char *data, size_t len) {
+    size_t offset = robotd_websocket_prepare_header(opcode, len);
+    os_memcpy(tmp_buf, data, offset + len);
+    for (size_t i = 0; i < MAX_NUM_CLIENTS; ++i) {
+        if (clients[i].type == CLIENT_WS) {
+            espconn_send(clients[i].conn, tmp_buf, offset + len);
+        }
+    }
+}
+
+void ICACHE_FLASH_ATTR
+robotd_websocket_send(robotd_client *pclient, uint8_t opcode,
+    char *data, size_t len) {
+    size_t offset = robotd_websocket_prepare_header(opcode, len);
     os_memcpy(tmp_buf, data, offset + len);
     espconn_send(pclient->conn, tmp_buf, offset + len);
 }

@@ -30,6 +30,5 @@ void robotd_set_websocket_receive_cb(void (*cb)(robotd_client *pclient,
     uint8_t opcode, char *data, size_t length));
 void robotd_websocket_send(robotd_client *pclient, uint8_t opcode, char *data,
     size_t length);
-void robotd_websocket_send_all(robotd_client *pclient, uint8_t opcode,
-    char *data, size_t length);
+void robotd_websocket_send_all(uint8_t opcode, char *data, size_t length);
 
