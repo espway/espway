@@ -366,6 +366,7 @@ robotd_recv_cb(void *arg, char *pusrdata, unsigned short length)
                 os_printf("Sent 404\n", res_len);
             }
         } else if (gReq.type == REQ_WS_UPGRADE) {
+            // TODO what if all the slots are filled?
             robotd_do_websocket_handshake(pespconn, gReq.data);
         } else {
             send_501(pespconn);
