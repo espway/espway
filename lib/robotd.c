@@ -12,11 +12,27 @@
 
 #include "indexhtml.inc"
 
-#define GET_ALIGNED_STRING_LEN(str) ((os_strlen(str) + 3) & ~3)
 #define GET_ALIGNED_SIZE(s) (((s) + 3) & ~3)
 
-static struct espconn esp_conn;
-static esp_tcp esptcp;
+typedef enum { CLIENT_NONE, CLIENT_FILE, CLIENT_WS } client_type;
+
+struct robotd_client_ {
+    struct espconn *conn;
+    client_type type;
+    uint8_t ip[4];
+    int port;
+    size_t send_data_length;
+    const char *send_data_pointer;
+
+    // Receptions vars for WebSocket clients
+    uint8_t recv_opcode;
+    uint8_t recv_mask[4];
+    bool fin;
+    size_t expected_data_length;
+    size_t recv_data_length;
+    char recv_buf[RECV_BUF_SIZE];
+    size_t recv_buf_data_length;
+};
 
 typedef enum { REQ_GET_FILE, REQ_WS_UPGRADE, REQ_IGNORE } req_type;
 
@@ -31,8 +47,9 @@ typedef struct {
     size_t data_len;
 } rodata_file;
 
+static struct espconn esp_conn;
+static esp_tcp esptcp;
 static parsed_request gReq;
-
 static char tmp_buf[TMP_BUF_SIZE];
 static robotd_client clients[MAX_NUM_CLIENTS];
 
