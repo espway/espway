@@ -52,6 +52,9 @@ static esp_tcp esptcp;
 static parsed_request gReq;
 static char tmp_buf[TMP_BUF_SIZE];
 static robotd_client clients[MAX_NUM_CLIENTS];
+static SHA1_CTX sha1_ctx;
+static void (*websocket_cb)(robotd_client *pclient, uint8_t opcode, char *data,
+    size_t length);
 
 static const char RESPONSE_OK[] = "200 OK",
                   NOT_FOUND[] = "404 Not Found",
@@ -69,9 +72,8 @@ static const char HEADER_FORMAT[] =
 static const rodata_file TEST_FILE =
     { INDEX_HTML, MIME_TEXT_HTML, sizeof(INDEX_HTML) - 1 };
 
-static const char WEBSOCKET_MAGIC_STRING[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-
-static SHA1_CTX sha1_ctx;
+static const char WEBSOCKET_MAGIC_STRING[] ICACHE_RODATA_ATTR =
+    "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 static void ICACHE_FLASH_ATTR
 robotd_send_header(struct espconn *pespconn,
@@ -285,6 +287,12 @@ robotd_websocket_prepare_header(uint8_t opcode, size_t len) {
 }
 
 void ICACHE_FLASH_ATTR
+robotd_set_websocket_receive_cb(void (*cb)(robotd_client *pclient,
+    uint8_t opcode, char *data, size_t length)) {
+    websocket_cb = cb;
+}
+
+void ICACHE_FLASH_ATTR
 robotd_websocket_send_all(uint8_t opcode, char *data, size_t len) {
     size_t offset = robotd_websocket_prepare_header(opcode, len);
     os_memcpy(tmp_buf, data, offset + len);
@@ -389,13 +397,20 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
         pclient->expected_data_length = 0;
         if (pclient->recv_opcode == WS_OPCODE_TEXT) {
             pclient->recv_buf[pclient->recv_buf_data_length] = '\0';
+            pclient->recv_buf_data_length += 1;
             os_printf("Received text: %s\n", pclient->recv_buf);
+            if (websocket_cb != NULL) {
+                websocket_cb(pclient, pclient->recv_opcode, pclient->recv_buf,
+                    pclient->recv_buf_data_length);
+            }
         } else if (pclient->recv_opcode == WS_OPCODE_BIN) {
             os_printf("Received binary data: ");
             for (size_t i = 0; i < pclient->recv_buf_data_length; ++i) {
                 os_printf("0x%x ", pclient->recv_buf[i]);
             }
             os_printf("\n");
+            websocket_cb(pclient, pclient->recv_opcode, pclient->recv_buf,
+                pclient->recv_buf_data_length);
         } else if (pclient->recv_opcode == WS_OPCODE_PING) {
             os_printf("Received ping, sent pong\n");
             robotd_websocket_send(pclient, WS_OPCODE_PONG,
