@@ -289,65 +289,111 @@ robotd_websocket_send(robotd_client *pclient, uint8_t opcode,
 static void ICACHE_FLASH_ATTR
 robotd_handle_websocket_frame(robotd_client *pclient, char *data,
     unsigned short length) {
-    if (length < 4) return;
-    os_printf("receive websocket buffer, length %u\n", length);
-    bool fin = (data[0] & 0x80) >> 7;
-    uint8_t opcode = data[0] & 0x0f;
-    bool mask = (data[1] & 0x80) >> 7;
-    uint8_t len1 = data[1] & 0x7f;
-    size_t len = 0;
-    if (len1 == 126) {
-        len = data[3];
-        len |= data[2] << 8;
-        data += 4;
-    } else {
-        len = len1;
-        data += 2;
-    }
+    size_t data_offset = 0;
 
-    if (len1 == 127 || len > TMP_BUF_SIZE) {
-        os_printf("Websocket error: too long data, %u bytes\n", len);
-        return;
-    }
+    if (pclient->expected_data_length == 0) {
+        if (length < 2) {
+            os_printf("Received data too short\n");
+            return;
+        }
 
-    os_printf(
-        "Decoded ws frame:\n"
-        "FIN: %d\n"
-        "opcode: 0x%x\n"
-        "mask: %d\n"
-        "length: %u\n", fin, opcode, mask, len);
-
-    if (mask) {
-        uint8_t *pmask = data;
-        data += 4;
-        int imod4 = 0;
-        for (size_t i = 0; i < len; ++i) {
-            data[i] ^= pmask[imod4];
-            if (++imod4 == 4) {
-                imod4 = 0;
+        bool fin = (data[0] & 0x80) >> 7;
+        uint8_t opcode = data[0] & 0x0f;
+        bool mask = (data[1] & 0x80) >> 7;
+        uint8_t len1 = data[1] & 0x7f;
+        size_t len = 0;
+        if (len1 == 126) {
+            if (length < 8) {
+                os_printf("WS: received data too short\n");
+                return;
             }
+            len = data[3];
+            len |= data[2] << 8;
+            data_offset += 4;
+        } else {
+            if (length < 6) {
+                os_printf("WS: received data too short\n");
+                return;
+            }
+            len = len1;
+            data_offset += 2;
+        }
+
+        if (len1 == 127) {
+            os_printf("Websocket error: too long data\n", len);
+            return;
+        }
+
+        os_printf(
+            "Decoded ws frame:\n"
+            "FIN: %d\n"
+            "opcode: 0x%x\n"
+            "mask: %d\n"
+            "length: %u\n", fin, opcode, mask, len);
+
+        if (mask) {
+            os_memcpy(pclient->recv_mask, &data[data_offset], 4);
+            data_offset += 4;
+        } else {
+            os_printf("Got unmasked data, something is wrong\n");
+        }
+
+        pclient->expected_data_length += len;
+        pclient->fin = fin;
+
+        if (opcode != WS_OPCODE_CONTINUATION) {
+            pclient->recv_opcode = opcode;
+            pclient->recv_data_length = 0;
+            pclient->recv_buf_data_length = 0;
         }
     }
 
-    if (opcode == WS_OPCODE_TEXT) {
-        data[len] = '\0';
-        os_printf("Received text: %s\n", data);
-    } else if (opcode == WS_OPCODE_BIN) {
-        os_printf("Received binary data: ");
-        for (size_t i = 0; i < len; ++i) {
-            os_printf("0x%x ", data[i]);
+    int imod4 = 0;
+    for (size_t i = data_offset; i < length; ++i) {
+        // Leave space for string termination
+        if (pclient->recv_buf_data_length >= RECV_BUF_SIZE - 1) {
+            os_printf("Receive buffer size exceeded\n");
+            break;
         }
-        os_printf("\n");
-    } else if (opcode == WS_OPCODE_PING) {
-        os_printf("Received ping, sent pong\n");
-        robotd_websocket_send(pclient, WS_OPCODE_PONG, data, len);
-    } else if (opcode == WS_OPCODE_PONG) {
-        os_printf("Received pong\n");
-    } else if (opcode == WS_OPCODE_CONTINUATION) {
-        os_printf("Received continuation\n");
-    } else if (opcode == WS_OPCODE_CLOSE) {
-        os_printf("Received close, sending close frame back...\n");
-        robotd_websocket_send(pclient, WS_OPCODE_CLOSE, data, len >= 2 ? 2 : 0);
+
+        pclient->recv_buf[pclient->recv_buf_data_length] =
+            data[i] ^ pclient->recv_mask[imod4];
+        pclient->recv_buf_data_length += 1;
+
+        if (++imod4 == 4) {
+            imod4 = 0;
+        }
+    }
+
+    pclient->recv_data_length += length - data_offset;
+
+    if (pclient->recv_data_length == pclient->expected_data_length &&
+        pclient->fin) {
+        pclient->expected_data_length = 0;
+        if (pclient->recv_opcode == WS_OPCODE_TEXT) {
+            pclient->recv_buf[pclient->recv_buf_data_length] = '\0';
+            os_printf("Received text: %s\n", pclient->recv_buf);
+        } else if (pclient->recv_opcode == WS_OPCODE_BIN) {
+            os_printf("Received binary data: ");
+            for (size_t i = 0; i < pclient->recv_buf_data_length; ++i) {
+                os_printf("0x%x ", pclient->recv_buf[i]);
+            }
+            os_printf("\n");
+        } else if (pclient->recv_opcode == WS_OPCODE_PING) {
+            os_printf("Received ping, sent pong\n");
+            robotd_websocket_send(pclient, WS_OPCODE_PONG,
+                pclient->recv_buf, pclient->recv_buf_data_length);
+        } else if (pclient->recv_opcode == WS_OPCODE_PONG) {
+            os_printf("Received pong\n");
+        } else if (pclient->recv_opcode == WS_OPCODE_CONTINUATION) {
+            os_printf("Received continuation\n");
+        } else if (pclient->recv_opcode == WS_OPCODE_CLOSE) {
+            os_printf("Received close, sending close frame back...\n");
+            robotd_websocket_send(pclient, WS_OPCODE_CLOSE, pclient->recv_buf,
+                pclient->recv_buf_data_length >= 2 ? 2 : 0);
+        } else {
+            os_printf("Opcode not recognized, something is wrong\n");
+        }
     }
 }
 

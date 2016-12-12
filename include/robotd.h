@@ -23,8 +23,15 @@ typedef struct {
     int port;
     size_t send_data_length;
     const char *send_data_pointer;
+
+    // Receptions vars for WebSocket clients
+    uint8_t recv_opcode;
+    uint8_t recv_mask[4];
+    bool fin;
+    size_t expected_data_length;
     size_t recv_data_length;
-    const char recv_buf[RECV_BUF_SIZE];
+    char recv_buf[RECV_BUF_SIZE];
+    size_t recv_buf_data_length;
 } robotd_client;
 
 void robotd_init(uint32_t port);
