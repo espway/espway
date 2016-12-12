@@ -1,0 +1,44 @@
+<!doctype html>
+
+<html>
+    <head>
+        <meta charset='us-ascii' />
+        <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no' />
+
+        <title>websocket tester</title>
+    </head>
+
+    <body>
+        <script>
+            (function() {
+                'use strict'
+
+                let ws = new WebSocket('ws://192.168.4.1/ws')
+                ws.binaryType = 'arraybuffer'
+                let sendText = text => {
+                    ws.send(text)
+                    console.log('sent "' + text + '", length ' + text.length)
+                }
+                let sendBytes = bytes => {
+                    ws.send((new Uint8Array(bytes)).buffer)
+                    console.log('sent some bytes')
+                }
+                let recv = e => {
+                    console.log('Received data: "' + e.data + '"')
+                }
+                ws.addEventListener('message', recv)
+                ws.addEventListener('open', sendMessages)
+
+                function sendMessages() {
+                    let mystr = 'Hello Websocket!'.repeat(70)
+                    sendText(mystr)
+
+                    //setInterval(() => {
+                    //    sendText('Hello Websocket!' + Date.now())
+                    //}, 1000)
+                }
+            })()
+        </script>
+    </body>
+</html>
+

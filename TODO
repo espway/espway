@@ -1,0 +1,5 @@
+* Fixed point Madgwick implementation
+* Saner filesystem implementation for robotd
+* (longterm) OTA upgrade for robotd
+* Figure out a way to test websocket continuation frames & verify the implementation
+
