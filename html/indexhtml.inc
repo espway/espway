@@ -115,7 +115,6 @@ static const char INDEX_HTML[] ICACHE_RODATA_ATTR =
 "                }\n"
 "                function raf() {\n"
 "                    cube.style.transform = gTransform\n"
-"                    ws.send('Hello WebSocket!')\n"
 "                    // request new data\n"
 "                    sendBytes([0])\n"
 "                }\n"

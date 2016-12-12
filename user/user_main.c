@@ -60,11 +60,24 @@ void mpuInterrupt(uint32_t mask, void *args) {
     system_os_post(2, 0, 0);
 }
 
+void ICACHE_FLASH_ATTR
+websocketCb(robotd_client *pclient, uint8_t opcode, char *data, size_t length) {
+    float scale = 1000.0f;
+    int16_t qdata[] = {
+        scale * gQuat.q0,
+        scale * gQuat.q1,
+        scale * gQuat.q2,
+        scale * gQuat.q3
+    };
+    robotd_websocket_send(pclient, WS_OPCODE_BIN, (char *)&qdata, 8);
+}
+
 void ICACHE_FLASH_ATTR user_init(void) {
     system_update_cpu_freq(80);
     i2c_master_gpio_init();
     UART_SetBaudrate(UART0, 115200);
 
+    robotd_set_websocket_receive_cb(websocketCb);
     robotd_init_ap("ESPway");
     robotd_init(80);
 
