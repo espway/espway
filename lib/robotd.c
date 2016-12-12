@@ -1,5 +1,7 @@
 #include <string.h>
 
+#define ROBOTD_DEBUG(...) //os_printf(__VA_ARGS__)
+
 #define USE_OPTIMIZE_PRINTF
 
 #include "ets_sys.h"
@@ -112,7 +114,7 @@ robotd_insert_client(struct espconn *pespconn) {
     robotd_client *pret = NULL;
     for (size_t i = 0; i < MAX_NUM_CLIENTS; ++i) {
         if (clients[i].type == CLIENT_NONE) {
-            os_printf("inserted client at %u\n", i);
+            ROBOTD_DEBUG("inserted client at %u\n", i);
             pret = &clients[i];
             pret->conn = pespconn;
             pret->port = pespconn->proto.tcp->remote_port;
@@ -136,7 +138,7 @@ robotd_send_file(struct espconn *pespconn,
     pclient->type = CLIENT_FILE;
     pclient->send_data_length = file->data_len;
     pclient->send_data_pointer = file->data;
-    os_printf("Going to send %u bytes of data\n", file->data_len);
+    ROBOTD_DEBUG("Going to send %u bytes of data\n", file->data_len);
     robotd_send_header(pespconn, res_code, file->mimetype, file->data_len, NULL);
 }
 
@@ -151,7 +153,7 @@ robotd_find_client(struct espconn *pespconn) {
 
         if (curr_client->port == pespconn->proto.tcp->remote_port &&
             os_memcmp(&curr_client->ip[0], &pespconn->proto.tcp->remote_ip[0], 4) == 0) {
-            os_printf("found client at slot %u\n", i);
+            ROBOTD_DEBUG("found client at slot %u\n", i);
             ret_client = curr_client;
             break;
         }
@@ -161,7 +163,7 @@ robotd_find_client(struct espconn *pespconn) {
 }
 
 static void ICACHE_FLASH_ATTR robotd_delete_client(struct espconn *pespconn) {
-    os_printf("deleting client...\n");
+    ROBOTD_DEBUG("deleting client...\n");
     robotd_client *pclient = robotd_find_client(pespconn);
     if (pclient != NULL) {
         pclient->type = CLIENT_NONE;
@@ -275,7 +277,7 @@ robotd_websocket_prepare_header(uint8_t opcode, size_t len) {
     size_t offset = 2;
     if (len > 125) {
         if (len > UINT16_MAX) {
-            os_printf("Websocket: too long data buffer\n");
+            ROBOTD_DEBUG("Websocket: too long data buffer\n");
         }
         tmp[1] = 126;
         tmp[2] = len && 0xff;
@@ -308,7 +310,7 @@ robotd_websocket_send_all(uint8_t opcode, char *data, size_t len) {
 void ICACHE_FLASH_ATTR
 robotd_websocket_send(robotd_client *pclient, uint8_t opcode,
     char *data, size_t len) {
-    os_printf("Sending %u bytes of websocket data...\n", len);
+    ROBOTD_DEBUG("Sending %u bytes of websocket data...\n", len);
     size_t offset = robotd_websocket_prepare_header(opcode, len);
     os_memcpy(tmp_buf + offset, data, len);
     espconn_send(pclient->conn, tmp_buf, offset + len);
@@ -321,7 +323,7 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
 
     if (pclient->expected_data_length == 0) {
         if (length < 2) {
-            os_printf("Received data too short\n");
+            ROBOTD_DEBUG("Received data too short\n");
             return;
         }
 
@@ -332,7 +334,7 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
         size_t len = 0;
         if (len1 == 126) {
             if (length < 8) {
-                os_printf("WS: received data too short\n");
+                ROBOTD_DEBUG("WS: received data too short\n");
                 return;
             }
             len = data[3];
@@ -340,7 +342,7 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
             data_offset += 4;
         } else {
             if (length < 6) {
-                os_printf("WS: received data too short\n");
+                ROBOTD_DEBUG("WS: received data too short\n");
                 return;
             }
             len = len1;
@@ -348,11 +350,11 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
         }
 
         if (len1 == 127) {
-            os_printf("Websocket error: too long data\n", len);
+            ROBOTD_DEBUG("Websocket error: too long data\n", len);
             return;
         }
 
-        os_printf(
+        ROBOTD_DEBUG(
             "Decoded ws frame:\n"
             "FIN: %d\n"
             "opcode: 0x%x\n"
@@ -363,7 +365,7 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
             os_memcpy(pclient->recv_mask, &data[data_offset], 4);
             data_offset += 4;
         } else {
-            os_printf("Got unmasked data, something is wrong\n");
+            ROBOTD_DEBUG("Got unmasked data, something is wrong\n");
         }
 
         pclient->expected_data_length += len;
@@ -380,7 +382,7 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
     for (size_t i = data_offset; i < length; ++i) {
         // Leave space for string termination
         if (pclient->recv_buf_data_length >= RECV_BUF_SIZE - 1) {
-            os_printf("Receive buffer size exceeded\n");
+            ROBOTD_DEBUG("Receive buffer size exceeded\n");
             break;
         }
 
@@ -401,35 +403,35 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
         if (pclient->recv_opcode == WS_OPCODE_TEXT) {
             pclient->recv_buf[pclient->recv_buf_data_length] = '\0';
             pclient->recv_buf_data_length += 1;
-            os_printf("Received text: %s\n", pclient->recv_buf);
+            ROBOTD_DEBUG("Received text: %s\n", pclient->recv_buf);
             if (websocket_cb != NULL) {
                 websocket_cb(pclient, pclient->recv_opcode, pclient->recv_buf,
                     pclient->recv_buf_data_length);
             }
         } else if (pclient->recv_opcode == WS_OPCODE_BIN) {
-            os_printf("Received binary data: ");
+            ROBOTD_DEBUG("Received binary data: ");
             for (size_t i = 0; i < pclient->recv_buf_data_length; ++i) {
-                os_printf("0x%x ", pclient->recv_buf[i]);
+                ROBOTD_DEBUG("0x%x ", pclient->recv_buf[i]);
             }
-            os_printf("\n");
+            ROBOTD_DEBUG("\n");
             if (websocket_cb != NULL) {
                 websocket_cb(pclient, pclient->recv_opcode, pclient->recv_buf,
                     pclient->recv_buf_data_length);
             }
         } else if (pclient->recv_opcode == WS_OPCODE_PING) {
-            os_printf("Received ping, sent pong\n");
+            ROBOTD_DEBUG("Received ping, sent pong\n");
             robotd_websocket_send(pclient, WS_OPCODE_PONG,
                 pclient->recv_buf, pclient->recv_buf_data_length);
         } else if (pclient->recv_opcode == WS_OPCODE_PONG) {
-            os_printf("Received pong\n");
+            ROBOTD_DEBUG("Received pong\n");
         } else if (pclient->recv_opcode == WS_OPCODE_CONTINUATION) {
-            os_printf("Received continuation\n");
+            ROBOTD_DEBUG("Received continuation\n");
         } else if (pclient->recv_opcode == WS_OPCODE_CLOSE) {
-            os_printf("Received close, sending close frame back...\n");
+            ROBOTD_DEBUG("Received close, sending close frame back...\n");
             robotd_websocket_send(pclient, WS_OPCODE_CLOSE, pclient->recv_buf,
                 pclient->recv_buf_data_length >= 2 ? 2 : 0);
         } else {
-            os_printf("Opcode not recognized, something is wrong\n");
+            ROBOTD_DEBUG("Opcode not recognized, something is wrong\n");
         }
     }
 }
@@ -448,17 +450,17 @@ robotd_recv_cb(void *arg, char *pusrdata, unsigned short length)
         if (gReq.type == REQ_GET_FILE) {
             if (os_strcmp(gReq.data, "/") == 0) {
                 robotd_send_file(pespconn, RESPONSE_OK, &TEST_FILE);
-                os_printf("Sent test content\n", res_len);
+                ROBOTD_DEBUG("Sent test content\n", res_len);
             } else {
                 send_404(pespconn);
-                os_printf("Sent 404\n", res_len);
+                ROBOTD_DEBUG("Sent 404\n", res_len);
             }
         } else if (gReq.type == REQ_WS_UPGRADE) {
             // TODO what if all the slots are filled?
             robotd_do_websocket_handshake(pespconn, gReq.data);
         } else {
             send_501(pespconn);
-            os_printf("Sent 501\n", res_len);
+            ROBOTD_DEBUG("Sent 501\n", res_len);
         }
     } else if (pclient->type == CLIENT_WS) {
         robotd_handle_websocket_frame(pclient, pusrdata, length);
@@ -468,14 +470,14 @@ robotd_recv_cb(void *arg, char *pusrdata, unsigned short length)
 static void ICACHE_FLASH_ATTR
 robotd_discon_cb(void *arg)
 {
-    os_printf("discon_cb\n");
+    ROBOTD_DEBUG("discon_cb\n");
     robotd_delete_client((struct espconn *)arg);
 }
 
 static void ICACHE_FLASH_ATTR
 robotd_recon_cb(void *arg, sint8 err)
 {
-    os_printf("recon_cb\n");
+    ROBOTD_DEBUG("recon_cb\n");
     robotd_delete_client((struct espconn *)arg);
 }
 

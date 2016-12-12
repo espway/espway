@@ -42,6 +42,10 @@ mpuconfig gConfig = {
     .beta = 0.05f
 };
 quaternion gQuat = { 1.0f, 0.0f, 0.0f, 0.0f };
+bool gSendQuat = false;
+unsigned long gLastSentQuat = 0;
+const unsigned long QUAT_INTERVAL = 50000;
+const float QUAT_SCALE = 1000.0f;
 int16_t buf[6];
 
 os_event_t gTaskQueue[QUEUE_LEN];
@@ -51,6 +55,19 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
     if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
     mpuUpdateQuaternion(&gConfig, buf, &gQuat);
     float pitch = pitchAngle(&gQuat);
+
+    unsigned long time = system_get_time();
+    if (gSendQuat && time - gLastSentQuat > QUAT_INTERVAL) {
+        int16_t qdata[] = {
+            QUAT_SCALE * gQuat.q0,
+            QUAT_SCALE * gQuat.q1,
+            QUAT_SCALE * gQuat.q2,
+            QUAT_SCALE * gQuat.q3
+        };
+        robotd_websocket_send_all(WS_OPCODE_BIN, (char *)qdata, 8);
+        gSendQuat = false;
+        gLastSentQuat = time;
+    }
 }
 
 void mpuInterrupt(uint32_t mask, void *args) {
@@ -62,14 +79,7 @@ void mpuInterrupt(uint32_t mask, void *args) {
 
 void ICACHE_FLASH_ATTR
 websocketCb(robotd_client *pclient, uint8_t opcode, char *data, size_t length) {
-    float scale = 1000.0f;
-    int16_t qdata[] = {
-        scale * gQuat.q0,
-        scale * gQuat.q1,
-        scale * gQuat.q2,
-        scale * gQuat.q3
-    };
-    robotd_websocket_send(pclient, WS_OPCODE_BIN, (char *)&qdata, 8);
+    gSendQuat = true;
 }
 
 void ICACHE_FLASH_ATTR user_init(void) {
