@@ -113,8 +113,8 @@ robotd_send_file(struct espconn *pespconn,
     }
 
     pclient->type = CLIENT_FILE;
-    pclient->to_be_sent = file->data_len;
-    pclient->data_pointer = file->data;
+    pclient->send_data_length = file->data_len;
+    pclient->send_data_pointer = file->data;
     os_printf("Going to send %u bytes of data\n", file->data_len);
     robotd_send_header(pespconn, res_code, file->mimetype, file->data_len, NULL);
 }
@@ -229,19 +229,19 @@ static void ICACHE_FLASH_ATTR robotd_sent_cb(void *arg) {
     if (pclient == NULL) return;
 
     if (pclient->type == CLIENT_FILE &&
-        pclient->data_pointer != NULL && pclient->to_be_sent != 0) {
+        pclient->send_data_pointer != NULL && pclient->send_data_length != 0) {
 
-        size_t data_len = pclient->to_be_sent > TMP_BUF_SIZE ?
-            TMP_BUF_SIZE : pclient->to_be_sent;
-        os_memcpy(tmp_buf, pclient->data_pointer,
+        size_t data_len = pclient->send_data_length > TMP_BUF_SIZE ?
+            TMP_BUF_SIZE : pclient->send_data_length;
+        os_memcpy(tmp_buf, pclient->send_data_pointer,
             GET_ALIGNED_SIZE(data_len));
         espconn_send(pespconn, tmp_buf, data_len);
 
-        pclient->to_be_sent -= data_len;
-        pclient->data_pointer += data_len;
+        pclient->send_data_length -= data_len;
+        pclient->send_data_pointer += data_len;
 
-        if (pclient->to_be_sent == 0) {
-            pclient->data_pointer = NULL;
+        if (pclient->send_data_length == 0) {
+            pclient->send_data_pointer = NULL;
         }
     }
 }
@@ -290,22 +290,24 @@ static void ICACHE_FLASH_ATTR
 robotd_handle_websocket_frame(robotd_client *pclient, char *data,
     unsigned short length) {
     if (length < 4) return;
+    os_printf("receive websocket buffer, length %u\n", length);
     bool fin = (data[0] & 0x80) >> 7;
     uint8_t opcode = data[0] & 0x0f;
     bool mask = (data[1] & 0x80) >> 7;
     uint8_t len1 = data[1] & 0x7f;
-    size_t len = len1;
-    char *pdata = &data[2];
+    size_t len = 0;
     if (len1 == 126) {
-        len = data[2];
-        len |= (size_t)data[3] << 8;
-        pdata = &data[4];
+        len = data[3];
+        len |= data[2] << 8;
+        data += 4;
     } else {
         len = len1;
+        data += 2;
     }
 
     if (len1 == 127 || len > TMP_BUF_SIZE) {
-        os_printf("Websocket error: too long data\n");
+        os_printf("Websocket error: too long data, %u bytes\n", len);
+        return;
     }
 
     os_printf(
@@ -316,11 +318,11 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
         "length: %u\n", fin, opcode, mask, len);
 
     if (mask) {
-        uint8_t *pmask = pdata;
-        pdata += 4;
+        uint8_t *pmask = data;
+        data += 4;
         int imod4 = 0;
         for (size_t i = 0; i < len; ++i) {
-            pdata[i] ^= pmask[imod4];
+            data[i] ^= pmask[imod4];
             if (++imod4 == 4) {
                 imod4 = 0;
             }
@@ -328,21 +330,24 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
     }
 
     if (opcode == WS_OPCODE_TEXT) {
-        pdata[len] = '\0';
-        os_printf("Received text: %s\n", pdata);
+        data[len] = '\0';
+        os_printf("Received text: %s\n", data);
     } else if (opcode == WS_OPCODE_BIN) {
         os_printf("Received binary data: ");
         for (size_t i = 0; i < len; ++i) {
-            os_printf("0x%x ", pdata[i]);
+            os_printf("0x%x ", data[i]);
         }
         os_printf("\n");
     } else if (opcode == WS_OPCODE_PING) {
         os_printf("Received ping, sent pong\n");
-        robotd_websocket_send(pclient, WS_OPCODE_PONG, pdata, len);
+        robotd_websocket_send(pclient, WS_OPCODE_PONG, data, len);
     } else if (opcode == WS_OPCODE_PONG) {
         os_printf("Received pong\n");
     } else if (opcode == WS_OPCODE_CONTINUATION) {
         os_printf("Received continuation\n");
+    } else if (opcode == WS_OPCODE_CLOSE) {
+        os_printf("Received close, sending close frame back...\n");
+        robotd_websocket_send(pclient, WS_OPCODE_CLOSE, data, len >= 2 ? 2 : 0);
     }
 }
 

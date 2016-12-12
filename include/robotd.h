@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #define TMP_BUF_SIZE 1024  // MUST be a multiple of 4
+#define RECV_BUF_SIZE 1024
 #define REQ_DATA_MAX_LENGTH 128
 #define MAX_NUM_CLIENTS 4
 
@@ -20,8 +21,10 @@ typedef struct {
     client_type type;
     uint8_t ip[4];
     int port;
-    size_t to_be_sent;
-    const char *data_pointer;
+    size_t send_data_length;
+    const char *send_data_pointer;
+    size_t recv_data_length;
+    const char recv_buf[RECV_BUF_SIZE];
 } robotd_client;
 
 void robotd_init(uint32_t port);
