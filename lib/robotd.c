@@ -1,5 +1,7 @@
 #include <string.h>
 
+#define USE_OPTIMIZE_PRINTF
+
 #include "ets_sys.h"
 #include "osapi.h"
 #include "mem.h"
@@ -54,7 +56,7 @@ static char tmp_buf[TMP_BUF_SIZE];
 static robotd_client clients[MAX_NUM_CLIENTS];
 static SHA1_CTX sha1_ctx;
 static void (*websocket_cb)(robotd_client *pclient, uint8_t opcode, char *data,
-    size_t length);
+    size_t length) = NULL;
 
 static const char RESPONSE_OK[] = "200 OK",
                   NOT_FOUND[] = "404 Not Found",
@@ -83,7 +85,7 @@ robotd_send_header(struct espconn *pespconn,
         data = "";
     }
     os_sprintf(tmp_buf, HEADER_FORMAT, res_code, data_len, mimetype, data);
-    os_printf(tmp_buf);
+    os_printf_plus(tmp_buf);
     espconn_send(pespconn, tmp_buf, os_strlen(tmp_buf));
 }
 
@@ -183,7 +185,7 @@ robotd_do_websocket_handshake(struct espconn *pespconn, const char *ws_key) {
         "Upgrade: websocket\r\n"
         "Connection: upgrade\r\n"
         "Sec-Websocket-Accept: %s\r\n\r\n", b64_buf);
-    os_printf(tmp_buf);
+    os_printf_plus(tmp_buf);
 
     robotd_client *pclient = robotd_insert_client(pespconn);
     pclient->type = CLIENT_WS;
@@ -409,8 +411,10 @@ robotd_handle_websocket_frame(robotd_client *pclient, char *data,
                 os_printf("0x%x ", pclient->recv_buf[i]);
             }
             os_printf("\n");
-            websocket_cb(pclient, pclient->recv_opcode, pclient->recv_buf,
-                pclient->recv_buf_data_length);
+            if (websocket_cb != NULL) {
+                websocket_cb(pclient, pclient->recv_opcode, pclient->recv_buf,
+                    pclient->recv_buf_data_length);
+            }
         } else if (pclient->recv_opcode == WS_OPCODE_PING) {
             os_printf("Received ping, sent pong\n");
             robotd_websocket_send(pclient, WS_OPCODE_PONG,
