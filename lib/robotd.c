@@ -431,12 +431,14 @@ robotd_recv_cb(void *arg, char *pusrdata, unsigned short length)
 static void ICACHE_FLASH_ATTR
 robotd_discon_cb(void *arg)
 {
+    os_printf("discon_cb\n");
     robotd_delete_client((struct espconn *)arg);
 }
 
 static void ICACHE_FLASH_ATTR
 robotd_recon_cb(void *arg, sint8 err)
 {
+    os_printf("recon_cb\n");
     robotd_delete_client((struct espconn *)arg);
 }
 
