@@ -297,7 +297,7 @@ robotd_set_websocket_receive_cb(void (*cb)(robotd_client *pclient,
 void ICACHE_FLASH_ATTR
 robotd_websocket_send_all(uint8_t opcode, char *data, size_t len) {
     size_t offset = robotd_websocket_prepare_header(opcode, len);
-    os_memcpy(tmp_buf, data, offset + len);
+    os_memcpy(tmp_buf + offset, data, len);
     for (size_t i = 0; i < MAX_NUM_CLIENTS; ++i) {
         if (clients[i].type == CLIENT_WS) {
             espconn_send(clients[i].conn, tmp_buf, offset + len);
@@ -308,8 +308,9 @@ robotd_websocket_send_all(uint8_t opcode, char *data, size_t len) {
 void ICACHE_FLASH_ATTR
 robotd_websocket_send(robotd_client *pclient, uint8_t opcode,
     char *data, size_t len) {
+    os_printf("Sending %u bytes of websocket data...\n", len);
     size_t offset = robotd_websocket_prepare_header(opcode, len);
-    os_memcpy(tmp_buf, data, offset + len);
+    os_memcpy(tmp_buf + offset, data, len);
     espconn_send(pclient->conn, tmp_buf, offset + len);
 }
 
