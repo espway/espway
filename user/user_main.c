@@ -42,10 +42,11 @@ mpuconfig gConfig = {
     .beta = 0.05f
 };
 quaternion gQuat = { 1.0f, 0.0f, 0.0f, 0.0f };
+quaternion_fix gQuat_fix = { Q16_MULTIPLIER, 0, 0, 0 };
 bool gSendQuat = false;
 unsigned long gLastSentQuat = 0;
 const unsigned long QUAT_INTERVAL = 50000;
-const float QUAT_SCALE = 1000.0f;
+const float QUAT_SCALE = 1000.0f / Q16_MULTIPLIER;
 int16_t buf[6];
 
 os_event_t gTaskQueue[QUEUE_LEN];
@@ -53,16 +54,17 @@ os_event_t gTaskQueue[QUEUE_LEN];
 void ICACHE_FLASH_ATTR compute(os_event_t *e) {
     mpuReadIntStatus(MPU_ADDR);
     if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
-    mpuUpdateQuaternion(&gConfig, buf, &gQuat);
-    float pitch = pitchAngle(&gQuat);
+    mpuUpdateQuaternion_fix(&gConfig, buf, &gQuat_fix);
+    /* os_printf("gQuat_fix: %ld, %ld, %ld, %ld\n", */
+    /*     gQuat_fix.q0, gQuat_fix.q1, gQuat_fix.q2, gQuat_fix.q3); */
 
     unsigned long time = system_get_time();
     if (gSendQuat && time - gLastSentQuat > QUAT_INTERVAL) {
         int16_t qdata[] = {
-            QUAT_SCALE * gQuat.q0,
-            QUAT_SCALE * gQuat.q1,
-            QUAT_SCALE * gQuat.q2,
-            QUAT_SCALE * gQuat.q3
+            QUAT_SCALE * gQuat_fix.q0,
+            QUAT_SCALE * gQuat_fix.q1,
+            QUAT_SCALE * gQuat_fix.q2,
+            QUAT_SCALE * gQuat_fix.q3
         };
         robotd_websocket_send_all(WS_OPCODE_BIN, (char *)qdata, 8);
         gSendQuat = false;

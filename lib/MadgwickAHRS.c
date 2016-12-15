@@ -15,6 +15,7 @@
 
 #include <math.h>
 
+#include "ets_sys.h"
 #include "MadgwickAHRS.h"
 
 // Fast inverse square-root
@@ -33,7 +34,7 @@ static inline float invSqrt(float x) {
 //---------------------------------------------------------------------------------------------------
 // IMU algorithm update
 
-void MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
+void ICACHE_FLASH_ATTR MadgwickAHRSupdateIMU(float beta, float gyroIntegrationFactor,
 	int16_t data[], quaternion * const q) {
 	float recipNorm;
 	float q0, q1, q2, q3;

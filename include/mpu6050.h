@@ -22,6 +22,7 @@
 #include <stdint.h>
 
 #include "MadgwickAHRS.h"
+#include "MadgwickAHRS_fix.h"
 
 // Register addresses and bits as per the MPU-6050 datasheet
 // http://43zrtwysvxb2gf29r5o0athu.wpengine.netdna-cdn.com/wp-content/uploads/2015/02/MPU-6000-Register-Map1.pdf
@@ -104,6 +105,9 @@ typedef struct {
     float gyroScale;
     float gyroIntegrationFactor;
     float correctedBeta;
+    q16 beta_fix;
+    q16 correctedBeta_fix;
+    q16 gyroIntegrationFactor_fix;
 } mpuconfig;
 
 /* mpuconfig mpuDefaultConfig = {
@@ -127,4 +131,6 @@ void mpuApplyOffsets(int16_t * const data, const int16_t * const offsets);
 int mpuSetup(const uint8_t addr, mpuconfig * const config);
 void mpuUpdateQuaternion(const mpuconfig * const config, int16_t * const data,
     quaternion * const q);
+void mpuUpdateQuaternion_fix(const mpuconfig * const config, int16_t * const data,
+    quaternion_fix * const q);
 

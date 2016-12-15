@@ -27,6 +27,6 @@ typedef struct {
     q16 q0, q1, q2, q3;
 } quaternion_fix;
 
-void MadgwickAHRSupdateIMU(q16 beta, q16 gyroIntegrationFactor,
+void MadgwickAHRSupdateIMU_fix(q16 beta, q16 gyroIntegrationFactor,
     int16_t data[], quaternion_fix * const q);
 

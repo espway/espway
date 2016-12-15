@@ -80,7 +80,7 @@ int mpuReadRawData(const uint8_t addr, int16_t * const data) {
     return ret ? 0 : -1;
 }
 
-void mpuApplyOffsets(int16_t * const data,
+void ICACHE_FLASH_ATTR mpuApplyOffsets(int16_t * const data,
     const int16_t * const offsets) {
     for (uint8_t i = 0; i < 6; ++i) {
         data[i] += offsets[i];
@@ -90,7 +90,7 @@ void mpuApplyOffsets(int16_t * const data,
 static const int16_t MPU_GYRO_RANGE[] = { 250, 500, 1000, 2000 };
 static const int8_t MPU_ACCEL_RANGE[] = { 2, 4, 8, 16 };
 
-int mpuSetup(const uint8_t addr,
+int ICACHE_FLASH_ATTR mpuSetup(const uint8_t addr,
     mpuconfig * const config) {
     int status;
     // Wake up and disable temperature measurement if asked for
@@ -133,12 +133,24 @@ int mpuSetup(const uint8_t addr,
     config->gyroIntegrationFactor = 0.5f * config->gyroScale * sampleTime;
     config->correctedBeta = config->beta / (0.5f * config->gyroScale);
 
+    float gyroScale = 4.0f * M_PI / 180.0f * MPU_GYRO_RANGE[config->gyroRange];
+    config->gyroIntegrationFactor_fix = float_to_q16(0.5f * gyroScale * sampleTime);
+    config->correctedBeta_fix = float_to_q16(config->beta / (0.5f * gyroScale));
+
     return id == addr ? 0 : -1;
 }
 
-void mpuUpdateQuaternion(const mpuconfig * const config,
+void ICACHE_FLASH_ATTR mpuUpdateQuaternion(const mpuconfig * const config,
     int16_t * const data, quaternion * const q) {
     MadgwickAHRSupdateIMU(config->correctedBeta, config->gyroIntegrationFactor,
+        data, q);
+}
+
+void ICACHE_FLASH_ATTR mpuUpdateQuaternion_fix(const mpuconfig * const config,
+    int16_t * const data, quaternion_fix * const q) {
+    MadgwickAHRSupdateIMU_fix(
+        config->correctedBeta_fix,
+        config->gyroIntegrationFactor_fix,
         data, q);
 }
 

@@ -1,8 +1,6 @@
 #include "q16.h"
 #include "q16_luts.h"
 
-#define Q16_MULTIPLIER 65536
-
 // Fixed point multiplication following
 // https://github.com/PetteriAimonen/libfixmath/blob/master/libfixmath/fix16.c
 q16 q16_mul(q16 x, q16 y) {
@@ -32,5 +30,9 @@ q16 q16_rsqrt(q16 x) {
     y = q16_mul(y, 3*Q16_MULTIPLIER - q16_mul(x, y2)) / 2;
 
     return y;
+}
+
+q16 ICACHE_FLASH_ATTR float_to_q16(float f) {
+    return Q16_MULTIPLIER * f;
 }
 
