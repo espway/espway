@@ -98,7 +98,7 @@
 
                 let byId = id => document.getElementById(id)
                 let cube = byId('cube')
-                let scale = 1 / 1000.0
+                let scale = 1 / 32768.0
                 let gTransform = ''
                 let ws = new WebSocket('ws://192.168.4.1/ws')
                 ws.binaryType = 'arraybuffer'

@@ -71,10 +71,10 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
     unsigned long time = system_get_time();
     if (gSendQuat && time - gLastSentQuat > QUAT_INTERVAL) {
         int16_t qdata[] = {
-            QUAT_SCALE * gQuat_fix.q0,
-            QUAT_SCALE * gQuat_fix.q1,
-            QUAT_SCALE * gQuat_fix.q2,
-            QUAT_SCALE * gQuat_fix.q3
+            gQuat_fix.q0 / 2,
+            gQuat_fix.q1 / 2,
+            gQuat_fix.q2 / 2,
+            gQuat_fix.q3 / 2
         };
         robotd_websocket_send_all(WS_OPCODE_BIN, (char *)qdata, 8);
         gSendQuat = false;

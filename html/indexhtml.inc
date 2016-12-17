@@ -82,7 +82,7 @@ static const char INDEX_HTML[] ICACHE_RODATA_ATTR =
 "                'use strict'\n"
 "                let byId = id => document.getElementById(id)\n"
 "                let cube = byId('cube')\n"
-"                let scale = 1 / 1000.0\n"
+"                let scale = 1 / 32768.0\n"
 "                let gTransform = ''\n"
 "                let ws = new WebSocket('ws://192.168.4.1/ws')\n"
 "                ws.binaryType = 'arraybuffer'\n"
