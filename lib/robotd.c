@@ -522,6 +522,7 @@ robotd_init_ap(char *ssid) {
     conf.max_connection = 1;
     conf.authmode = AUTH_OPEN;
 
+    wifi_set_phy_mode(PHY_MODE_11G);
     wifi_softap_set_config(&conf);
     wifi_set_opmode(SOFTAP_MODE);
 }
