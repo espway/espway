@@ -47,8 +47,8 @@ void MadgwickAHRSupdateIMU_fix(q16 beta, q16 gyroIntegrationFactor,
     // (avoids NaN in accelerometer normalisation)
     if (data[ACC_X_IDX] != 0 || data[ACC_Y_IDX] != 0 || data[ACC_Z_IDX] != 0) {
         q16 ax = data[ACC_X_IDX],
-        ay = data[ACC_Y_IDX],
-        az = data[ACC_Z_IDX];
+            ay = data[ACC_Y_IDX],
+            az = data[ACC_Z_IDX];
         // Normalise accelerometer measurement
         recipNorm = q16_mul(ax, ax);
         recipNorm += q16_mul(ay, ay);

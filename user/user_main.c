@@ -33,7 +33,7 @@ const int MPU_ADDR = 0x68;
 
 mpuconfig gConfig = {
     .lowpass = 3,
-    .sampleRateDivider = 1,
+    .sampleRateDivider = 0,
     .gyroRange = 3,
     .accelRange = 0,
     .enableInterrupt = true,
@@ -43,6 +43,12 @@ mpuconfig gConfig = {
 };
 quaternion gQuat = { 1.0f, 0.0f, 0.0f, 0.0f };
 quaternion_fix gQuat_fix = { Q16_MULTIPLIER, 0, 0, 0 };
+
+const bool COUNT_FREQUENCY = false;
+const int N_FREQUENCY_SAMPLES = 1000;
+int gSampleCounter = 0;
+unsigned long gLastCountTime = 0;
+
 bool gSendQuat = false;
 unsigned long gLastSentQuat = 0;
 const unsigned long QUAT_INTERVAL = 50000;
@@ -53,8 +59,12 @@ os_event_t gTaskQueue[QUEUE_LEN];
 
 void ICACHE_FLASH_ATTR compute(os_event_t *e) {
     mpuReadIntStatus(MPU_ADDR);
-    if (mpuReadRawData(MPU_ADDR, buf) != 0) return;
+    if (mpuReadRawData(MPU_ADDR, buf) != 0) {
+        os_printf("Problem reading raw data\n");
+        return;
+    }
     mpuUpdateQuaternion_fix(&gConfig, buf, &gQuat_fix);
+    /* mpuUpdateQuaternion(&gConfig, buf, &gQuat); */
     /* os_printf("gQuat_fix: %ld, %ld, %ld, %ld\n", */
     /*     gQuat_fix.q0, gQuat_fix.q1, gQuat_fix.q2, gQuat_fix.q3); */
 
@@ -69,6 +79,13 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
         robotd_websocket_send_all(WS_OPCODE_BIN, (char *)qdata, 8);
         gSendQuat = false;
         gLastSentQuat = time;
+    }
+
+    if (COUNT_FREQUENCY && ++gSampleCounter == N_FREQUENCY_SAMPLES) {
+        os_printf("Sampling frequency: %d\n",
+            1000000 * N_FREQUENCY_SAMPLES / (time - gLastCountTime));
+        gSampleCounter = 0;
+        gLastCountTime = time;
     }
 }
 

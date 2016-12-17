@@ -133,7 +133,7 @@ int ICACHE_FLASH_ATTR mpuSetup(const uint8_t addr,
     config->gyroIntegrationFactor = 0.5f * config->gyroScale * sampleTime;
     config->correctedBeta = config->beta / (0.5f * config->gyroScale);
 
-    float gyroScale = 4.0f * M_PI / 180.0f * MPU_GYRO_RANGE[config->gyroRange];
+    float gyroScale = 2.0f * M_PI / 180.0f * MPU_GYRO_RANGE[config->gyroRange];
     config->gyroIntegrationFactor_fix = float_to_q16(0.5f * gyroScale * sampleTime);
     config->correctedBeta_fix = float_to_q16(config->beta / (0.5f * gyroScale));
 

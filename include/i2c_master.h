@@ -49,7 +49,7 @@
     gpio_output_set(0, (1<<I2C_MASTER_SDA_GPIO) | (1<<I2C_MASTER_SCL_GPIO), \
     (1<<I2C_MASTER_SDA_GPIO) | (1<<I2C_MASTER_SCL_GPIO), 0)
 
-#define I2C_MASTER_DELAY 1
+#define I2C_MASTER_DELAY 0
 
 #define i2c_master_wait() os_delay_us(I2C_MASTER_DELAY)
 
