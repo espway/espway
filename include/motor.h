@@ -19,6 +19,8 @@
 #define MOTOR1_REVERSE false
 #define MOTOR2_REVERSE false
 
+#include "q16.h"
+
 void setup_motor_pwm();
-void set_motor_velocities(int velocity1, int velocity2);
+void set_motor_velocities(q16 velocity1, q16 velocity2);
 

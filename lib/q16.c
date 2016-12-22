@@ -36,3 +36,11 @@ q16 ICACHE_FLASH_ATTR float_to_q16(float f) {
     return Q16_MULTIPLIER * f;
 }
 
+int16_t ICACHE_FLASH_ATTR q16_to_int(q16 x) {
+    return x >> 16;
+}
+
+q16 ICACHE_FLASH_ATTR int_to_q16(int16_t x) {
+    return x << 16;
+}
+
