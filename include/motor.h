@@ -1,13 +1,24 @@
 #pragma once
 
-const unsigned long MOTOR_PWM_PERIOD = 1000;  // period in us
+#define MOTOR_PWM_PERIOD 1000
 
-struct motor {
-    int pwmPin;
-    int directionPin;
-    bool reverse;
-};
+#define MOTOR1_PWM_MUX PERIPHS_IO_MUX_MTMS_U
+#define MOTOR1_PWM_FUNC FUNC_GPIO14
+#define MOTOR1_PWM_GPIO_NUM 14
+#define MOTOR1_DIR_MUX PERIPHS_IO_MUX_MTDI_U
+#define MOTOR1_DIR_FUNC FUNC_GPIO12
+#define MOTOR1_DIR_GPIO_NUM 12
 
-void setupMotorPwm(motor m);
-void setMotorVelocity(motor m, double velocity);
+#define MOTOR2_PWM_MUX PERIPHS_IO_MUX_MTCK_U
+#define MOTOR2_PWM_FUNC FUNC_GPIO13
+#define MOTOR2_PWM_GPIO_NUM 13
+#define MOTOR2_DIR_MUX PERIPHS_IO_MUX_MTDO_U
+#define MOTOR2_DIR_FUNC FUNC_GPIO15
+#define MOTOR2_DIR_GPIO_NUM 15
+
+#define MOTOR1_REVERSE false
+#define MOTOR2_REVERSE false
+
+void setup_motor_pwm();
+void set_motor_velocities(int velocity1, int velocity2);
 
