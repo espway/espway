@@ -16,11 +16,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "ets_sys.h"
-#include "osapi.h"
-#include "os_type.h"
-#include "espmissingincludes.h"
-#include "gpio.h"
+#include <ets_sys.h>
+#include <osapi.h>
+#include <os_type.h>
+#include <espmissingincludes.h>
+#include <gpio.h>
 
 #include "i2c_master.h"
 
@@ -111,7 +111,7 @@ i2c_master_readByte(void)
 {
     uint8 retVal = 0;
 
-    for (int8_t i = 7; i >= 0; i--) {
+    for (int8_t i = 7; i >= 0; --i) {
         retVal |= i2c_master_read_bit() << i;
     }
 
@@ -121,7 +121,7 @@ i2c_master_readByte(void)
 void ICACHE_FLASH_ATTR
 i2c_master_writeByte(uint8 wrdata)
 {
-    for (int8_t i = 7; i >= 0; i--) {
+    for (int8_t i = 7; i >= 0; --i) {
         i2c_master_write_bit((wrdata >> i) & 0x1);
     }
 }
@@ -137,7 +137,7 @@ bool ICACHE_FLASH_ATTR i2c_master_receiveFrom(uint8_t addr) {
 }
 
 bool ICACHE_FLASH_ATTR i2c_master_writeBytes(uint8_t *buf, int len) {
-    for (int i = 0; i < len; i++) {
+    for (int i = 0; i < len; --i) {
         i2c_master_writeByte(buf[i]);
         if (i2c_master_checkAck() == 0) return false;
     }
@@ -146,7 +146,7 @@ bool ICACHE_FLASH_ATTR i2c_master_writeBytes(uint8_t *buf, int len) {
 
 bool ICACHE_FLASH_ATTR i2c_master_readBytes(uint8_t *buf, int len) {
     int i;
-    for (i = 0; i < len - 1; i++) {
+    for (i = 0; i < len - 1; --i) {
         buf[i] = i2c_master_readNextByte(true);
     }
     buf[i] = i2c_master_readNextByte(false);

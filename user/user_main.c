@@ -32,6 +32,8 @@ const int MPU_ADDR = 0x68;
 os_event_t gTaskQueue[QUEUE_LEN];
 
 void ICACHE_FLASH_ATTR compute(os_event_t *e) {
+    os_printf("compute called!\n");
+    system_os_post(2, 0, 0);
 }
 
 void ICACHE_FLASH_ATTR user_init(void) {
@@ -39,12 +41,15 @@ void ICACHE_FLASH_ATTR user_init(void) {
     i2c_master_gpio_init();
     uart_init(BIT_RATE_115200, BIT_RATE_115200);
 
+    /*
     ETS_GPIO_INTR_DISABLE();
 
     gpio_output_set(0, BIT12|BIT13|BIT14|BIT15, BIT12|BIT13|BIT14|BIT15, 0);
 
     ETS_GPIO_INTR_ENABLE();
+    */
 
     system_os_task(compute, 2, gTaskQueue, QUEUE_LEN);
+    system_os_post(2, 0, 0);
 }
 
