@@ -1,15 +1,15 @@
 
 #include "imu.h"
 
-q16 gravityX(const quaternion_fix * const quat) {
+q16 ICACHE_FLASH_ATTR gravityX(const quaternion_fix * const quat) {
     return 2 * (q16_mul(quat->q1, quat->q3) - q16_mul(quat->q0, quat->q2));
 }
 
-q16 gravityY(const quaternion_fix * const quat) {
+q16 ICACHE_FLASH_ATTR gravityY(const quaternion_fix * const quat) {
     return 2 * (q16_mul(quat->q2, quat->q3) + q16_mul(quat->q0, quat->q1));
 }
 
-q16 gravityZ(const quaternion_fix * const quat) {
+q16 ICACHE_FLASH_ATTR gravityZ(const quaternion_fix * const quat) {
     return q16_mul(quat->q0, quat->q0) -
         q16_mul(quat->q1, quat->q1) -
         q16_mul(quat->q2, quat->q2) +
@@ -33,7 +33,7 @@ q16 gravityZ(const quaternion_fix * const quat) {
 // 14/12/2016   Sakari Kapanen  Fixed point version of the algorithm
 //
 //=============================================================================
-void MadgwickAHRSupdateIMU_fix(const madgwickparams * const params,
+void ICACHE_FLASH_ATTR MadgwickAHRSupdateIMU_fix(const madgwickparams * const params,
     const int16_t * const rawAccel, const int16_t * const rawGyro,
     quaternion_fix * const q) {
     q16 recipNorm;
@@ -113,7 +113,7 @@ void MadgwickAHRSupdateIMU_fix(const madgwickparams * const params,
     q->q3 = q16_mul(q3, recipNorm);
 }
 
-void calculateMadgwickParams(madgwickparams * const params,
+void ICACHE_FLASH_ATTR calculateMadgwickParams(madgwickparams * const params,
     float beta, float gyroScale, float sampleTime) {
     params->gyroIntegrationFactor = FLT_TO_Q16(0.5f * gyroScale * sampleTime);
     params->beta = FLT_TO_Q16(beta / (0.5f * gyroScale));

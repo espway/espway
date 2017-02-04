@@ -4,7 +4,7 @@ static inline q16 clamp(q16 x, q16 a, q16 b) {
     return x > a ? (x < b ? x : b) : a;
 }
 
-void pid_initialize(q16 Kp, q16 Ki, q16 Kd, q16 dt,
+void ICACHE_FLASH_ATTR pid_initialize(q16 Kp, q16 Ki, q16 Kd, q16 dt,
     q16 out_min, q16 out_max, bool invert, pidsettings *settings) {
     settings->dt = dt;
     settings->out_min = out_min;
@@ -13,7 +13,7 @@ void pid_initialize(q16 Kp, q16 Ki, q16 Kd, q16 dt,
     pid_update_params(Kp, Ki, Kd, settings);
 }
 
-void pid_update_params(q16 Kp, q16 Ki, q16 Kd, pidsettings *settings) {
+void ICACHE_FLASH_ATTR pid_update_params(q16 Kp, q16 Ki, q16 Kd, pidsettings *settings) {
     settings->Kp = Kp;
     settings->Ki_times_dt = q16_mul(Ki, settings->dt);
     settings->Kd_over_dt = q16_div(Kd, settings->dt);
@@ -24,13 +24,13 @@ void pid_update_params(q16 Kp, q16 Ki, q16 Kd, pidsettings *settings) {
     }
 }
 
-void pid_initialize_flt(float Kp, float Ki, float Kd, float dt, q16 out_min,
+void ICACHE_FLASH_ATTR pid_initialize_flt(float Kp, float Ki, float Kd, float dt, q16 out_min,
     q16 out_max, bool invert, pidsettings *settings) {
     pid_initialize(FLT_TO_Q16(Kp), FLT_TO_Q16(Ki), FLT_TO_Q16(Kd),
         FLT_TO_Q16(dt), out_min, out_max, invert, settings);
 }
 
-q16 pid_compute(q16 input, q16 setpoint,
+q16 ICACHE_FLASH_ATTR pid_compute(q16 input, q16 setpoint,
     pidsettings *settings, pidstate *state) {
     q16 error = input - setpoint;
     q16 p_term = q16_mul(settings->Kp, error);
@@ -42,7 +42,7 @@ q16 pid_compute(q16 input, q16 setpoint,
     return clamp(output, settings->out_min, settings->out_max);
 }
 
-void pid_reset(q16 input, q16 output, pidsettings *settings, pidstate *state) {
+void ICACHE_FLASH_ATTR pid_reset(q16 input, q16 output, pidsettings *settings, pidstate *state) {
     state->i_term = clamp(output, settings->out_min,
         settings->out_max);
     state->last_input = input;

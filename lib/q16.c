@@ -3,7 +3,7 @@
 
 // Fixed point multiplication following
 // https://github.com/PetteriAimonen/libfixmath/blob/master/libfixmath/fix16.c
-q16 q16_mul(q16 x, q16 y) {
+q16 ICACHE_FLASH_ATTR q16_mul(q16 x, q16 y) {
     int32_t xhi = x >> 16, yhi = y >> 16;
     uint32_t xlo = x & 0xffff, ylo = y & 0xffff;
 
@@ -17,12 +17,12 @@ q16 q16_mul(q16 x, q16 y) {
     return (hi << 16) | (prod_lo >> 16);
 }
 
-q16 q16_div(q16 x, q16 y) {
+q16 ICACHE_FLASH_ATTR q16_div(q16 x, q16 y) {
     int32_t res = x / y;
     return res << 16;
 }
 
-q16 q16_rsqrt(q16 x) {
+q16 ICACHE_FLASH_ATTR q16_rsqrt(q16 x) {
     int power = 14 - (__builtin_clz(x) & ~0x01);
 
     q16 x_normalized = x >> (power + 10);
@@ -37,7 +37,7 @@ q16 q16_rsqrt(q16 x) {
     return y;
 }
 
-q16 q16_exponential_smooth(q16 prevVal, q16 newVal, q16 alpha) {
+q16 ICACHE_FLASH_ATTR q16_exponential_smooth(q16 prevVal, q16 newVal, q16 alpha) {
     return prevVal + q16_mul(alpha, newVal - prevVal);
 }
 

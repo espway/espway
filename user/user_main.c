@@ -21,6 +21,7 @@
 #include <espmissingincludes.h>
 #include <gpio.h>
 #include <driver/uart.h>
+#include <stdbool.h>
 
 #include <esp8266.h>
 #include "httpd.h"
@@ -29,7 +30,8 @@
 #include "espfs.h"
 #include "webpages-espfs.h"
 
-#include "i2c_master.h"
+#include "i2c.h"
+#include "mpu6050.h"
 
 #define QUEUE_LEN 1
 
@@ -37,6 +39,8 @@ const int LED_PIN = 2;
 const int MPU_ADDR = 0x68;
 
 os_event_t gTaskQueue[QUEUE_LEN];
+
+bool mpuInitSucceeded = false;
 
 #ifdef ESPFS_POS
 CgiUploadFlashDef uploadParams={
@@ -71,28 +75,42 @@ HttpdBuiltInUrl builtInUrls[]={
 };
 
 void ICACHE_FLASH_ATTR compute(os_event_t *e) {
-    os_printf("compute called!\n");
+    if (mpuInitSucceeded) {
+        os_printf("mpu init succeeded\n");
+    }
     system_os_post(2, 0, 0);
 }
 
 void ICACHE_FLASH_ATTR wifi_init(void) {
     struct softap_config config;
     wifi_set_opmode_current(0x02);
-    wifi_softap_get_config(&config); // Get config first.
+    wifi_softap_get_config(&config);
+    wifi_set_phy_mode(PHY_MODE_11G);
     os_memset(config.ssid, 0, 32);
     os_memset(config.password, 0, 64);
     os_memcpy(config.ssid, "ESPway", 6);
     config.authmode = AUTH_OPEN;
-    config.ssid_len = 0;// or its actual length
+    config.ssid_len = 0;
     config.beacon_interval = 100;
-    config.max_connection = 1; // how many stations can connect to ESP8266 softAP at most.
-    wifi_softap_set_config(&config);// Set ESP8266 softap config .
+    config.max_connection = 1;
+    wifi_softap_set_config(&config);
+}
+
+bool ICACHE_FLASH_ATTR mpuInit(void) {
+    mpuWriteRegister(MPU_ADDR, MPU_PWR_MGMT_1, MPU_CLK_PLL_ZGYRO | MPU_TEMP_DIS,
+        false);
+    uint8_t addr = 0;
+    mpuReadRegisters(MPU_ADDR, MPU_WHO_AM_I, 1, &addr);
+    os_printf("\n%u\n", addr);
+    return addr == MPU_ADDR;
 }
 
 void ICACHE_FLASH_ATTR user_init(void) {
     system_update_cpu_freq(80);
-    i2c_master_gpio_init();
+    gpio_init();
     uart_init(BIT_RATE_115200, BIT_RATE_115200);
+    i2c_gpio_init();
+    mpuInitSucceeded = mpuInit();
 
     wifi_init();
 
