@@ -11,3 +11,4 @@ ldscript_memspecific.ld
 eagle.app.sym
 .output
 mapfile.txt
+.pio*

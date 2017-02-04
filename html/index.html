@@ -2,143 +2,234 @@
 
 <html>
     <head>
-        <meta charset='us-ascii' />
+        <meta charset='utf-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no' />
 
         <title>ESPway</title>
 
         <style>
-            html {
-                font-size: 32px;
-            }
-
-            body {
-                font-family: sans-serif;
-                text-align: center;
-                margin: 0 auto;
-            }
-
-            button {
-                font-size: 2rem;
-                width: 4rem;
-                height: 3rem;
-            }
-
-            #cube {
-                transform-style: preserve-3d;
-                position: absolute;
-                width: 200px;
-                height: 200px;
+            body, html {
                 margin: 0;
+                padding: 0;
+                text-align: center;
             }
 
-            .square {
-                width: 200px;
-                height: 200px;
-                position: absolute;
+            body, button {
+                background-color: white;
+                color: #334;
+                font-family: monospace;
+            }
+
+            #joystick {
                 margin: 0 auto;
+                width: 310px;
+                height: 310px;
+                display: block;
+                border: 2px solid #334;
+                border-radius: 10px;
+                background: radial-gradient(circle closest-side, #fff, #ccd);
             }
 
-            #square1A, #square1B {
-                background-color: blue;
+            h1 {
+                text-align: center;
+                font-size: 2rem;
             }
 
-            #square2A, #square2B {
-                background-color: red;
+            #tiltBtn {
+                margin-top: 1em;
+                font-size: 1.5rem;
+                padding: 1em 0;
+                width: 310px;
+                border-radius: 0.5em;
+                border-style: none;
+                display: none;
+                color: white;
+                font-weight: bold;
             }
 
-            #square3A, #square3B {
-                background-color: green;
+            #heading {
+                width: 310px;
+                margin: 1em auto;
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
             }
 
-            #square1A {
-                transform: translate3d(0, 0, 100px);
-            }
-            #square1B {
-                transform: translate3d(0, 0, -100px);
-            }
-
-            #square2A {
-                transform: rotateY(90deg) translate3d(0, 0, -100px);
-            }
-            #square2B {
-                transform: rotateY(90deg) translate3d(0, 0, 100px);
-            }
-
-            #square3A {
-                transform: rotateX(90deg) translate3d(0, 0, -100px);
-            }
-            #square3B {
-                transform: rotateX(90deg) translate3d(0, 0, 100px);
-            }
-
-            #container {
-                margin: 100px auto;
-                width: 200px;
-                height: 200px;
+            .largetxt {
+                font-size: 2em;
             }
         </style>
     </head>
 
     <body>
-        <div id='container'>
-            <div id='cube'>
-                <div class='square' id='square1A'></div>
-                <div class='square' id='square2A'></div>
-                <div class='square' id='square3A'></div>
-                <div class='square' id='square1B'></div>
-                <div class='square' id='square2B'></div>
-                <div class='square' id='square3B'></div>
-            </div>
+        <div id='heading'>
+            <div class='largetxt left'>ESPway</div>
+            <div class='right'>BAT: <span id='battery'></span> V</div>
         </div>
+        <canvas id='joystick'></canvas>
+        <button id='tiltBtn'></button>
 
         <script>
-            (function() {
+            window.addEventListener('load', () => {
                 'use strict'
 
                 let byId = id => document.getElementById(id)
-                let cube = byId('cube')
-                let scale = 1 / 32768.0
-                let gTransform = ''
                 let ws = new WebSocket('ws://192.168.4.1/ws')
                 ws.binaryType = 'arraybuffer'
-                let sendBytes = bytes => ws.send((new Uint8Array(bytes)).buffer)
-                ws.addEventListener('message', update)
-                ws.addEventListener('open', raf)
 
-                function update(e) {
-                    if (e.data.byteLength === 8) {
-                        let arr = new Int16Array(e.data)
-                        let q0 = scale * arr[0],
-                            q1 = -scale * arr[2],
-                            q2 = scale * arr[3],
-                            q3 = -scale * arr[1]
-                        let a1 = q0*q0 + q1*q1 - q2*q2 - q3*q3,
-                            a2 = 2 * (q1*q2 - q0*q3),
-                            a3 = 2 * (q1*q3 + q0*q2),
-                            b1 = 2 * (q1*q2 + q0*q3),
-                            b2 = q0*q0 - q1*q1 + q2*q2 - q3*q3,
-                            b3 = 2 * (q2*q3 - q0*q1),
-                            c1 = 2 * (q1*q3 - q0*q2),
-                            c2 = 2 * (q2*q3 + q0*q1),
-                            c3 = q0*q0 - q1*q1 - q2*q2 + q3*q3
-                        gTransform = 'matrix3d(' +
-                            a1 + ',' + b1 + ',' + c1 + ',0,' +
-                            a2 + ',' + b2 + ',' + c2 + ',0,' +
-                            a3 + ',' + b3 + ',' + c3 + ',0,' +
-                            '0,0,0,1)'
+                let tiltBtn = byId('tiltBtn')
+                let battery = byId('battery')
+                let myCanvas = byId('joystick')
+                let dpr = window.devicePixelRatio
+                let canvasWidth = myCanvas.clientWidth,
+                    canvasHeight = myCanvas.clientHeight
+                myCanvas.width = canvasWidth * dpr
+                myCanvas.height = canvasHeight * dpr
+                let ctx = myCanvas.getContext('2d')
+                ctx.lineWidth = 10
+                ctx.strokeStyle = 'black'
+                ctx.fillStyle = 'red'
+                ctx.scale(dpr, dpr)
+
+                let mouseIsDown = false
+                let hasCurrentTouch = false
+                let currentTouchId = null
+                let pageX = 0, pageY = 0
+                let x = 0, y = 0
+                let beta = 0, gamma = 0
+                let hasDeviceOrientation = false
+                let tiltControl = false
+
+                ws.addEventListener('message', e => {
+                    let dview = new DataView(e.data)
+                    let command = dview.getUint8(0)
+                    if (command === 3 && e.data.byteLength === 3) {
+                        let batteryValue = dview.getInt16(1, true) / 100
+                        battery.innerText = batteryValue.toFixed(2)
                     }
+                })
 
-                    requestAnimationFrame(raf)
+                window.addEventListener('mousemove', e => {
+                    if (mouseIsDown) {
+                        pageX = e.pageX
+                        pageY = e.pageY
+                    }
+                })
+
+                myCanvas.addEventListener('mousedown', e => {
+                    mouseIsDown = true
+                    pageX = e.pageX
+                    pageY = e.pageY
+                })
+
+                window.addEventListener('mouseup', e => {
+                    mouseIsDown = false
+                })
+
+                myCanvas.addEventListener('touchstart', e => {
+                    currentTouchId = e.changedTouches[0].identifier
+                    pageX = e.changedTouches[0].pageX
+                    pageY = e.changedTouches[0].pageY
+                    hasCurrentTouch = true
+                })
+
+                window.addEventListener('touchend', e => {
+                    if (hasCurrentTouch &&
+                        e.changedTouches.item(currentTouchId) !== null) {
+                        hasCurrentTouch = false
+                    }
+                })
+
+                window.addEventListener('touchmove', e => {
+                    let item = e.changedTouches.item(currentTouchId)
+                    if (hasCurrentTouch && item !== null) {
+                        pageX = item.pageX
+                        pageY = item.pageY
+                    }
+                    e.preventDefault()
+                })
+
+                window.addEventListener('deviceorientation', e => {
+                    if (e.beta !== null && e.gamma !== null) {
+                        if (!hasDeviceOrientation) {
+                            hasDeviceOrientation = true
+                            tiltBtn.style.display = 'inline'
+                            updateTiltBtnText()
+                        }
+                        beta = e.beta
+                        gamma = e.gamma
+                    }
+                })
+
+                function updateTiltBtnText() {
+                    tiltBtn.innerText = tiltControl ?
+                        '☑ Tilt control' : '☐ Tilt control'
+                    tiltBtn.style.backgroundColor = tiltControl ?
+                        '#0bf' : '#ddd'
                 }
 
-                function raf() {
-                    cube.style.transform = gTransform
-                    // request new data
-                    sendBytes([0])
+                tiltBtn.addEventListener('click', () => {
+                    tiltControl = !tiltControl
+                    updateTiltBtnText()
+                })
+
+                function updateXY() {
+                    if (tiltControl) {
+                        x = gamma / 20
+                        y = -beta / 20
+                    } else {
+                        if (!hasCurrentTouch && !mouseIsDown) {
+                            x = 0
+                            y = 0
+                        } else {
+                            x = pageX - myCanvas.offsetLeft - canvasWidth/2
+                            y = (canvasHeight/2 - (pageY - myCanvas.offsetTop))
+                            x /= canvasWidth / 2
+                            y /= canvasHeight / 2
+                        }
+                    }
+                    x = Math.min(Math.max(x, -1), 1)
+                    y = Math.min(Math.max(y, -1), 1)
                 }
-            })()
+
+                function sendSteeringCommand(turning, speed) {
+                    if (ws.readyState !== 1) {
+                        return;
+                    }
+                    let dview = new DataView(new ArrayBuffer(3))
+                    dview.setUint8(0)
+                    dview.setInt8(1, turning * 127)
+                    dview.setInt8(2, speed * 127)
+                    ws.send(dview.buffer)
+                }
+
+                window.setInterval(() => {
+                    sendSteeringCommand(x, y)
+                }, 100)
+
+                function draw() {
+                    updateXY()
+
+                    let canvasX = (x + 1) / 2 * canvasWidth,
+                        canvasY = (-y + 1) / 2 * canvasHeight
+
+                    ctx.lineWidth = 10
+                    ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+                    ctx.beginPath()
+                    ctx.moveTo(canvasWidth / 2, canvasHeight / 2)
+                    ctx.lineTo(canvasX, canvasY)
+                    ctx.stroke()
+
+                    ctx.lineWidth = 2
+                    ctx.beginPath()
+                    ctx.arc(canvasX, canvasY, 15, 0, 2*Math.PI)
+                    ctx.fill()
+                    ctx.stroke()
+
+                    window.requestAnimationFrame(draw)
+                }
+                window.requestAnimationFrame(draw)
+            })
         </script>
     </body>
 </html>
-

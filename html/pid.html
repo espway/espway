@@ -1,0 +1,122 @@
+<!doctype html>
+
+<html>
+    <head>
+        <meta charset='utf-8' />
+        <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no' />
+
+        <title>ESPway</title>
+
+        <style>
+            body, html {
+                margin: 0;
+                padding: 0;
+            }
+
+            body, button {
+                background-color: white;
+                color: #334;
+                font-family: monospace;
+                margin: 0 auto;
+            }
+
+            .mainContainer {
+                margin: 0 auto;
+                padding: 1em;
+                width: 320px;
+            }
+
+            .mainContainer > select {
+                width: 100%;
+                margin-bottom: 0.5em;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <div class='mainContainer'>
+            <h3>PID tuning</h3>
+
+            <select id='pidSelect'>
+                <option value='angle'>Angle PID</option>
+                <option value='angle2'>Angle PID 2</option>
+                <option value='velocity'>Velocity PID</option>
+            </select>
+
+            <slider id='pslider' label='P'></slider>
+            <slider id='islider' label='I'></slider>
+            <slider id='dslider' label='D'></slider>
+        </div>
+
+        <script type='riot/tag' src='slider.js'></script>
+        <script src='riot+compiler.min.js.gz'></script>
+        <script>
+            window.addEventListener('load', () => {
+                'use strict'
+
+                const PID_SEND_INTERVAL = 100
+                const PID_LIMITS = {
+                    'angle': {
+                        pMin: -3, pMax: 2,
+                        iMin: -3, iMax: 2,
+                        dMin: -3, dMax: 2
+                    },
+                    'angle2': {
+                        pMin: -3, pMax: 2,
+                        iMin: -3, iMax: 2,
+                        dMin: -3, dMax: 2
+                    },
+                    'velocity': {
+                        pMin: -3, pMax: 2,
+                        iMin: -3, iMax: 2,
+                        dMin: -4, dMax: 1
+                    }
+                }
+
+                let ws = new WebSocket('ws://192.168.4.1/ws')
+                ws.binaryType = 'arraybuffer'
+
+                let pidSelect = document.getElementById('pidSelect')
+
+                function mountSliders(limits, values) {
+                    riot.mount('#pslider', {
+                        boundMin: limits.pMin,
+                        boundMax: limits.pMax,
+                        myValue: values.pValue
+                    })
+                    riot.mount('#islider', {
+                        boundMin: limits.iMin,
+                        boundMax: limits.iMax,
+                        myValue: values.iValue
+                    })
+                    riot.mount('#dslider', {
+                        boundMin: limits.dMin,
+                        boundMax: limits.dMax,
+                        myValue: values.dValue
+                    })
+                }
+
+                function fetchPidValues() {
+                    // TODO ask ws for updated values
+                }
+
+                function sendPidValues() {
+                    // TODO
+                }
+
+                function showPidValues() {
+                    let pidName = pidSelect.value
+                    mountSliders(PID_LIMITS[pidName],
+                        { pValue: 0.001, iValue: 0.001, dValue: 0 })
+                }
+                pidSelect.addEventListener('change', fetchPidValues)
+
+                // TODO run these when ws is connected
+                showPidValues()
+                setInterval(sendPidValues, PID_SEND_INTERVAL)
+            })
+        </script>
+    </body>
+</html>
+

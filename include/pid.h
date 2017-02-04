@@ -1,25 +1,36 @@
 #pragma once
 
+#include "q16.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
-    float Kp;
-    float Ki;
-    float Ki_times_dt;
-    float Kd;
-    float Kd_over_dt;
-    float dt;
-    float out_min;
-    float out_max;
+    q16 Kp;
+    q16 Ki_times_dt;
+    q16 Kd_over_dt;
+    q16 dt;
+    q16 out_min;
+    q16 out_max;
+    bool invert;
 } pidsettings;
 
 typedef struct {
-    float i_term;
-    float last_error;
+    q16 i_term;
+    q16 last_input;
 } pidstate;
 
-void pid_initialize(float Kp, float Ki, float Kd, float dt, float out_min,
-    float out_max, pidsettings *settings, pidstate *state);
-float pid_compute(float input, float setpoint,
+void pid_initialize(q16 Kp, q16 Ki, q16 Kd, q16 dt, q16 out_min, q16 out_max,
+    bool invert, pidsettings *settings);
+void pid_update_params(q16 Kp, q16 Ki, q16 Kd, pidsettings *settings);
+void pid_initialize_flt(float Kp, float Ki, float Kd, float dt, q16 out_min,
+    q16 out_max, bool invert, pidsettings *settings);
+q16 pid_compute(q16 input, q16 setpoint,
     pidsettings *settings, pidstate *state);
-void pid_reset(float input, float setpoint, float output,
-    pidsettings *settings, pidstate *state);
+void pid_reset(q16 input, q16 output, pidsettings *settings, pidstate *state);
+
+#ifdef __cplusplus
+}
+#endif
 
