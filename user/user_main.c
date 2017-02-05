@@ -96,9 +96,14 @@ q16 steeringBias = 0;
 
 bool mpuInitSucceeded = false;
 bool sendQuat = false;
+bool otaStarted = false;
 
+int myUploadFirmware(HttpdConnData *connData) {
+    otaStarted = true;
+    return cgiUploadFirmware(connData);
+}
 
-void set_both_eyes(const color_t color) {
+void ICACHE_FLASH_ATTR set_both_eyes(const color_t color) {
     uint8_t buf[] = {
         color.g, color.r, color.b,
         color.g, color.r, color.b
@@ -204,7 +209,9 @@ void ICACHE_FLASH_ATTR doLog(int16_t *rawAccel, int16_t *rawGyro, q16 spitch) {
 }
 
 void ICACHE_FLASH_ATTR compute(os_event_t *e) {
-    if (!mpuInitSucceeded) {
+    if (!mpuInitSucceeded || otaStarted) {
+        setMotors(0, 0);
+        set_both_eyes(LILA);
         return;
     }
 
@@ -347,7 +354,7 @@ CgiUploadFlashDef uploadParams={
 HttpdBuiltInUrl builtInUrls[]={
 #ifdef INCLUDE_FLASH_FNS
     {"/flash/next", cgiGetFirmwareNext, &uploadParams},
-    {"/flash/upload", cgiUploadFirmware, &uploadParams},
+    {"/flash/upload", myUploadFirmware, &uploadParams},
     {"/flash/reboot", cgiRebootFirmware, NULL},
 #endif
 
