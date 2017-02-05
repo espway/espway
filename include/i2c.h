@@ -23,43 +23,41 @@
 
 #include <eagle_soc.h>
 
-#define I2C_MASTER_SDA_MUX PERIPHS_IO_MUX_GPIO4_U
-#define I2C_MASTER_SCL_MUX PERIPHS_IO_MUX_GPIO5_U
-#define I2C_MASTER_SDA_GPIO 4
-#define I2C_MASTER_SCL_GPIO 5
-#define I2C_MASTER_SDA_FUNC FUNC_GPIO4
-#define I2C_MASTER_SCL_FUNC FUNC_GPIO5
+#define I2C_SDA_MUX PERIPHS_IO_MUX_GPIO4_U
+#define I2C_SCL_MUX PERIPHS_IO_MUX_GPIO5_U
+#define I2C_SDA_GPIO 4
+#define I2C_SCL_GPIO 5
+#define I2C_SDA_FUNC FUNC_GPIO4
+#define I2C_SCL_FUNC FUNC_GPIO5
 
 #define SDA_HIGH() \
-    GPIO_REG_WRITE(GPIO_ENABLE_W1TC_ADDRESS, 1 << I2C_MASTER_SDA_GPIO)
+    GPIO_REG_WRITE(GPIO_ENABLE_W1TC_ADDRESS, 1 << I2C_SDA_GPIO)
 #define SCL_HIGH() \
-    GPIO_REG_WRITE(GPIO_ENABLE_W1TC_ADDRESS, 1 << I2C_MASTER_SCL_GPIO)
+    GPIO_REG_WRITE(GPIO_ENABLE_W1TC_ADDRESS, 1 << I2C_SCL_GPIO)
 #define SDA_LOW()  \
-    GPIO_REG_WRITE(GPIO_ENABLE_W1TS_ADDRESS, 1 << I2C_MASTER_SDA_GPIO)
+    GPIO_REG_WRITE(GPIO_ENABLE_W1TS_ADDRESS, 1 << I2C_SDA_GPIO)
 #define SCL_LOW()  \
-    GPIO_REG_WRITE(GPIO_ENABLE_W1TS_ADDRESS, 1 << I2C_MASTER_SCL_GPIO)
+    GPIO_REG_WRITE(GPIO_ENABLE_W1TS_ADDRESS, 1 << I2C_SCL_GPIO)
 #define SDA_READ() \
-    ((GPIO_REG_READ(GPIO_IN_ADDRESS) & (1 << I2C_MASTER_SDA_GPIO)) != 0)
+    ((GPIO_REG_READ(GPIO_IN_ADDRESS) & (1 << I2C_SDA_GPIO)) != 0)
 #define SCL_READ() \
-    ((GPIO_REG_READ(GPIO_IN_ADDRESS) & (1 << I2C_MASTER_SCL_GPIO)) != 0)
+    ((GPIO_REG_READ(GPIO_IN_ADDRESS) & (1 << I2C_SCL_GPIO)) != 0)
 
-#define I2C_MASTER_DELAY 0
-#define I2C_CLOCK_STRETCH_MAX 100
-
-#define i2c_wait() os_delay_us(I2C_MASTER_DELAY)
+#define I2C_WAIT_COUNT 1
+#define I2C_CLOCK_STRETCH_MAX 10
 
 void i2c_gpio_init(void);
 
 void i2c_stop(void);
 void i2c_start(void);
-uint8_t i2c_readByte(void);
-void i2c_writeByte(uint8_t wrdata);
+uint8_t i2c_read_byte(void);
+void i2c_write_byte(uint8_t wrdata);
 
-bool i2c_checkAck(void);
+bool i2c_check_ack(void);
 void i2c_send_ack(bool);
 
-bool i2c_transmitTo(uint8_t addr);
-bool i2c_receiveFrom(uint8_t addr);
-bool i2c_writeBytes(uint8_t *buf, int len);
-bool i2c_readBytes(uint8_t *buf, int len);
+bool i2c_transmit_to(uint8_t addr);
+bool i2c_receive_from(uint8_t addr);
+bool i2c_write_bytes(uint8_t *buf, int len);
+bool i2c_read_bytes(uint8_t *buf, int len);
 

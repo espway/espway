@@ -25,16 +25,23 @@
 
 #include "i2c.h"
 
+static inline void i2c_wait() {
+    unsigned int i = I2C_WAIT_COUNT;
+    while (i--) {
+        asm volatile("nop");
+    }
+}
+
 void ICACHE_FLASH_ATTR
 i2c_gpio_init(void)
 {
     ETS_GPIO_INTR_DISABLE();
 
-    PIN_FUNC_SELECT(I2C_MASTER_SDA_MUX, I2C_MASTER_SDA_FUNC);
-    PIN_FUNC_SELECT(I2C_MASTER_SCL_MUX, I2C_MASTER_SCL_FUNC);
+    PIN_FUNC_SELECT(I2C_SDA_MUX, I2C_SDA_FUNC);
+    PIN_FUNC_SELECT(I2C_SCL_MUX, I2C_SCL_FUNC);
 
-    GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, 1 << I2C_MASTER_SDA_GPIO);
-    GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, 1 << I2C_MASTER_SCL_GPIO);
+    GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, 1 << I2C_SDA_GPIO);
+    GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, 1 << I2C_SCL_GPIO);
 
     SDA_HIGH();
     SCL_HIGH();
@@ -65,7 +72,7 @@ i2c_stop(void)
     i2c_wait();
 }
 
-LOCAL void ICACHE_FLASH_ATTR
+static void ICACHE_FLASH_ATTR
 i2c_write_bit(bool bit)
 {
     uint32_t i = 0;
@@ -81,7 +88,7 @@ i2c_write_bit(bool bit)
     i2c_wait();
 }
 
-LOCAL bool ICACHE_FLASH_ATTR
+static bool ICACHE_FLASH_ATTR
 i2c_read_bit()
 {
     uint32_t i = 0;
@@ -98,7 +105,7 @@ i2c_read_bit()
 }
 
 bool ICACHE_FLASH_ATTR
-i2c_checkAck(void)
+i2c_check_ack(void)
 {
     return i2c_read_bit() ? false : true;
 }
@@ -110,7 +117,7 @@ i2c_send_ack(bool ack)
 }
 
 uint8_t ICACHE_FLASH_ATTR
-i2c_readByte(void)
+i2c_read_byte(void)
 {
     uint8_t retVal = 0;
 
@@ -122,38 +129,38 @@ i2c_readByte(void)
 }
 
 void ICACHE_FLASH_ATTR
-i2c_writeByte(uint8_t wrdata)
+i2c_write_byte(uint8_t wrdata)
 {
     for (int i = 7; i >= 0; i--) {
         i2c_write_bit((wrdata >> i) & 0x1);
     }
 }
 
-bool ICACHE_FLASH_ATTR i2c_transmitTo(uint8_t addr) {
-    i2c_writeByte(addr << 1);
-    return i2c_checkAck();
+bool ICACHE_FLASH_ATTR i2c_transmit_to(uint8_t addr) {
+    i2c_write_byte(addr << 1);
+    return i2c_check_ack();
 }
 
-bool ICACHE_FLASH_ATTR i2c_receiveFrom(uint8_t addr) {
-    i2c_writeByte((addr << 1) | 1);
-    return i2c_checkAck();
+bool ICACHE_FLASH_ATTR i2c_receive_from(uint8_t addr) {
+    i2c_write_byte((addr << 1) | 1);
+    return i2c_check_ack();
 }
 
-bool ICACHE_FLASH_ATTR i2c_writeBytes(uint8_t *buf, int len) {
+bool ICACHE_FLASH_ATTR i2c_write_bytes(uint8_t *buf, int len) {
     for (int i = 0; i < len; ++i) {
-        i2c_writeByte(buf[i]);
-        if (i2c_checkAck() == 0) return false;
+        i2c_write_byte(buf[i]);
+        if (i2c_check_ack() == 0) return false;
     }
     return true;
 }
 
-bool ICACHE_FLASH_ATTR i2c_readBytes(uint8_t *buf, int len) {
+bool ICACHE_FLASH_ATTR i2c_read_bytes(uint8_t *buf, int len) {
     int i;
     for (i = 0; i < len - 1; ++i) {
-        buf[i] = i2c_readByte();
+        buf[i] = i2c_read_byte();
         i2c_send_ack(true);
     }
-    buf[i] = i2c_readByte();
+    buf[i] = i2c_read_byte();
     i2c_send_ack(false);
     return true;
 }

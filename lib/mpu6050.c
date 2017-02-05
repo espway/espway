@@ -28,8 +28,8 @@ int ICACHE_FLASH_ATTR mpuWriteRegister(const uint8_t addr,
     const uint8_t reg, const uint8_t value, const bool stop) {
     uint8_t regValue[] = { reg, value };
     i2c_start();
-    bool ret = i2c_transmitTo(addr);
-    ret &= i2c_writeBytes(regValue, 2);
+    bool ret = i2c_transmit_to(addr);
+    ret &= i2c_write_bytes(regValue, 2);
     if (stop) i2c_stop();
     return ret ? 0 : -1;
 }
@@ -37,23 +37,18 @@ int ICACHE_FLASH_ATTR mpuWriteRegister(const uint8_t addr,
 int ICACHE_FLASH_ATTR mpuReadRegisters(const uint8_t addr,
     const uint8_t firstReg, const uint8_t len, uint8_t * const data) {
     i2c_start();
-    bool ret = i2c_transmitTo(addr);
-    os_printf("\n0: %u\n", ret);
-    //ret &= i2c_writeByte(firstReg);
-    i2c_writeByte(firstReg);
-    i2c_checkAck();
-    os_printf("1: %u\n", ret);
+    bool ret = i2c_transmit_to(addr);
+    i2c_write_byte(firstReg);
+    ret &= i2c_check_ack();
     i2c_start();
-    ret &= i2c_receiveFrom(addr);
-    os_printf("2: %u\n", ret);
-    ret &= i2c_readBytes(data, len);
-    os_printf("3: %u\n", ret);
+    ret &= i2c_receive_from(addr);
+    ret &= i2c_read_bytes(data, len);
     i2c_stop();
     return ret ? 0 : -1;
 }
 
 int ICACHE_FLASH_ATTR mpuReadIntStatus(const uint8_t addr) {
-    uint8_t tmp;
+    uint8_t tmp = 0;
     mpuReadRegisters(addr, MPU_INT_STATUS, 1, &tmp);
     return tmp;
 }
@@ -62,33 +57,33 @@ int ICACHE_FLASH_ATTR mpuReadRawData(const uint8_t addr, int16_t * const data) {
     uint8_t *myData = (uint8_t *)data;
     uint8_t reg = MPU_ACCEL_XOUT_H;
     i2c_start();
-    bool ret = i2c_transmitTo(addr) &&
-        i2c_writeBytes(&reg, 1);
+    bool ret = i2c_transmit_to(addr) &&
+        i2c_write_bytes(&reg, 1);
     i2c_start();
-    ret = ret && i2c_receiveFrom(addr);
+    ret = ret && i2c_receive_from(addr);
 
     if (ret) {
         for (int8_t i = 0; i < 3; i++) {
-            *(myData + 1) = i2c_readByte();
+            *(myData + 1) = i2c_read_byte();
             i2c_send_ack(true);
-            *myData = i2c_readByte();
+            *myData = i2c_read_byte();
             i2c_send_ack(true);
             myData += 2;
         }
-        i2c_readByte();
+        i2c_read_byte();
         i2c_send_ack(true);
-        i2c_readByte();
+        i2c_read_byte();
         i2c_send_ack(true);
         for (int8_t i = 0; i < 2; i++) {
-            *(myData + 1) = i2c_readByte();
+            *(myData + 1) = i2c_read_byte();
             i2c_send_ack(true);
-            *myData = i2c_readByte();
+            *myData = i2c_read_byte();
             i2c_send_ack(true);
             myData += 2;
         }
-        *(myData + 1) = i2c_readByte();
+        *(myData + 1) = i2c_read_byte();
         i2c_send_ack(true);
-        *myData = i2c_readByte();
+        *myData = i2c_read_byte();
         i2c_send_ack(false);
     }
 
