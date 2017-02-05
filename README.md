@@ -13,6 +13,8 @@ The project utilizes some third-party libraries, in their respective folders:
 
 Kudos to all the above developers. Without these libraries this project wouldn't exist in such quality. The libraries are intentionally included in this repo because I had to make some minor adjustments to be able to build them under the NONOS SDK and strict `-Wall -Werror` compile flags.
 
+[Riot.js](http://riotjs.com/) is used on the HTML+JS frontend for facilitating some UI components.
+
 ## License
 The project is licensed under GPLv3.
 
