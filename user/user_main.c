@@ -376,14 +376,6 @@ void ICACHE_FLASH_ATTR user_init(void) {
 
     wifi_init();
 
-#define PERIPHS_IO_MUX_MTDI_U           (PERIPHS_IO_MUX + 0x04)
-#define FUNC_GPIO12                     3
-#define PERIPHS_IO_MUX_MTCK_U           (PERIPHS_IO_MUX + 0x08)
-#define FUNC_GPIO13                     3
-#define PERIPHS_IO_MUX_MTMS_U           (PERIPHS_IO_MUX + 0x0C)
-#define FUNC_GPIO14                     3
-#define PERIPHS_IO_MUX_MTDO_U           (PERIPHS_IO_MUX + 0x10)
-#define FUNC_GPIO15                     3
     // Motor direction pins
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_GPIO12);
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15);
