@@ -18,7 +18,6 @@
 
 #include <esp8266.h>
 #include <driver/uart.h>
-#include <pwm.h>
 
 // libesphttpd includes
 #include "httpd.h"
@@ -137,7 +136,6 @@ void ICACHE_FLASH_ATTR send_battery_reading(uint16_t battery_reading) {
     payload[0] = q16_mul(battery_reading, BATTERY_COEFFICIENT);
     cgiWebsockBroadcast("/ws", (char *)buf, 3, WEBSOCK_FLAG_BIN);
 }
-
 
 
 void ICACHE_FLASH_ATTR do_log(int16_t *raw_accel, int16_t *raw_gyro,
