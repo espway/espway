@@ -16,20 +16,18 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <user_interface.h>
-#include <osapi.h>
-#include <espmissingincludes.h>
-#include <gpio.h>
-#include <driver/uart.h>
-#include <stdbool.h>
-
 #include <esp8266.h>
+#include <driver/uart.h>
+
+// libesphttpd includes
 #include "httpd.h"
 #include "cgiflash.h"
 #include "httpdespfs.h"
 #include "espfs.h"
 #include "webpages-espfs.h"
+#include "cgiwebsocket.h"
 
+// internal includes
 #include "i2c.h"
 #include "mpu6050.h"
 #include "imu.h"
@@ -83,9 +81,57 @@ q16 steeringBias = 0;
 bool mpuInitSucceeded = false;
 bool sendQuat = false;
 
-void setMotors(int x, int y) {}
 
-void doLog(int16_t *rawAccel, int16_t *rawGyro, q16 spitch) {
+void websocketRecvCb(Websock *ws, char *signed_data, int len, int flags) {
+    if (len == 0) {
+        return;
+    }
+    uint8_t *data = (uint8_t *)signed_data;
+    uint8_t msgtype = data[0];
+    uint8_t *payload = &data[1];
+    int data_len = len - 1;
+    // Parse steering command
+    if (msgtype == STEERING && data_len == 2) {
+        int8_t *signed_data = (int8_t *)payload;
+        steeringBias = (FLT_TO_Q16(STEERING_FACTOR) * signed_data[0]) / 128;
+        targetSpeed = (FLT_TO_Q16(SPEED_CONTROL_FACTOR) * signed_data[1]) / 128;
+    } else if (msgtype == REQ_QUATERNION) {
+        sendQuat = true;
+    }
+}
+
+
+void websocketConnectCb(Websock *ws) {
+    ws->recvCb = websocketRecvCb;
+}
+
+
+void ICACHE_FLASH_ATTR sendQuaternion(const quaternion_fix * const quat) {
+    uint8_t buf[9];
+    buf[0] = RES_QUATERNION;
+    int16_t *qdata = (int16_t *)&buf[1];
+    qdata[0] = quat->q0 / 2;
+    qdata[1] = quat->q1 / 2;
+    qdata[2] = quat->q2 / 2;
+    qdata[3] = quat->q3 / 2;
+    cgiWebsockBroadcast("/ws", (char *)buf, 9, WEBSOCK_FLAG_BIN);
+    sendQuat = false;
+}
+
+
+void ICACHE_FLASH_ATTR sendBatteryReading(uint16_t batteryReading) {
+    uint8_t buf[3];
+    buf[0] = BATTERY;
+    uint16_t *payload = (uint16_t *)&buf[1];
+    payload[0] = q16_mul(batteryReading, BATTERY_COEFFICIENT);
+    cgiWebsockBroadcast("/ws", (char *)buf, 3, WEBSOCK_FLAG_BIN);
+}
+
+
+void ICACHE_FLASH_ATTR setMotors(int x, int y) {}
+
+
+void ICACHE_FLASH_ATTR doLog(int16_t *rawAccel, int16_t *rawGyro, q16 spitch) {
     static unsigned long lastCallTime = 0;
     static unsigned int callCounter = 0;
 
@@ -200,12 +246,12 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
 
     if (sendBattery) {
         sendBattery = false;
-        //sendBatteryReading(batteryValue);
+        sendBatteryReading(batteryValue);
     }
 
     static unsigned long lastSentQuat = 0;
     if (sendQuat && curTime - lastSentQuat > QUAT_DELAY) {
-        //sendQuaternion(&quat);
+        sendQuaternion(&quat);
         lastSentQuat = curTime;
     }
 
@@ -254,6 +300,7 @@ HttpdBuiltInUrl builtInUrls[]={
     {"/flash/reboot", cgiRebootFirmware, NULL},
 #endif
 
+    {"/ws", cgiWebsocket, websocketConnectCb},
     {"/", cgiRedirect, "/index.html"},
     {"*", cgiEspFsHook, NULL}, //Catch-all cgi function for the filesystem
     {NULL, NULL, NULL}
