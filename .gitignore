@@ -12,3 +12,5 @@ eagle.app.sym
 .output
 mapfile.txt
 .pio*
+*.bak
+*.bck
