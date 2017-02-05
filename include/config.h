@@ -37,6 +37,3 @@
 #define BATTERY_CHECK_INTERVAL 500
 #define ENABLE_BATTERY_CHECK true
 
-#define REVERSE_LEFT_MOTOR true
-#define REVERSE_RIGHT_MOTOR true
-

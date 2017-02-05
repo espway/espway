@@ -1,6 +1,6 @@
 /*
     Firmware for a segway-style robot using ESP8266.
-    Copyright (C) 2016  Sakari Kapanen
+    Copyright (C) 201&  Sakari Kapanen
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,8 +20,6 @@
 #include <driver/uart.h>
 #include <pwm.h>
 
-#include "ws2812_i2s.h"
-
 // libesphttpd includes
 #include "httpd.h"
 #include "cgiflash.h"
@@ -35,11 +33,12 @@
 #include "mpu6050.h"
 #include "imu.h"
 #include "pid.h"
+#include "motors.h"
+#include "eyes.h"
 
 #include "config.h"
 
 #define QUEUE_LEN 1
-#define MPU_ADDR 0x68
 #define M_PI 3.14159265359f
 
 #define LOGMODE LOG_PITCH
@@ -54,21 +53,7 @@
 #define FREQUENCY_SAMPLES 1000
 #define QUAT_DELAY 50
 
-#define MPU_RATE 0
 #define SAMPLE_TIME ((1.0f + MPU_RATE) / 1000.0f)
-
-#define PWMPERIOD 2500
-
-const int LED_PIN = 2;
-
-os_event_t gTaskQueue[QUEUE_LEN];
-
-typedef enum { LOG_FREQ, LOG_RAW, LOG_PITCH, LOG_NONE } logmode;
-typedef enum { STABILIZING_ORIENTATION, RUNNING, FALLEN } state;
-
-typedef struct {
-    uint8_t r, g, b;
-} color_t;
 
 const color_t RED = { 180, 0, 0 };
 const color_t YELLOW = { 180, 180, 0 };
@@ -76,6 +61,11 @@ const color_t GREEN = { 0, 180, 0 };
 const color_t BLUE = { 0, 0, 180 };
 const color_t LILA = { 180, 0, 180 };
 const color_t BLACK = { 0, 0, 0 };
+
+os_event_t task_queue[QUEUE_LEN];
+
+typedef enum { LOG_FREQ, LOG_RAW, LOG_PITCH, LOG_NONE } logmode;
+typedef enum { STABILIZING_ORIENTATION, RUNNING, FALLEN } state;
 
 typedef enum {
     STEERING = 0,
@@ -85,34 +75,25 @@ typedef enum {
 } ws_msg_type;
 
 madgwickparams imuparams;
-pidsettings velPidSettings;
-pidsettings anglePidSettings;
-pidsettings angleHighPidSettings;
-pidstate velPidState;
-pidstate anglePidState;
+pidsettings vel_pid_settings;
+pidsettings angle_pid_settings;
+pidsettings angle_high_pid_settings;
+pidstate vel_pid_state;
+pidstate angle_pid_state;
 
-q16 targetSpeed = 0;
-q16 steeringBias = 0;
+q16 target_speed = 0;
+q16 steering_bias = 0;
 
-bool mpuInitSucceeded = false;
-bool sendQuat = false;
-bool otaStarted = false;
+bool mpu_init_succeeded = false;
+bool send_quat = false;
+bool ota_started = false;
 
-int myUploadFirmware(HttpdConnData *connData) {
-    otaStarted = true;
+int upload_firmware(HttpdConnData *connData) {
+    ota_started = true;
     return cgiUploadFirmware(connData);
 }
 
-void ICACHE_FLASH_ATTR set_both_eyes(const color_t color) {
-    uint8_t buf[] = {
-        color.g, color.r, color.b,
-        color.g, color.r, color.b
-    };
-    ws2812_push(buf, 6);
-}
-
-
-void websocketRecvCb(Websock *ws, char *signed_data, int len, int flags) {
+void websocket_recv_cb(Websock *ws, char *signed_data, int len, int flags) {
     if (len == 0) {
         return;
     }
@@ -123,20 +104,20 @@ void websocketRecvCb(Websock *ws, char *signed_data, int len, int flags) {
     // Parse steering command
     if (msgtype == STEERING && data_len == 2) {
         int8_t *signed_data = (int8_t *)payload;
-        steeringBias = (FLT_TO_Q16(STEERING_FACTOR) * signed_data[0]) / 128;
-        targetSpeed = (FLT_TO_Q16(SPEED_CONTROL_FACTOR) * signed_data[1]) / 128;
+        steering_bias = (FLT_TO_Q16(STEERING_FACTOR) * signed_data[0]) / 128;
+        target_speed = (FLT_TO_Q16(SPEED_CONTROL_FACTOR) * signed_data[1]) / 128;
     } else if (msgtype == REQ_QUATERNION) {
-        sendQuat = true;
+        send_quat = true;
     }
 }
 
 
-void websocketConnectCb(Websock *ws) {
-    ws->recvCb = websocketRecvCb;
+void websocket_connect_cb(Websock *ws) {
+    ws->recvCb = websocket_recv_cb;
 }
 
 
-void ICACHE_FLASH_ATTR sendQuaternion(const quaternion_fix * const quat) {
+void ICACHE_FLASH_ATTR send_quaternion(const quaternion_fix * const quat) {
     uint8_t buf[9];
     buf[0] = RES_QUATERNION;
     int16_t *qdata = (int16_t *)&buf[1];
@@ -145,97 +126,70 @@ void ICACHE_FLASH_ATTR sendQuaternion(const quaternion_fix * const quat) {
     qdata[2] = quat->q2 / 2;
     qdata[3] = quat->q3 / 2;
     cgiWebsockBroadcast("/ws", (char *)buf, 9, WEBSOCK_FLAG_BIN);
-    sendQuat = false;
+    send_quat = false;
 }
 
 
-void ICACHE_FLASH_ATTR sendBatteryReading(uint16_t batteryReading) {
+void ICACHE_FLASH_ATTR send_battery_reading(uint16_t battery_reading) {
     uint8_t buf[3];
     buf[0] = BATTERY;
     uint16_t *payload = (uint16_t *)&buf[1];
-    payload[0] = q16_mul(batteryReading, BATTERY_COEFFICIENT);
+    payload[0] = q16_mul(battery_reading, BATTERY_COEFFICIENT);
     cgiWebsockBroadcast("/ws", (char *)buf, 3, WEBSOCK_FLAG_BIN);
 }
 
-void ICACHE_FLASH_ATTR set_motor_speed(int channel, int dir_pin, q16 speed,
-    bool reverse) {
-    speed = Q16_TO_INT(PWMPERIOD * speed);
-
-    if (speed > PWMPERIOD) {
-        speed = PWMPERIOD;
-    } else if (speed < -PWMPERIOD) {
-        speed = -PWMPERIOD;
-    }
-
-    if (reverse) {
-        speed = -speed;
-    }
-
-    if (speed < 0) {
-        GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, 1 << dir_pin);
-        pwm_set_duty(PWMPERIOD + speed, channel);
-    } else {
-        GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, 1 << dir_pin);
-        pwm_set_duty(speed, channel);
-    }
-}
 
 
-void ICACHE_FLASH_ATTR setMotors(int leftSpeed, int rightSpeed) {
-    set_motor_speed(1, 12, rightSpeed, REVERSE_RIGHT_MOTOR);
-    set_motor_speed(0, 15, leftSpeed, REVERSE_LEFT_MOTOR);
-    pwm_start();
-}
-
-
-void ICACHE_FLASH_ATTR doLog(int16_t *rawAccel, int16_t *rawGyro, q16 spitch) {
-    static unsigned long lastCallTime = 0;
-    static unsigned int callCounter = 0;
+void ICACHE_FLASH_ATTR do_log(int16_t *raw_accel, int16_t *raw_gyro,
+    q16 sin_pitch) {
+    static unsigned long last_call_time = 0;
+    static unsigned int call_counter = 0;
 
     if (LOGMODE == LOG_RAW) {
         os_printf("%d, %d, %d, %d, %d, %d\n",
-            rawAccel[0], rawAccel[1], rawAccel[2],
-            rawGyro[0], rawGyro[1], rawGyro[2]);
+            raw_accel[0], raw_accel[1], raw_accel[2],
+            raw_gyro[0], raw_gyro[1], raw_gyro[2]);
     } else if (LOGMODE == LOG_PITCH) {
-        os_printf("%d\n", spitch);
+        os_printf("%d\n", sin_pitch);
     } else if (LOGMODE == LOG_FREQ) {
         unsigned long us = system_get_time();
-        if (++callCounter == FREQUENCY_SAMPLES) {
-            os_printf("%lu\n", FREQUENCY_SAMPLES * 1000000 / (us - lastCallTime));
-            callCounter = 0;
-            lastCallTime = us;
+        if (++call_counter == FREQUENCY_SAMPLES) {
+            os_printf("%lu\n",
+                FREQUENCY_SAMPLES * 1000000 / (us - last_call_time));
+            call_counter = 0;
+            last_call_time = us;
         }
     }
 }
 
 void ICACHE_FLASH_ATTR compute(os_event_t *e) {
-    if (!mpuInitSucceeded || otaStarted) {
-        setMotors(0, 0);
+    if (!mpu_init_succeeded || ota_started) {
+        set_motors(0, 0);
         set_both_eyes(LILA);
         return;
     }
 
-    static unsigned long lastBatteryCheck = 0;
-    static unsigned int batteryValue = 1024;
-    static bool sendBattery = false;
+    static unsigned long last_battery_check = 0;
+    static unsigned int battery_value = 1024;
+    static bool send_battery = false;
 
-    unsigned long curTime;
+    unsigned long current_time;
 
-    while (!mpuReadIntStatus(MPU_ADDR)) {
-        curTime = system_get_time() / 1024;
+    while (!mpu_read_int_status(MPU_ADDR)) {
+        current_time = system_get_time() / 1024;
         if (ENABLE_BATTERY_CHECK &&
-            curTime - lastBatteryCheck > BATTERY_CHECK_INTERVAL) {
-            lastBatteryCheck = curTime;
-            batteryValue = q16_exponential_smooth(batteryValue, system_adc_read(),
+            current_time - last_battery_check > BATTERY_CHECK_INTERVAL) {
+            last_battery_check = current_time;
+            battery_value = q16_exponential_smooth(battery_value, system_adc_read(),
                 FLT_TO_Q16(0.25f));
-            sendBattery = true;
+            send_battery = true;
 
-            if (batteryValue <
+            if (battery_value <
                 (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR)) {
                 set_both_eyes(BLACK);
                 // Put MPU6050 to sleep
-                mpuWriteRegister(MPU_ADDR, MPU_PWR_MGMT_1, 1 << 6, true);
-                setMotors(0, 0);
+                mpu_go_to_sleep();
+                set_motors(0, 0);
                 system_deep_sleep(UINT32_MAX);
                 return;
             }
@@ -243,76 +197,76 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
     }
 
     // Perform MPU quaternion update
-    int16_t rawData[6];
-    mpuReadRawData(MPU_ADDR, rawData);
+    int16_t raw_data[6];
+    mpu_read_raw_data(MPU_ADDR, raw_data);
     // Update orientation estimate
     static quaternion_fix quat = { Q16_ONE, 0, 0, 0 };
-    MadgwickAHRSupdateIMU_fix(&imuparams, &rawData[0], &rawData[3],
+    madgwick_ahrs_update_imu(&imuparams, &raw_data[0], &raw_data[3],
         &quat);
     // Calculate sine of pitch angle from quaternion
-    q16 spitch = -gravityZ(&quat);
+    q16 sin_pitch = -gravity_z(&quat);
 
-    static q16 travelSpeed = 0;
-    static q16 smoothedTargetSpeed = 0;
+    static q16 travel_speed = 0;
+    static q16 smoothed_target_speed = 0;
 
     // Exponential smoothing of target speed
-    smoothedTargetSpeed = q16_exponential_smooth(smoothedTargetSpeed,
-        targetSpeed, FLT_TO_Q16(TARGET_SPEED_SMOOTHING));
+    smoothed_target_speed = q16_exponential_smooth(smoothed_target_speed,
+        target_speed, FLT_TO_Q16(TARGET_SPEED_SMOOTHING));
 
-    static state myState = STABILIZING_ORIENTATION;
-    static unsigned long stageStarted = 0;
-    curTime = system_get_time() / 1024;
-    if (myState == STABILIZING_ORIENTATION) {
-        if (curTime - stageStarted > ORIENTATION_STABILIZE_DURATION) {
-            myState = RUNNING;
-            stageStarted = curTime;
+    static state my_state = STABILIZING_ORIENTATION;
+    static unsigned long stage_started = 0;
+    current_time = system_get_time() / 1024;
+    if (my_state == STABILIZING_ORIENTATION) {
+        if (current_time - stage_started > ORIENTATION_STABILIZE_DURATION) {
+            my_state = RUNNING;
+            stage_started = current_time;
         }
-    } else if (myState == RUNNING) {
-        if (spitch < FALL_UPPER_BOUND && spitch > FALL_LOWER_BOUND) {
+    } else if (my_state == RUNNING) {
+        if (sin_pitch < FALL_UPPER_BOUND && sin_pitch > FALL_LOWER_BOUND) {
             // Perform PID update
-            q16 targetAngle = pid_compute(travelSpeed, smoothedTargetSpeed,
-                &velPidSettings, &velPidState);
-            bool useHighPid =
-                spitch < (targetAngle - FLT_TO_Q16(HIGH_PID_LIMIT)) ||
-                spitch > (targetAngle + FLT_TO_Q16(HIGH_PID_LIMIT));
-            q16 motorSpeed = pid_compute(spitch, targetAngle,
-                useHighPid ? &angleHighPidSettings : &anglePidSettings,
-                &anglePidState);
+            q16 target_angle = pid_compute(travel_speed, smoothed_target_speed,
+                &vel_pid_settings, &vel_pid_state);
+            bool use_high_pid =
+                sin_pitch < (target_angle - FLT_TO_Q16(HIGH_PID_LIMIT)) ||
+                sin_pitch > (target_angle + FLT_TO_Q16(HIGH_PID_LIMIT));
+            q16 motor_speed = pid_compute(sin_pitch, target_angle,
+                use_high_pid ? &angle_high_pid_settings : &angle_pid_settings,
+                &angle_pid_state);
 
-            setMotors(motorSpeed + steeringBias, motorSpeed - steeringBias);
+            set_motors(motor_speed + steering_bias, motor_speed - steering_bias);
 
             // Estimate travel speed by exponential smoothing
-            travelSpeed = q16_exponential_smooth(travelSpeed, motorSpeed,
+            travel_speed = q16_exponential_smooth(travel_speed, motor_speed,
                 FLT_TO_Q16(TRAVEL_SPEED_SMOOTHING));
         } else {
-            myState = FALLEN;
+            my_state = FALLEN;
             set_both_eyes(BLUE);
-            travelSpeed = 0;
-            setMotors(0, 0);
+            travel_speed = 0;
+            set_motors(0, 0);
         }
-    } else if (myState == FALLEN) {
-        if (spitch < RECOVER_UPPER_BOUND && spitch > RECOVER_LOWER_BOUND) {
-            myState = RUNNING;
+    } else if (my_state == FALLEN) {
+        if (sin_pitch < RECOVER_UPPER_BOUND && sin_pitch > RECOVER_LOWER_BOUND) {
+            my_state = RUNNING;
             set_both_eyes(GREEN);
-            pid_reset(spitch, 0, &anglePidSettings, &anglePidState);
-            pid_reset(0, FLT_TO_Q16(STABLE_ANGLE), &velPidSettings,
-                &velPidState);
+            pid_reset(sin_pitch, 0, &angle_pid_settings, &angle_pid_state);
+            pid_reset(0, FLT_TO_Q16(STABLE_ANGLE), &vel_pid_settings,
+                &vel_pid_state);
         }
     }
 
     if (LOGMODE != LOG_NONE) {
-        doLog(&rawData[0], &rawData[3], spitch);
+        do_log(&raw_data[0], &raw_data[3], sin_pitch);
     }
 
-    if (sendBattery) {
-        sendBattery = false;
-        sendBatteryReading(batteryValue);
+    if (send_battery) {
+        send_battery = false;
+        send_battery_reading(battery_value);
     }
 
-    static unsigned long lastSentQuat = 0;
-    if (sendQuat && curTime - lastSentQuat > QUAT_DELAY) {
-        sendQuaternion(&quat);
-        lastSentQuat = curTime;
+    static unsigned long last_sent_quat = 0;
+    if (send_quat && current_time - last_sent_quat > QUAT_DELAY) {
+        send_quaternion(&quat);
+        last_sent_quat = current_time;
     }
 
     system_os_post(2, 0, 0);
@@ -356,72 +310,41 @@ CgiUploadFlashDef uploadParams={
 HttpdBuiltInUrl builtInUrls[]={
 #ifdef INCLUDE_FLASH_FNS
     {"/flash/next", cgiGetFirmwareNext, &uploadParams},
-    {"/flash/upload", myUploadFirmware, &uploadParams},
+    {"/flash/upload", upload_firmware, &uploadParams},
     {"/flash/reboot", cgiRebootFirmware, NULL},
 #endif
 
-    {"/ws", cgiWebsocket, websocketConnectCb},
+    {"/ws", cgiWebsocket, websocket_connect_cb},
     {"/", cgiRedirect, "/index.html"},
     {"*", cgiEspFsHook, NULL}, //Catch-all cgi function for the filesystem
     {NULL, NULL, NULL}
 };
-
-bool ICACHE_FLASH_ATTR mpuInit(void) {
-    // Wake up
-    mpuWriteRegister(MPU_ADDR, MPU_PWR_MGMT_1, MPU_CLK_PLL_ZGYRO | MPU_TEMP_DIS,
-        false);
-    // 1000 Hz sampling
-    mpuWriteRegister(MPU_ADDR, MPU_SMPRT_DIV, MPU_RATE, false);
-    // 188 Hz LPF
-    mpuWriteRegister(MPU_ADDR, MPU_CONFIG, 1, false);
-    // Gyroscope min sensitivity
-    mpuWriteRegister(MPU_ADDR, MPU_GYRO_CONFIG, 3 << 3, false);
-    // Accel max sensitivity
-    mpuWriteRegister(MPU_ADDR, MPU_ACCEL_CONFIG, 0, false);
-    // Data ready interrupt on
-    mpuWriteRegister(MPU_ADDR, MPU_INT_ENABLE, 1, false);
-    // TODO gyro offset loading
-    // Check if the MPU still responds with its own address
-    uint8_t addr = 0;
-    mpuReadRegisters(MPU_ADDR, MPU_WHO_AM_I, 1, &addr);
-    return addr == MPU_ADDR;
-}
 
 void ICACHE_FLASH_ATTR user_init(void) {
     system_update_cpu_freq(80);
 
     // Parameter calculation & initialization
     pid_initialize_flt(ANGLE_KP, ANGLE_KI, ANGLE_KD, SAMPLE_TIME,
-        -Q16_ONE, Q16_ONE, false, &anglePidSettings);
+        -Q16_ONE, Q16_ONE, false, &angle_pid_settings);
     pid_initialize_flt(ANGLE_HIGH_KP, ANGLE_HIGH_KI, ANGLE_HIGH_KD, SAMPLE_TIME,
-        -Q16_ONE, Q16_ONE, false, &angleHighPidSettings);
-    pid_reset(0, 0, &anglePidSettings, &anglePidState);
+        -Q16_ONE, Q16_ONE, false, &angle_high_pid_settings);
+    pid_reset(0, 0, &angle_pid_settings, &angle_pid_state);
     pid_initialize_flt(VEL_KP, VEL_KI, VEL_KD, SAMPLE_TIME,
-        FALL_LOWER_BOUND, FALL_UPPER_BOUND, true, &velPidSettings);
-    pid_reset(0, 0, &velPidSettings, &velPidState);
-    calculateMadgwickParams(&imuparams, MADGWICK_BETA,
+        FALL_LOWER_BOUND, FALL_UPPER_BOUND, true, &vel_pid_settings);
+    pid_reset(0, 0, &vel_pid_settings, &vel_pid_state);
+    calculate_madgwick_params(&imuparams, MADGWICK_BETA,
         2.0f * M_PI / 180.0f * 2000.0f, SAMPLE_TIME);
 
     uart_init(BIT_RATE_115200, BIT_RATE_115200);
     i2c_gpio_init();
-    mpuInitSucceeded = mpuInit();
+    mpu_init_succeeded = mpu_init();
 
     wifi_init();
 
-    // Motor direction pins
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_GPIO12);
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15);
-    GPIO_REG_WRITE(GPIO_ENABLE_W1TS_ADDRESS, (1 << 12) | (1 << 15));
-    GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, (1 << 12) | (1 << 15));
-    uint32_t pin_info_list[][3] = {
-        { PERIPHS_IO_MUX_MTCK_U, FUNC_GPIO13, 13 },
-        { PERIPHS_IO_MUX_MTMS_U, FUNC_GPIO14, 14 }
-    };
-    uint32_t duty_init[] = { 0, 0 };
-    pwm_init(PWMPERIOD, duty_init, 2, pin_info_list);
+    motors_init();
 
-    ws2812_init();
-    set_both_eyes(mpuInitSucceeded ? YELLOW : RED);
+    eyes_init();
+    set_both_eyes(mpu_init_succeeded ? YELLOW : RED);
 
     // 0x40200000 is the base address for spi flash memory mapping, ESPFS_POS is the position
     // where image is written in flash that is defined in Makefile.
@@ -432,7 +355,7 @@ void ICACHE_FLASH_ATTR user_init(void) {
 #endif
     httpdInit(builtInUrls, 80);
 
-    system_os_task(compute, 2, gTaskQueue, QUEUE_LEN);
+    system_os_task(compute, 2, task_queue, QUEUE_LEN);
     system_os_post(2, 0, 0);
 }
 

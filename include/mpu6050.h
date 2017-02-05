@@ -21,6 +21,9 @@
 
 #include <stdint.h>
 
+#define MPU_ADDR 0x68
+#define MPU_RATE 0
+
 // Register addresses and bits as per the MPU-6050 datasheet
 // http://43zrtwysvxb2gf29r5o0athu.wpengine.netdna-cdn.com/wp-content/uploads/2015/02/MPU-6000-Register-Map1.pdf
 
@@ -65,10 +68,13 @@
 
 #define MPU_WHO_AM_I 0x75
 
-int mpuWriteRegister(const uint8_t addr,
+int mpu_write_register(const uint8_t addr,
     const uint8_t reg, const uint8_t value, const bool stop);
-int mpuReadRegisters(const uint8_t addr,
+int mpu_read_registers(const uint8_t addr,
     const uint8_t firstReg, const uint8_t len, uint8_t * const data);
-int mpuReadIntStatus(const uint8_t addr);
-int mpuReadRawData(const uint8_t addr, int16_t * const data);
+int mpu_read_int_status(const uint8_t addr);
+int mpu_read_raw_data(const uint8_t addr, int16_t * const data);
+
+bool mpu_init(void);
+void mpu_go_to_sleep(void);
 

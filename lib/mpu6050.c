@@ -24,21 +24,21 @@
 #include "i2c.h"
 #include "mpu6050.h"
 
-int ICACHE_FLASH_ATTR mpuWriteRegister(const uint8_t addr,
+int ICACHE_FLASH_ATTR mpu_write_register(const uint8_t addr,
     const uint8_t reg, const uint8_t value, const bool stop) {
-    uint8_t regValue[] = { reg, value };
+    uint8_t reg_value[] = { reg, value };
     i2c_start();
     bool ret = i2c_transmit_to(addr);
-    ret &= i2c_write_bytes(regValue, 2);
+    ret &= i2c_write_bytes(reg_value, 2);
     if (stop) i2c_stop();
     return ret ? 0 : -1;
 }
 
-int ICACHE_FLASH_ATTR mpuReadRegisters(const uint8_t addr,
-    const uint8_t firstReg, const uint8_t len, uint8_t * const data) {
+int ICACHE_FLASH_ATTR mpu_read_registers(const uint8_t addr,
+    const uint8_t first_reg, const uint8_t len, uint8_t * const data) {
     i2c_start();
     bool ret = i2c_transmit_to(addr);
-    i2c_write_byte(firstReg);
+    i2c_write_byte(first_reg);
     ret &= i2c_check_ack();
     i2c_start();
     ret &= i2c_receive_from(addr);
@@ -47,14 +47,15 @@ int ICACHE_FLASH_ATTR mpuReadRegisters(const uint8_t addr,
     return ret ? 0 : -1;
 }
 
-int ICACHE_FLASH_ATTR mpuReadIntStatus(const uint8_t addr) {
+int ICACHE_FLASH_ATTR mpu_read_int_status(const uint8_t addr) {
     uint8_t tmp = 0;
-    mpuReadRegisters(addr, MPU_INT_STATUS, 1, &tmp);
+    mpu_read_registers(addr, MPU_INT_STATUS, 1, &tmp);
     return tmp;
 }
 
-int ICACHE_FLASH_ATTR mpuReadRawData(const uint8_t addr, int16_t * const data) {
-    uint8_t *myData = (uint8_t *)data;
+int ICACHE_FLASH_ATTR mpu_read_raw_data(const uint8_t addr,
+    int16_t * const data) {
+    uint8_t *my_data = (uint8_t *)data;
     uint8_t reg = MPU_ACCEL_XOUT_H;
     i2c_start();
     bool ret = i2c_transmit_to(addr) &&
@@ -63,31 +64,61 @@ int ICACHE_FLASH_ATTR mpuReadRawData(const uint8_t addr, int16_t * const data) {
     ret = ret && i2c_receive_from(addr);
 
     if (ret) {
+        // Read accelerometer data
         for (int8_t i = 0; i < 3; i++) {
-            *(myData + 1) = i2c_read_byte();
+            *(my_data + 1) = i2c_read_byte();
             i2c_send_ack(true);
-            *myData = i2c_read_byte();
+            *my_data = i2c_read_byte();
             i2c_send_ack(true);
-            myData += 2;
+            my_data += 2;
         }
+        // Read and discard temperature data
         i2c_read_byte();
         i2c_send_ack(true);
         i2c_read_byte();
         i2c_send_ack(true);
+        // Read gyroscope data
         for (int8_t i = 0; i < 2; i++) {
-            *(myData + 1) = i2c_read_byte();
+            *(my_data + 1) = i2c_read_byte();
             i2c_send_ack(true);
-            *myData = i2c_read_byte();
+            *my_data = i2c_read_byte();
             i2c_send_ack(true);
-            myData += 2;
+            my_data += 2;
         }
-        *(myData + 1) = i2c_read_byte();
+        *(my_data + 1) = i2c_read_byte();
         i2c_send_ack(true);
-        *myData = i2c_read_byte();
+        *my_data = i2c_read_byte();
         i2c_send_ack(false);
     }
 
     i2c_stop();
     return ret ? 0 : -1;
+}
+
+bool ICACHE_FLASH_ATTR mpu_init(void) {
+    // Wake up
+    mpu_write_register(MPU_ADDR, MPU_PWR_MGMT_1,
+        MPU_CLK_PLL_ZGYRO | MPU_TEMP_DIS, false);
+    // 1000 Hz sampling
+    mpu_write_register(MPU_ADDR, MPU_SMPRT_DIV, MPU_RATE, false);
+    // 188 Hz LPF
+    mpu_write_register(MPU_ADDR, MPU_CONFIG, 1, false);
+    // Gyroscope min sensitivity
+    mpu_write_register(MPU_ADDR, MPU_GYRO_CONFIG, 3 << 3, false);
+    // Accel max sensitivity
+    mpu_write_register(MPU_ADDR, MPU_ACCEL_CONFIG, 0, false);
+    // Data ready interrupt on
+    mpu_write_register(MPU_ADDR, MPU_INT_ENABLE, 1, false);
+    // Check if the MPU still responds with its own address
+    uint8_t addr = 0;
+    mpu_read_registers(MPU_ADDR, MPU_WHO_AM_I, 1, &addr);
+    return addr == MPU_ADDR;
+}
+
+void ICACHE_FLASH_ATTR mpu_set_gyro_offsets(int16_t *offsets) {
+}
+
+void ICACHE_FLASH_ATTR mpu_go_to_sleep(void) {
+    mpu_write_register(MPU_ADDR, MPU_PWR_MGMT_1, 1 << 6, true);
 }
 

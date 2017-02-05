@@ -1,15 +1,15 @@
 
 #include "imu.h"
 
-q16 ICACHE_FLASH_ATTR gravityX(const quaternion_fix * const quat) {
+q16 ICACHE_FLASH_ATTR gravity_x(const quaternion_fix * const quat) {
     return 2 * (q16_mul(quat->q1, quat->q3) - q16_mul(quat->q0, quat->q2));
 }
 
-q16 ICACHE_FLASH_ATTR gravityY(const quaternion_fix * const quat) {
+q16 ICACHE_FLASH_ATTR gravity_y(const quaternion_fix * const quat) {
     return 2 * (q16_mul(quat->q2, quat->q3) + q16_mul(quat->q0, quat->q1));
 }
 
-q16 ICACHE_FLASH_ATTR gravityZ(const quaternion_fix * const quat) {
+q16 ICACHE_FLASH_ATTR gravity_z(const quaternion_fix * const quat) {
     return q16_mul(quat->q0, quat->q0) -
         q16_mul(quat->q1, quat->q1) -
         q16_mul(quat->q2, quat->q2) +
@@ -33,13 +33,14 @@ q16 ICACHE_FLASH_ATTR gravityZ(const quaternion_fix * const quat) {
 // 14/12/2016   Sakari Kapanen  Fixed point version of the algorithm
 //
 //=============================================================================
-void ICACHE_FLASH_ATTR MadgwickAHRSupdateIMU_fix(const madgwickparams * const params,
-    const int16_t * const rawAccel, const int16_t * const rawGyro,
+void ICACHE_FLASH_ATTR madgwick_ahrs_update_imu(
+    const madgwickparams * const params,
+    const int16_t * const raw_accel, const int16_t * const raw_gyro,
     quaternion_fix * const q) {
-    q16 recipNorm;
+    q16 recip_norm;
     q16 q0, q1, q2, q3;
     q16 s0, s1, s2, s3;
-    q16 qDot0, qDot1, qDot2, qDot3;
+    q16 qdot0, qdot1, qdot2, qdot3;
     q16 _2q1q1q2q2, tmpterm;
 
     q0 = q->q0;
@@ -47,28 +48,28 @@ void ICACHE_FLASH_ATTR MadgwickAHRSupdateIMU_fix(const madgwickparams * const pa
     q2 = q->q2;
     q3 = q->q3;
 
-    q16 gx = rawGyro[0], gy = rawGyro[1], gz = rawGyro[2];
+    q16 gx = raw_gyro[0], gy = raw_gyro[1], gz = raw_gyro[2];
 
     // Rate of change of quaternion from gyroscope
     // NOTE these values are actually double the actual values but it
     // does not matter
-    qDot0 = -q16_mul(q1, gx) - q16_mul(q2, gy) - q16_mul(q3, gz);
-    qDot1 = q16_mul(q0, gx) + q16_mul(q2, gz) - q16_mul(q3, gy);
-    qDot2 = q16_mul(q0, gy) - q16_mul(q1, gz) + q16_mul(q3, gx);
-    qDot3 = q16_mul(q0, gz) + q16_mul(q1, gy) - q16_mul(q2, gx);
+    qdot0 = -q16_mul(q1, gx) - q16_mul(q2, gy) - q16_mul(q3, gz);
+    qdot1 = q16_mul(q0, gx) + q16_mul(q2, gz) - q16_mul(q3, gy);
+    qdot2 = q16_mul(q0, gy) - q16_mul(q1, gz) + q16_mul(q3, gx);
+    qdot3 = q16_mul(q0, gz) + q16_mul(q1, gy) - q16_mul(q2, gx);
 
-    q16 ax = rawAccel[0], ay = rawAccel[1], az = rawAccel[2];
+    q16 ax = raw_accel[0], ay = raw_accel[1], az = raw_accel[2];
     // Compute feedback only if accelerometer measurement valid
     // (avoids NaN in accelerometer normalisation)
     if (ax != 0 || ay != 0 || az != 0) {
         // Normalise accelerometer measurement
-        recipNorm = q16_mul(ax, ax);
-        recipNorm += q16_mul(ay, ay);
-        recipNorm += q16_mul(az, az);
-        recipNorm = q16_rsqrt(recipNorm);
-        ax = q16_mul(ax, recipNorm);
-        ay = q16_mul(ay, recipNorm);
-        az = q16_mul(az, recipNorm);
+        recip_norm = q16_mul(ax, ax);
+        recip_norm += q16_mul(ay, ay);
+        recip_norm += q16_mul(az, az);
+        recip_norm = q16_rsqrt(recip_norm);
+        ax = q16_mul(ax, recip_norm);
+        ay = q16_mul(ay, recip_norm);
+        az = q16_mul(az, recip_norm);
 
         // Auxiliary variables to avoid repeated arithmetic
         _2q1q1q2q2 = q16_mul(q1, q1) + q16_mul(q2, q2);
@@ -83,39 +84,39 @@ void ICACHE_FLASH_ATTR MadgwickAHRSupdateIMU_fix(const madgwickparams * const pa
         s3 = q16_mul(q3, _2q1q1q2q2) - q16_mul(q1, ax) - q16_mul(q2, ay);
 
         // Apply feedback step
-        recipNorm = q16_mul(s0, s0);
-        recipNorm += q16_mul(s1, s1);
-        recipNorm += q16_mul(s2, s2);
-        recipNorm += q16_mul(s3, s3);
-        recipNorm = q16_rsqrt(recipNorm);
-        recipNorm = q16_mul(params->beta, recipNorm);
-        qDot0 -= q16_mul(recipNorm, s0);
-        qDot1 -= q16_mul(recipNorm, s1);
-        qDot2 -= q16_mul(recipNorm, s2);
-        qDot3 -= q16_mul(recipNorm, s3);
+        recip_norm = q16_mul(s0, s0);
+        recip_norm += q16_mul(s1, s1);
+        recip_norm += q16_mul(s2, s2);
+        recip_norm += q16_mul(s3, s3);
+        recip_norm = q16_rsqrt(recip_norm);
+        recip_norm = q16_mul(params->beta, recip_norm);
+        qdot0 -= q16_mul(recip_norm, s0);
+        qdot1 -= q16_mul(recip_norm, s1);
+        qdot2 -= q16_mul(recip_norm, s2);
+        qdot3 -= q16_mul(recip_norm, s3);
     }
 
     // Integrate rate of change of quaternion to yield quaternion
-    q0 += q16_mul(qDot0, params->gyroIntegrationFactor);
-    q1 += q16_mul(qDot1, params->gyroIntegrationFactor);
-    q2 += q16_mul(qDot2, params->gyroIntegrationFactor);
-    q3 += q16_mul(qDot3, params->gyroIntegrationFactor);
+    q0 += q16_mul(qdot0, params->gyro_integration_factor);
+    q1 += q16_mul(qdot1, params->gyro_integration_factor);
+    q2 += q16_mul(qdot2, params->gyro_integration_factor);
+    q3 += q16_mul(qdot3, params->gyro_integration_factor);
 
     // Normalise quaternion
-    recipNorm = q16_mul(q0, q0);
-    recipNorm += q16_mul(q1, q1);
-    recipNorm += q16_mul(q2, q2);
-    recipNorm += q16_mul(q3, q3);
-    recipNorm = q16_rsqrt(recipNorm);
-    q->q0 = q16_mul(q0, recipNorm);
-    q->q1 = q16_mul(q1, recipNorm);
-    q->q2 = q16_mul(q2, recipNorm);
-    q->q3 = q16_mul(q3, recipNorm);
+    recip_norm = q16_mul(q0, q0);
+    recip_norm += q16_mul(q1, q1);
+    recip_norm += q16_mul(q2, q2);
+    recip_norm += q16_mul(q3, q3);
+    recip_norm = q16_rsqrt(recip_norm);
+    q->q0 = q16_mul(q0, recip_norm);
+    q->q1 = q16_mul(q1, recip_norm);
+    q->q2 = q16_mul(q2, recip_norm);
+    q->q3 = q16_mul(q3, recip_norm);
 }
 
-void ICACHE_FLASH_ATTR calculateMadgwickParams(madgwickparams * const params,
-    float beta, float gyroScale, float sampleTime) {
-    params->gyroIntegrationFactor = FLT_TO_Q16(0.5f * gyroScale * sampleTime);
-    params->beta = FLT_TO_Q16(beta / (0.5f * gyroScale));
+void ICACHE_FLASH_ATTR calculate_madgwick_params(madgwickparams * const params,
+    float beta, float gyro_scale, float sample_time) {
+    params->gyro_integration_factor = FLT_TO_Q16(0.5f * gyro_scale * sample_time);
+    params->beta = FLT_TO_Q16(beta / (0.5f * gyro_scale));
 }
 
