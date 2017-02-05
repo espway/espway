@@ -233,9 +233,11 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
             if (batteryValue <
                 (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR)) {
                 set_both_eyes(BLACK);
-                //mpu.setSleepEnabled(true);
+                // Put MPU6050 to sleep
+                mpuWriteRegister(MPU_ADDR, MPU_PWR_MGMT_1, 1 << 6, true);
                 setMotors(0, 0);
-                //ESP.deepSleep(100000000UL);
+                system_deep_sleep(UINT32_MAX);
+                return;
             }
         }
     }
