@@ -2,7 +2,8 @@
 #the espfs combined into the flash binary.
 
 # Change tagname to some identifier that's unique for your project. 27 chars max.
-TAGNAME ?= "generic"
+TAGNAME ?= "espway"
+ESPIP="192.168.4.1"
 
 # linker script used for the linker step
 
@@ -41,7 +42,7 @@ $(3): $(1)
 	$$(Q) $$(OBJCOPY) --only-section .data -O binary $1 build/eagle.app.v6.data.bin
 	$$(Q) $$(OBJCOPY) --only-section .rodata -O binary $1 build/eagle.app.v6.rodata.bin
 	$$(Q) $$(OBJCOPY) --only-section .irom0.text -O binary $1 build/eagle.app.v6.irom0text.bin
-	$$(Q) cd build; COMPILE=gcc PATH=$$(XTENSA_TOOLS_ROOT):$$(PATH) python $$(APPGEN) $(1:build/%=%) 2 $$(ESP_FLASH_MODE) $$(ESP_FLASH_FREQ_DIV) $$(ESP_FLASH_SIZE_IX) $(4)
+	$$(Q) cd build; COMPILE=gcc PATH=$$(XTENSA_TOOLS_ROOT):$$(PATH) python2 $$(APPGEN) $(1:build/%=%) 2 $$(ESP_FLASH_MODE) $$(ESP_FLASH_FREQ_DIV) $$(ESP_FLASH_SIZE_IX) $(4)
 	$$(Q) rm -f eagle.app.v6.*.bin
 	$$(Q) mv build/eagle.app.flash.bin $$@
 	@echo "** user1.bin uses $$$$(stat -c '%s' $$@) bytes of" $$(ESP_FLASH_MAX) "available"
@@ -66,7 +67,7 @@ ldscript_memspecific.ld:
 #	$(Q) $(OBJCP) --only-section .rodata -O binary $2 build/eagle.app.v6.rodata.bin
 #	$(Q) $(OBJCP) --only-section .irom0.text -O binary $2 build/eagle.app.v6.irom0text.bin
 #	ls -ls build/eagle*bin
-#	$(Q) COMPILE=gcc PATH=$(XTENSA_TOOLS_ROOT):$(PATH) python $(APPGEN_TOOL) $(USER1_OUT) 2 $(ESP_FLASH_MODE) $(ESP_FLASH_FREQ_DIV) $(ESP_SPI_SIZE)
+#	$(Q) COMPILE=gcc PATH=$(XTENSA_TOOLS_ROOT):$(PATH) python2 $(APPGEN_TOOL) $(USER1_OUT) 2 $(ESP_FLASH_MODE) $(ESP_FLASH_FREQ_DIV) $(ESP_SPI_SIZE)
 #	$(Q) rm -f eagle.app.v6.*.bin
 #	$(Q) mv eagle.app.flash.bin $@
 #	@echo "** user1.bin uses $$(stat -c '%s' $@) bytes of" $(ESP_FLASH_MAX) "available"
@@ -84,7 +85,7 @@ $(FW_BASE): $(TARGET_BIN) libesphttpd/mkupgimg/mkupgimg
 	$(Q) libesphttpd/mkupgimg/mkupgimg $(TARGET_BIN_USR1) $(TARGET_BIN_USR2) $(TAGNAME) $(TARGET_OTAFILE)
 
 flash: $(TARGET_OUT) $(FW_BASE)
-	$(Q) $(ESPTOOL) $(ESPTOOL_OPTS) write_flash $(ESPTOOL_FLASHDEF) 0x00000 "$(SDK_BASE)/bin/boot_v1.5.bin" 0x1000 $(TARGET_BIN_USR1)
+	$(Q) $(ESPTOOL) $(ESPTOOL_OPTS) write_flash $(ESPTOOL_FLASHDEF) 0x00000 "$(SDK_BASE)/bin/boot_v1.6.bin" 0x1000 $(TARGET_BIN_USR1)
 
 blankflash:
 	$(Q) $(ESPTOOL) $(ESPTOOL_OPTS) write_flash $(ESPTOOL_FLASHDEF) $(BLANKPOS) $(SDK_BASE)/bin/blank.bin $(INITDATAPOS) $(SDK_BASE)/bin/esp_init_data_default.bin
