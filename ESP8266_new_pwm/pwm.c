@@ -22,10 +22,10 @@
   #define SDK_PWM_PERIOD_COMPAT_MODE 0
 #endif
 #ifndef PWM_MAX_CHANNELS
-  #define PWM_MAX_CHANNELS 8
+  #define PWM_MAX_CHANNELS 2
 #endif
 #define PWM_DEBUG 0
-#define PWM_USE_NMI 0
+#define PWM_USE_NMI 1
 
 /* no user servicable parts beyond this point */
 
@@ -62,6 +62,8 @@ struct pwm_phase {
 	uint16_t on_mask;  ///< GPIO mask to switch on
 	uint16_t off_mask; ///< GPIO mask to switch off
 };
+
+void NmiTimSetFunc(void(*func)(void));
 
 /* Three sets of PWM phases, the active one, the one used
  * starting with the next cycle, and the one updated

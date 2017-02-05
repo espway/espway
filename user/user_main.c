@@ -18,6 +18,7 @@
 
 #include <esp8266.h>
 #include <driver/uart.h>
+#include <pwm.h>
 
 // libesphttpd includes
 #include "httpd.h"
@@ -53,6 +54,8 @@
 
 #define MPU_RATE 0
 #define SAMPLE_TIME ((1.0f + MPU_RATE) / 1000.0f)
+
+#define PWMPERIOD 2500
 
 const int LED_PIN = 2;
 
@@ -127,8 +130,34 @@ void ICACHE_FLASH_ATTR sendBatteryReading(uint16_t batteryReading) {
     cgiWebsockBroadcast("/ws", (char *)buf, 3, WEBSOCK_FLAG_BIN);
 }
 
+void set_motor_speed(int channel, int dir_pin, q16 speed, bool reverse) {
+    speed = Q16_TO_INT(PWMPERIOD * speed);
 
-void ICACHE_FLASH_ATTR setMotors(int x, int y) {}
+    if (speed > PWMPERIOD) {
+        speed = PWMPERIOD;
+    } else if (speed < -PWMPERIOD) {
+        speed = -PWMPERIOD;
+    }
+
+    if (reverse) {
+        speed = -speed;
+    }
+
+    if (speed < 0) {
+        GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, 1 << dir_pin);
+        pwm_set_duty(PWMPERIOD + speed, channel);
+    } else {
+        GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, 1 << dir_pin);
+        pwm_set_duty(speed, channel);
+    }
+}
+
+
+void ICACHE_FLASH_ATTR setMotors(int leftSpeed, int rightSpeed) {
+    set_motor_speed(1, 12, rightSpeed, REVERSE_RIGHT_MOTOR);
+    set_motor_speed(0, 15, leftSpeed, REVERSE_LEFT_MOTOR);
+    pwm_start();
+}
 
 
 void ICACHE_FLASH_ATTR doLog(int16_t *rawAccel, int16_t *rawGyro, q16 spitch) {
@@ -170,7 +199,7 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
             batteryValue = q16_exponential_smooth(batteryValue, system_adc_read(),
                 FLT_TO_Q16(0.25f));
             sendBattery = true;
-            /*
+
             if (batteryValue <
                 (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR)) {
                 //setBothEyes(BLACK);
@@ -178,7 +207,6 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
                 setMotors(0, 0);
                 //ESP.deepSleep(100000000UL);
             }
-            */
         }
     }
 
@@ -347,6 +375,26 @@ void ICACHE_FLASH_ATTR user_init(void) {
     mpuInitSucceeded = mpuInit();
 
     wifi_init();
+
+#define PERIPHS_IO_MUX_MTDI_U           (PERIPHS_IO_MUX + 0x04)
+#define FUNC_GPIO12                     3
+#define PERIPHS_IO_MUX_MTCK_U           (PERIPHS_IO_MUX + 0x08)
+#define FUNC_GPIO13                     3
+#define PERIPHS_IO_MUX_MTMS_U           (PERIPHS_IO_MUX + 0x0C)
+#define FUNC_GPIO14                     3
+#define PERIPHS_IO_MUX_MTDO_U           (PERIPHS_IO_MUX + 0x10)
+#define FUNC_GPIO15                     3
+    // Motor direction pins
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_GPIO12);
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15);
+    GPIO_REG_WRITE(GPIO_ENABLE_W1TS_ADDRESS, (1 << 12) | (1 << 15));
+    GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, (1 << 12) | (1 << 15));
+    uint32_t pin_info_list[][3] = {
+        { PERIPHS_IO_MUX_MTCK_U, FUNC_GPIO13, 13 },
+        { PERIPHS_IO_MUX_MTMS_U, FUNC_GPIO14, 14 }
+    };
+    uint32_t duty_init[] = { 0, 0 };
+    pwm_init(PWMPERIOD, duty_init, 2, pin_info_list);
 
     // 0x40200000 is the base address for spi flash memory mapping, ESPFS_POS is the position
     // where image is written in flash that is defined in Makefile.
