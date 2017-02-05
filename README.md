@@ -12,5 +12,3 @@ The project utilizes some third-party libraries, in their respective folders:
 ## License
 The project is licensed under GPLv3.
 
-The `base64` and `sha1` components are included from [Brad Conte's repo](https://github.com/B-Con/crypto-algorithms).
-
