@@ -20,6 +20,8 @@
 #include <driver/uart.h>
 #include <pwm.h>
 
+#include "ws2812_i2s.h"
+
 // libesphttpd includes
 #include "httpd.h"
 #include "cgiflash.h"
@@ -64,6 +66,17 @@ os_event_t gTaskQueue[QUEUE_LEN];
 typedef enum { LOG_FREQ, LOG_RAW, LOG_PITCH, LOG_NONE } logmode;
 typedef enum { STABILIZING_ORIENTATION, RUNNING, FALLEN } state;
 
+typedef struct {
+    uint8_t r, g, b;
+} color_t;
+
+const color_t RED = { 180, 0, 0 };
+const color_t YELLOW = { 180, 180, 0 };
+const color_t GREEN = { 0, 180, 0 };
+const color_t BLUE = { 0, 0, 180 };
+const color_t LILA = { 180, 0, 180 };
+const color_t BLACK = { 0, 0, 0 };
+
 typedef enum {
     STEERING = 0,
     REQ_QUATERNION = 1,
@@ -83,6 +96,15 @@ q16 steeringBias = 0;
 
 bool mpuInitSucceeded = false;
 bool sendQuat = false;
+
+
+void set_both_eyes(const color_t color) {
+    uint8_t buf[] = {
+        color.g, color.r, color.b,
+        color.g, color.r, color.b
+    };
+    ws2812_push(buf, 6);
+}
 
 
 void websocketRecvCb(Websock *ws, char *signed_data, int len, int flags) {
@@ -130,7 +152,8 @@ void ICACHE_FLASH_ATTR sendBatteryReading(uint16_t batteryReading) {
     cgiWebsockBroadcast("/ws", (char *)buf, 3, WEBSOCK_FLAG_BIN);
 }
 
-void set_motor_speed(int channel, int dir_pin, q16 speed, bool reverse) {
+void ICACHE_FLASH_ATTR set_motor_speed(int channel, int dir_pin, q16 speed,
+    bool reverse) {
     speed = Q16_TO_INT(PWMPERIOD * speed);
 
     if (speed > PWMPERIOD) {
@@ -202,7 +225,7 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
 
             if (batteryValue <
                 (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR)) {
-                //setBothEyes(BLACK);
+                set_both_eyes(BLACK);
                 //mpu.setSleepEnabled(true);
                 setMotors(0, 0);
                 //ESP.deepSleep(100000000UL);
@@ -254,14 +277,14 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
                 FLT_TO_Q16(TRAVEL_SPEED_SMOOTHING));
         } else {
             myState = FALLEN;
-            //setBothEyes(BLUE);
+            set_both_eyes(BLUE);
             travelSpeed = 0;
             setMotors(0, 0);
         }
     } else if (myState == FALLEN) {
         if (spitch < RECOVER_UPPER_BOUND && spitch > RECOVER_LOWER_BOUND) {
             myState = RUNNING;
-            //setBothEyes(GREEN);
+            set_both_eyes(GREEN);
             pid_reset(spitch, 0, &anglePidSettings, &anglePidState);
             pid_reset(0, FLT_TO_Q16(STABLE_ANGLE), &velPidSettings,
                 &velPidState);
@@ -387,6 +410,9 @@ void ICACHE_FLASH_ATTR user_init(void) {
     };
     uint32_t duty_init[] = { 0, 0 };
     pwm_init(PWMPERIOD, duty_init, 2, pin_info_list);
+
+    ws2812_init();
+    set_both_eyes(mpuInitSucceeded ? YELLOW : RED);
 
     // 0x40200000 is the base address for spi flash memory mapping, ESPFS_POS is the position
     // where image is written in flash that is defined in Makefile.

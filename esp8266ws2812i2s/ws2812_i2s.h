@@ -15,7 +15,7 @@
 //NOTE: Blocksize MUST be divisible by 4.  Cannot exceed 4092
 //Each LED takes up 12 block bytes in WS2812_FOUR_SAMPLE
 //Or 9 block bytes in WS2812_THREE_SAMPLE
-#define WS_BLOCKSIZE 4000
+#define WS_BLOCKSIZE 20
 
 //You can either have 3 or 4 samples per bit for WS2812s.
 //3 sample can't go quite as fast as 4.
