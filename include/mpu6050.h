@@ -68,6 +68,13 @@
 
 #define MPU_WHO_AM_I 0x75
 
+#define MPU_XG_OFFS_USRH 0x13
+#define MPU_XG_OFFS_USRL 0x14
+#define MPU_YG_OFFS_USRH 0x15
+#define MPU_YG_OFFS_USRL 0x16
+#define MPU_ZG_OFFS_USRH 0x17
+#define MPU_ZG_OFFS_USRL 0x18
+
 int mpu_write_register(const uint8_t addr,
     const uint8_t reg, const uint8_t value, const bool stop);
 int mpu_read_registers(const uint8_t addr,
@@ -77,4 +84,5 @@ int mpu_read_raw_data(const uint8_t addr, int16_t * const data);
 
 bool mpu_init(void);
 void mpu_go_to_sleep(void);
+bool mpu_set_gyro_offsets(int16_t *offsets);
 

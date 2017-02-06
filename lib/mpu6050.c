@@ -115,7 +115,16 @@ bool ICACHE_FLASH_ATTR mpu_init(void) {
     return addr == MPU_ADDR;
 }
 
-void ICACHE_FLASH_ATTR mpu_set_gyro_offsets(int16_t *offsets) {
+bool ICACHE_FLASH_ATTR mpu_set_gyro_offsets(int16_t *offsets) {
+    bool ret = i2c_transmit_to(MPU_ADDR);
+    if (!ret) return ret;
+    uint8_t data[] = {
+        MPU_XG_OFFS_USRH,
+        offsets[0] >> 8, offsets[0] & 0xff,
+        offsets[1] >> 8, offsets[1] & 0xff,
+        offsets[2] >> 8, offsets[2] & 0xff
+    };
+    return i2c_write_bytes(data, 7);
 }
 
 void ICACHE_FLASH_ATTR mpu_go_to_sleep(void) {
