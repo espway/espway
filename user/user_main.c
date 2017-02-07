@@ -34,6 +34,7 @@
 #include "pid.h"
 #include "motors.h"
 #include "eyes.h"
+#include "flash_config.h"
 
 #include "config.h"
 
@@ -54,6 +55,8 @@
 
 #define SAMPLE_TIME ((1.0f + MPU_RATE) / 1000.0f)
 
+#define CONFIG_VERSION 2
+
 const color_t RED = { 180, 0, 0 };
 const color_t YELLOW = { 180, 180, 0 };
 const color_t GREEN = { 0, 180, 0 };
@@ -68,17 +71,46 @@ typedef enum { STABILIZING_ORIENTATION, RUNNING, FALLEN } state;
 
 typedef enum {
     STEERING = 0,
+
     REQ_QUATERNION = 1,
     RES_QUATERNION = 2,
-    BATTERY = 3
+
+    BATTERY = 3,
+    BATTERY_CUTOFF = 4,
+
+    REQ_SET_PID_PARAMS = 5,
+    REQ_GET_PID_PARAMS = 6,
+    RES_PID_PARAMS = 7,
+
+    REQ_SET_GYRO_OFFSETS = 8,
+    RES_SET_GYRO_OFFSETS_FAILURE = 9,
+    RES_SET_GYRO_OFFSETS_SUCCESS = 10,
+
+    REQ_SAVE_CONFIG = 11,
+    RES_SAVE_CONFIG_FAILURE = 12,
+    RES_SAVE_CONFIG_SUCCESS = 13
 } ws_msg_type;
 
+typedef enum {
+    ANGLE = 0,
+    ANGLE_HIGH = 1,
+    VEL = 2
+} pid_controller_index;
+
+typedef struct {
+    q16 p, i, d;
+} pid_coeffs;
+
+typedef struct {
+    pid_coeffs pid_coeffs_arr[3];
+    int16_t gyro_offsets[3];
+} espway_config;
+
 madgwickparams imuparams;
-pidsettings vel_pid_settings;
-pidsettings angle_pid_settings;
-pidsettings angle_high_pid_settings;
 pidstate vel_pid_state;
 pidstate angle_pid_state;
+
+pidsettings pid_settings_arr[3];
 
 q16 target_speed = 0;
 q16 steering_bias = 0;
@@ -87,9 +119,53 @@ bool mpu_init_succeeded = false;
 bool send_quat = false;
 bool ota_started = false;
 
+espway_config my_config;
+
+void apply_config_params() {
+    pid_initialize_flt(
+        my_config.pid_coeffs_arr[ANGLE].p,
+        my_config.pid_coeffs_arr[ANGLE].i,
+        my_config.pid_coeffs_arr[ANGLE].d,
+        SAMPLE_TIME, -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE]);
+    pid_initialize_flt(
+        my_config.pid_coeffs_arr[ANGLE_HIGH].p,
+        my_config.pid_coeffs_arr[ANGLE_HIGH].i,
+        my_config.pid_coeffs_arr[ANGLE_HIGH].d,
+        SAMPLE_TIME, -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE_HIGH]);
+    pid_initialize_flt(
+        my_config.pid_coeffs_arr[VEL].p,
+        my_config.pid_coeffs_arr[VEL].i,
+        my_config.pid_coeffs_arr[VEL].d,
+        SAMPLE_TIME, FALL_LOWER_BOUND, FALL_UPPER_BOUND, true,
+            &pid_settings_arr[VEL]);
+
+    mpu_set_gyro_offsets(my_config.gyro_offsets);
+}
+
+void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d) {
+    if (idx > 2) {
+        return;
+    }
+
+    pid_update_params(p, i, d, &pid_settings_arr[idx]);
+    pid_coeffs *p_coeffs = &my_config.pid_coeffs_arr[idx];
+    p_coeffs->p = p;
+    p_coeffs->i = i;
+    p_coeffs->d = d;
+}
+
 int upload_firmware(HttpdConnData *connData) {
     ota_started = true;
     return cgiUploadFirmware(connData);
+}
+
+void send_pid_params(pid_controller_index idx) {
+    uint8_t payload[13];
+    payload[0] = idx;
+    int32_t *params = (int32_t *)payload;
+    params[0] = my_config.pid_coeffs_arr[idx].p;
+    params[1] = my_config.pid_coeffs_arr[idx].i;
+    params[2] = my_config.pid_coeffs_arr[idx].d;
 }
 
 void websocket_recv_cb(Websock *ws, char *signed_data, int len, int flags) {
@@ -100,21 +176,54 @@ void websocket_recv_cb(Websock *ws, char *signed_data, int len, int flags) {
     uint8_t msgtype = data[0];
     uint8_t *payload = &data[1];
     int data_len = len - 1;
-    // Parse steering command
-    if (msgtype == STEERING && data_len == 2) {
-        int8_t *signed_data = (int8_t *)payload;
-        steering_bias = (FLT_TO_Q16(STEERING_FACTOR) * signed_data[0]) / 128;
-        target_speed = (FLT_TO_Q16(SPEED_CONTROL_FACTOR) * signed_data[1]) / 128;
-    } else if (msgtype == REQ_QUATERNION) {
-        send_quat = true;
+
+    switch (msgtype) {
+        case STEERING:
+            // Parameters: velocity (int8_t), turn rate (int8_t)
+            if (data_len != 2) {
+                break;
+            }
+            int8_t *signed_data = (int8_t *)payload;
+            steering_bias = (FLT_TO_Q16(STEERING_FACTOR) * signed_data[0]) / 128;
+            target_speed = (FLT_TO_Q16(SPEED_CONTROL_FACTOR) * signed_data[1]) / 128;
+            break;
+
+        case REQ_QUATERNION:
+            send_quat = true;
+            break;
+
+        case REQ_SET_PID_PARAMS:
+            // Parameters: pid index (uint8_t), P (q16/int32_t), I (q16), D (q16)
+            if (data_len != 13) {
+                break;
+            }
+
+            uint8_t pid_index = payload[0];
+            int32_t *i32_data = (int32_t *)payload;
+            if (pid_index <= 2) {
+                update_pid_controller(pid_index, i32_data[0], i32_data[1],
+                    i32_data[2]);
+                send_pid_params(pid_index);
+            }
+
+            break;
+
+        case REQ_GET_PID_PARAMS:
+            if (data_len != 1) {
+                break;
+            }
+
+            if (payload[0] <= 2) {
+                send_pid_params(payload[0]);
+            }
+
+            break;
     }
 }
-
 
 void websocket_connect_cb(Websock *ws) {
     ws->recvCb = websocket_recv_cb;
 }
-
 
 void ICACHE_FLASH_ATTR send_quaternion(const quaternion_fix * const quat) {
     uint8_t buf[9];
@@ -128,7 +237,6 @@ void ICACHE_FLASH_ATTR send_quaternion(const quaternion_fix * const quat) {
     send_quat = false;
 }
 
-
 void ICACHE_FLASH_ATTR send_battery_reading(uint16_t battery_reading) {
     uint8_t buf[3];
     buf[0] = BATTERY;
@@ -136,7 +244,6 @@ void ICACHE_FLASH_ATTR send_battery_reading(uint16_t battery_reading) {
     payload[0] = q16_mul(battery_reading, BATTERY_COEFFICIENT);
     cgiWebsockBroadcast("/ws", (char *)buf, 3, WEBSOCK_FLAG_BIN);
 }
-
 
 void ICACHE_FLASH_ATTR do_log(int16_t *raw_accel, int16_t *raw_gyro,
     q16 sin_pitch) {
@@ -223,12 +330,13 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
         if (sin_pitch < FALL_UPPER_BOUND && sin_pitch > FALL_LOWER_BOUND) {
             // Perform PID update
             q16 target_angle = pid_compute(travel_speed, smoothed_target_speed,
-                &vel_pid_settings, &vel_pid_state);
+                &pid_settings_arr[VEL], &vel_pid_state);
             bool use_high_pid =
                 sin_pitch < (target_angle - FLT_TO_Q16(HIGH_PID_LIMIT)) ||
                 sin_pitch > (target_angle + FLT_TO_Q16(HIGH_PID_LIMIT));
             q16 motor_speed = pid_compute(sin_pitch, target_angle,
-                use_high_pid ? &angle_high_pid_settings : &angle_pid_settings,
+                use_high_pid ? &pid_settings_arr[ANGLE_HIGH] :
+                               &pid_settings_arr[ANGLE],
                 &angle_pid_state);
 
             set_motors(motor_speed + steering_bias, motor_speed - steering_bias);
@@ -246,8 +354,8 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
         if (sin_pitch < RECOVER_UPPER_BOUND && sin_pitch > RECOVER_LOWER_BOUND) {
             my_state = RUNNING;
             set_both_eyes(GREEN);
-            pid_reset(sin_pitch, 0, &angle_pid_settings, &angle_pid_state);
-            pid_reset(0, FLT_TO_Q16(STABLE_ANGLE), &vel_pid_settings,
+            pid_reset(sin_pitch, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
+            pid_reset(0, FLT_TO_Q16(STABLE_ANGLE), &pid_settings_arr[VEL],
                 &vel_pid_state);
         }
     }
@@ -321,15 +429,24 @@ HttpdBuiltInUrl builtInUrls[]={
 void ICACHE_FLASH_ATTR user_init(void) {
     system_update_cpu_freq(80);
 
+    if (!read_flash_config(&my_config, sizeof(espway_config), CONFIG_VERSION)) {
+        // Load default parameters
+        my_config.pid_coeffs_arr[ANGLE].p = ANGLE_KP;
+        my_config.pid_coeffs_arr[ANGLE].i = ANGLE_KI;
+        my_config.pid_coeffs_arr[ANGLE].d = ANGLE_KD;
+        my_config.pid_coeffs_arr[ANGLE_HIGH].p = ANGLE_HIGH_KP;
+        my_config.pid_coeffs_arr[ANGLE_HIGH].i = ANGLE_HIGH_KI;
+        my_config.pid_coeffs_arr[ANGLE_HIGH].d = ANGLE_HIGH_KD;
+        my_config.pid_coeffs_arr[VEL].p = VEL_KP;
+        my_config.pid_coeffs_arr[VEL].i = VEL_KI;
+        my_config.pid_coeffs_arr[VEL].d = VEL_KD;
+        os_memcpy(my_config.gyro_offsets, GYRO_OFFSETS, 3 * sizeof(int16_t));
+    }
+    apply_config_params();
+
     // Parameter calculation & initialization
-    pid_initialize_flt(ANGLE_KP, ANGLE_KI, ANGLE_KD, SAMPLE_TIME,
-        -Q16_ONE, Q16_ONE, false, &angle_pid_settings);
-    pid_initialize_flt(ANGLE_HIGH_KP, ANGLE_HIGH_KI, ANGLE_HIGH_KD, SAMPLE_TIME,
-        -Q16_ONE, Q16_ONE, false, &angle_high_pid_settings);
-    pid_reset(0, 0, &angle_pid_settings, &angle_pid_state);
-    pid_initialize_flt(VEL_KP, VEL_KI, VEL_KD, SAMPLE_TIME,
-        FALL_LOWER_BOUND, FALL_UPPER_BOUND, true, &vel_pid_settings);
-    pid_reset(0, 0, &vel_pid_settings, &vel_pid_state);
+    pid_reset(0, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
+    pid_reset(0, 0, &pid_settings_arr[VEL], &vel_pid_state);
     calculate_madgwick_params(&imuparams, MADGWICK_BETA,
         2.0f * M_PI / 180.0f * 2000.0f, SAMPLE_TIME);
 
