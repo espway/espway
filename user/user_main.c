@@ -379,6 +379,16 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
 }
 
 void ICACHE_FLASH_ATTR wifi_init(void) {
+    wifi_softap_dhcps_stop();
+
+    struct ip_info info;
+    IP4_ADDR(&info.ip, 192, 168, 4, 1);
+    IP4_ADDR(&info.gw, 192, 168, 4, 1);
+    IP4_ADDR(&info.netmask, 255, 255, 255, 0);
+    wifi_set_ip_info(SOFTAP_IF, &info);
+
+    wifi_softap_dhcps_start();
+
     struct softap_config config;
     wifi_set_opmode_current(0x02);
     wifi_softap_get_config(&config);
