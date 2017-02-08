@@ -15,6 +15,15 @@ Kudos to all the above developers. Without these libraries this project wouldn't
 
 [Riot.js](http://riotjs.com/) is used on the HTML+JS frontend for facilitating some UI components.
 
+## Supported browsers
+
+Please use the latest Firefox or Chrome if possible. The HTML/JS UI uses some
+recent JavaScript features which might not be supported by older browsers.
+
+I'm intending to setup JavaScript transpilation with `gulp` to support older browsers.
+Before that is done, it might not make much sense to use any other than the
+aforementioned browsers, as I have no means of testing the code on anything else.
+
 ## License
 The project is licensed under GPLv3.
 
