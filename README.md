@@ -1,8 +1,21 @@
 # ESPway
-A segway-like balancing two-wheel robot built on ESP8266. It is controlled over WiFi via a HTML/JS GUI and a WebSocket. This is a work in progress.
+A segway-like balancing two-wheel robot built on ESP8266. It is controlled over WiFi via a HTML/JS GUI and a WebSocket. This is a work in progress. The firmware is meant to run on a WEMOS D1 mini or a similar board with 4 megabytes of flash.
 
 ## Building
 This project is meant to be built against the ESP8266 NONOS SDK V2.0.0 20160810. You can use the [`esp-open-sdk` Makefile](https://github.com/pfalcon/esp-open-sdk) to setup the SDK and compiler toolchain. A Unix-based platform is recommended for building.
+
+If this is your first time flashing this code to the WEMOS D1 mini, run
+```
+make blankflash
+```
+to upload initial parameters required by the firmware.
+
+Then you can build and flashthe firmware by running
+```
+make clean && make && make flash
+```
+with the WEMOS D1 mini connected. This will upload both the firmware and the
+filesystem containing the HTML UI.
 
 ## Dependencies
 The project utilizes some third-party libraries, in their respective folders:
