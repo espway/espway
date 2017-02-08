@@ -168,6 +168,7 @@ void send_pid_params(pid_controller_index idx) {
     params[0] = my_config.pid_coeffs_arr[idx].p;
     params[1] = my_config.pid_coeffs_arr[idx].i;
     params[2] = my_config.pid_coeffs_arr[idx].d;
+    cgiWebsockBroadcast("/ws", (char *)payload, 13, WEBSOCK_FLAG_BIN);
 }
 
 void websocket_recv_cb(Websock *ws, char *signed_data, int len, int flags) {
