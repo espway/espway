@@ -22,8 +22,8 @@ TARGET_BIN	:=  $(TARGET_BIN_USR1) $(TARGET_BIN_USR2)
 TARGET_OTAFILE := $(addprefix $(BUILD_BASE)/,$(TARGET).ota)
 
 
-BLANKPOS="$$(printf "0x%X" $$(($(ESP_SPI_FLASH_SIZE_K)*512-0x2000)))"
-INITDATAPOS="$$(printf "0x%X" $$(($(ESP_SPI_FLASH_SIZE_K)*512-0x4000)))"
+BLANKPOS="$$(printf "0x%X" $$(($(ESP_SPI_FLASH_SIZE_K)*1024-0x2000)))"
+INITDATAPOS="$$(printf "0x%X" $$(($(ESP_SPI_FLASH_SIZE_K)*1024-0x4000)))"
 
 #Convert SPI size into arg for appgen. Format: no=size
 FLASH_MAP_CONV:=0:512 2:1024 5:2048 6:4096
