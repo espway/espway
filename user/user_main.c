@@ -122,22 +122,24 @@ bool ota_started = false;
 espway_config my_config;
 
 void apply_config_params() {
-    pid_initialize_flt(
+    pid_initialize(
         my_config.pid_coeffs_arr[ANGLE].p,
         my_config.pid_coeffs_arr[ANGLE].i,
         my_config.pid_coeffs_arr[ANGLE].d,
-        SAMPLE_TIME, -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE]);
-    pid_initialize_flt(
+        FLT_TO_Q16(SAMPLE_TIME),
+        -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE]);
+    pid_initialize(
         my_config.pid_coeffs_arr[ANGLE_HIGH].p,
         my_config.pid_coeffs_arr[ANGLE_HIGH].i,
         my_config.pid_coeffs_arr[ANGLE_HIGH].d,
-        SAMPLE_TIME, -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE_HIGH]);
-    pid_initialize_flt(
+        FLT_TO_Q16(SAMPLE_TIME),
+        -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE_HIGH]);
+    pid_initialize(
         my_config.pid_coeffs_arr[VEL].p,
         my_config.pid_coeffs_arr[VEL].i,
         my_config.pid_coeffs_arr[VEL].d,
-        SAMPLE_TIME, FALL_LOWER_BOUND, FALL_UPPER_BOUND, true,
-            &pid_settings_arr[VEL]);
+        FLT_TO_Q16(SAMPLE_TIME), FALL_LOWER_BOUND, FALL_UPPER_BOUND, true,
+        &pid_settings_arr[VEL]);
 
     mpu_set_gyro_offsets(my_config.gyro_offsets);
 }
@@ -441,15 +443,15 @@ void ICACHE_FLASH_ATTR user_init(void) {
 
     if (!read_flash_config(&my_config, sizeof(espway_config), CONFIG_VERSION)) {
         // Load default parameters
-        my_config.pid_coeffs_arr[ANGLE].p = ANGLE_KP;
-        my_config.pid_coeffs_arr[ANGLE].i = ANGLE_KI;
-        my_config.pid_coeffs_arr[ANGLE].d = ANGLE_KD;
-        my_config.pid_coeffs_arr[ANGLE_HIGH].p = ANGLE_HIGH_KP;
-        my_config.pid_coeffs_arr[ANGLE_HIGH].i = ANGLE_HIGH_KI;
-        my_config.pid_coeffs_arr[ANGLE_HIGH].d = ANGLE_HIGH_KD;
-        my_config.pid_coeffs_arr[VEL].p = VEL_KP;
-        my_config.pid_coeffs_arr[VEL].i = VEL_KI;
-        my_config.pid_coeffs_arr[VEL].d = VEL_KD;
+        my_config.pid_coeffs_arr[ANGLE].p = FLT_TO_Q16(ANGLE_KP);
+        my_config.pid_coeffs_arr[ANGLE].i = FLT_TO_Q16(ANGLE_KI);
+        my_config.pid_coeffs_arr[ANGLE].d = FLT_TO_Q16(ANGLE_KD);
+        my_config.pid_coeffs_arr[ANGLE_HIGH].p = FLT_TO_Q16(ANGLE_HIGH_KP);
+        my_config.pid_coeffs_arr[ANGLE_HIGH].i = FLT_TO_Q16(ANGLE_HIGH_KI);
+        my_config.pid_coeffs_arr[ANGLE_HIGH].d = FLT_TO_Q16(ANGLE_HIGH_KD);
+        my_config.pid_coeffs_arr[VEL].p = FLT_TO_Q16(VEL_KP);
+        my_config.pid_coeffs_arr[VEL].i = FLT_TO_Q16(VEL_KI);
+        my_config.pid_coeffs_arr[VEL].d = FLT_TO_Q16(VEL_KD);
         os_memcpy(my_config.gyro_offsets, GYRO_OFFSETS, 3 * sizeof(int16_t));
     }
     apply_config_params();
