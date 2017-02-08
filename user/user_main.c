@@ -289,7 +289,7 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
                 FLT_TO_Q16(0.25f));
             send_battery = true;
 
-            if (battery_value <
+            if (ENABLE_BATTERY_CUTOFF && battery_value <
                 (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR)) {
                 set_both_eyes(BLACK);
                 // Put MPU6050 to sleep
