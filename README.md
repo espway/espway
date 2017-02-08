@@ -28,6 +28,24 @@ Kudos to all the above developers. Without these libraries this project wouldn't
 
 [Riot.js](http://riotjs.com/) is used on the HTML+JS frontend for facilitating some UI components.
 
+## Schematic & BOM
+
+See the `schematic` folder for the schematic. It is drawn with [KiCad](http://kicad-pcb.org/) and there's a [rendered PDF](https://github.com/flannelhead/espway/raw/master/schematic/espway.pdf) in the repo.
+
+Tentative BOM (not including PCB, connectors, wire etc. materials):
+
+* WEMOS D1 Mini board
+* GY-521 (MPU6050 breakout board)
+* L293D motor driver IC. **N.B.** this is what I used so far, but I'm intending to change to DRV8833 for a smaller voltage drop across the H-bridge
+* 2x 6V 300rpm metal gear motor (search for "12ga 300rpm" or "n20 300rpm"), these should be $3-5 per piece
+* 2x WS2812B neopixels for eyes and showing current state
+* AMS1117 5V regulator
+* 5x 100n ceramic capacitors
+* 2x 1000u 10V electrolytic capacitor
+* 470 ohm resistor
+* 10 kohm resistor
+* 680 kohm resistor
+
 ## Supported browsers
 
 Please use the latest Firefox or Chrome if possible. The HTML/JS UI uses some
