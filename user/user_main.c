@@ -41,7 +41,7 @@
 #define QUEUE_LEN 1
 #define M_PI 3.14159265359f
 
-#define LOGMODE LOG_PITCH
+#define LOGMODE LOG_NONE
 
 #define FALL_LOWER_BOUND FLT_TO_Q16(STABLE_ANGLE - FALL_LIMIT)
 #define FALL_UPPER_BOUND FLT_TO_Q16(STABLE_ANGLE + FALL_LIMIT)
@@ -162,13 +162,15 @@ int upload_firmware(HttpdConnData *connData) {
 }
 
 void send_pid_params(pid_controller_index idx) {
-    uint8_t payload[13];
-    payload[0] = idx;
-    int32_t *params = (int32_t *)payload;
+    uint8_t payload[14];
+    payload[0] = RES_PID_PARAMS;
+    payload[1] = idx;
+    int32_t *params = (int32_t *)(&payload[2]);
     params[0] = my_config.pid_coeffs_arr[idx].p;
     params[1] = my_config.pid_coeffs_arr[idx].i;
     params[2] = my_config.pid_coeffs_arr[idx].d;
-    cgiWebsockBroadcast("/ws", (char *)payload, 13, WEBSOCK_FLAG_BIN);
+    printf("sent %d, %d, %d\n", params[0], params[1], params[2]);
+    cgiWebsockBroadcast("/ws", (char *)payload, 14, WEBSOCK_FLAG_BIN);
 }
 
 void websocket_recv_cb(Websock *ws, char *signed_data, int len, int flags) {
@@ -202,7 +204,7 @@ void websocket_recv_cb(Websock *ws, char *signed_data, int len, int flags) {
             }
 
             uint8_t pid_index = payload[0];
-            int32_t *i32_data = (int32_t *)payload;
+            int32_t *i32_data = (int32_t *)(&payload[1]);
             if (pid_index <= 2) {
                 update_pid_controller(pid_index, i32_data[0], i32_data[1],
                     i32_data[2]);
