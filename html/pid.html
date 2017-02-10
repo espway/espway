@@ -38,10 +38,10 @@
         <div class='mainContainer'>
             <h3>PID tuning</h3>
 
-            <select id='pidSelect'>
+            <select id='pidSelect' value='angle'>
                 <option value='angle'>Angle PID</option>
-                <option value='angle2'>Angle PID 2</option>
-                <option value='velocity'>Velocity PID</option>
+                <option value='angle_high'>Angle high gain PID</option>
+                <option value='vel'>Velocity PID</option>
             </select>
 
             <slider id='pslider' label='P'></slider>
@@ -55,29 +55,35 @@
             window.addEventListener('load', () => {
                 'use strict'
 
-                const PID_SEND_INTERVAL = 100
+                const PID_SEND_INTERVAL = 200
                 const PID_LIMITS = {
                     'angle': {
                         pMin: -3, pMax: 2,
                         iMin: -3, iMax: 2,
                         dMin: -3, dMax: 2
                     },
-                    'angle2': {
+                    'angle_high': {
                         pMin: -3, pMax: 2,
                         iMin: -3, iMax: 2,
                         dMin: -3, dMax: 2
                     },
-                    'velocity': {
+                    'vel': {
                         pMin: -3, pMax: 2,
                         iMin: -3, iMax: 2,
                         dMin: -4, dMax: 1
                     }
                 }
+                const PID_INDICES = {
+                    'angle': 0, 'angle_high': 1, 'vel': 2
+                }
+                const FLOAT_TO_Q16 = (1 << 16)
+                const Q16_TO_FLOAT = 1 / FLOAT_TO_Q16
 
                 let ws = new WebSocket('ws://192.168.4.1/ws')
                 ws.binaryType = 'arraybuffer'
 
-                let pidSelect = document.getElementById('pidSelect')
+                let byId = id => document.getElementById(id)
+                let pidSelect = byId('pidSelect')
 
                 function mountSliders(limits, values) {
                     riot.mount('#pslider', {
@@ -97,24 +103,64 @@
                     })
                 }
 
-                function fetchPidValues() {
-                    // TODO ask ws for updated values
-                }
-
                 function sendPidValues() {
-                    // TODO
+                    let pidIndex = PID_INDICES[pidSelect.value]
+                    let buf = new ArrayBuffer(14)
+                    let dv = new DataView(buf)
+                    dv.setUint8(0, 5)
+                    dv.setUint8(1, pidIndex)
+                    let p = byId('pslider').getAttribute('my-value'),
+                        i = byId('islider').getAttribute('my-value'),
+                        d = byId('dslider').getAttribute('my-value')
+                    dv.setInt32(2, p * FLOAT_TO_Q16, true)
+                    dv.setInt32(6, i * FLOAT_TO_Q16, true)
+                    dv.setInt32(10, d * FLOAT_TO_Q16, true)
+                    ws.send(buf)
                 }
 
-                function showPidValues() {
+                function showPidValues(p, i, d) {
                     let pidName = pidSelect.value
                     mountSliders(PID_LIMITS[pidName],
-                        { pValue: 0.001, iValue: 0.001, dValue: 0 })
+                        { pValue: p, iValue: i, dValue: d })
                 }
-                pidSelect.addEventListener('change', fetchPidValues)
 
-                // TODO run these when ws is connected
-                showPidValues()
-                setInterval(sendPidValues, PID_SEND_INTERVAL)
+                function fetchPidValues() {
+                    let pidIndex = PID_INDICES[pidSelect.value]
+                    let buf = new ArrayBuffer(2)
+                    let dv = new DataView(buf)
+                    dv.setUint8(0, 7)
+                    dv.setUint8(1, pidIndex)
+                    ws.send(buf)
+                }
+
+                function wsRecv(e) {
+                    let buf = e.data
+                    let dv = new DataView(buf)
+                    let command = dv.getUint8(0)
+                    switch (command) {
+                        case 8:
+                            if (buf.byteLength != 14) { break; }
+                            let pidIndex = dv.getUint8(1)
+                            let p = dv.getInt32(2, true),
+                                i = dv.getInt32(6, true),
+                                d = dv.getInt32(10, true)
+
+                            showPidValues(
+                                p * Q16_TO_FLOAT,
+                                i * Q16_TO_FLOAT,
+                                d * Q16_TO_FLOAT
+                            )
+
+                            break;
+                    }
+                }
+
+                pidSelect.addEventListener('change', fetchPidValues)
+                ws.addEventListener('open', () => {
+                    fetchPidValues()
+                    setInterval(sendPidValues, PID_SEND_INTERVAL)
+                })
+                ws.addEventListener('message', wsRecv)
             })
         </script>
     </body>

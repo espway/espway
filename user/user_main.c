@@ -80,16 +80,17 @@ typedef enum {
     BATTERY_CUTOFF = 4,
 
     REQ_SET_PID_PARAMS = 5,
-    REQ_GET_PID_PARAMS = 6,
-    RES_PID_PARAMS = 7,
+    RES_SET_PID_PARAMS_ACK = 6,
+    REQ_GET_PID_PARAMS = 7,
+    RES_PID_PARAMS = 8,
 
-    REQ_SET_GYRO_OFFSETS = 8,
-    RES_SET_GYRO_OFFSETS_FAILURE = 9,
-    RES_SET_GYRO_OFFSETS_SUCCESS = 10,
+    REQ_SET_GYRO_OFFSETS = 9,
+    RES_SET_GYRO_OFFSETS_FAILURE = 10,
+    RES_SET_GYRO_OFFSETS_SUCCESS = 11,
 
-    REQ_SAVE_CONFIG = 11,
-    RES_SAVE_CONFIG_FAILURE = 12,
-    RES_SAVE_CONFIG_SUCCESS = 13
+    REQ_SAVE_CONFIG = 12,
+    RES_SAVE_CONFIG_FAILURE = 13,
+    RES_SAVE_CONFIG_SUCCESS = 14
 } ws_msg_type;
 
 typedef enum {
@@ -209,7 +210,9 @@ void websocket_recv_cb(Websock *ws, char *signed_data, int len, int flags) {
             if (pid_index <= 2) {
                 update_pid_controller(pid_index, i32_data[0], i32_data[1],
                     i32_data[2]);
-                send_pid_params(pid_index);
+
+                uint8_t res = RES_SET_PID_PARAMS_ACK;
+                cgiWebsockBroadcast("/ws", (char *)&res, 1, WEBSOCK_FLAG_BIN);
             }
 
             break;

@@ -46,14 +46,18 @@
             sliderValue -= log10(this.centerValue)
         }
         this.refs.slider.value = sliderValue
-        if (this.value == 0) {
+        if (this.value === 0) {
             this.mantissa = 0
             this.exponent = 0
         } else {
-            let exponent = Math.floor(log10(this.value))
-            let mantissa = this.value / Math.pow(10, exponent)
-            this.mantissa = mantissa.toFixed(1)
-            this.exponent = exponent
+            let exponent = Math.ceil(log10(this.value))
+            let mantissa = Math.round(this.value * Math.pow(10, 2 - exponent))
+            if (mantissa == 100) {
+                exponent += 1
+                mantissa = 10
+            }
+            this.mantissa = (mantissa / 10).toFixed(1)
+            this.exponent = exponent - 1
         }
     }
 
