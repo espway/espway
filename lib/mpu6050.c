@@ -21,30 +21,22 @@
 #include <esp8266.h>
 #include <osapi.h>
 
-#include "i2c.h"
+#include "brzo_i2c.h"
+
 #include "mpu6050.h"
 
-int ICACHE_FLASH_ATTR mpu_write_register(const uint8_t addr,
-    const uint8_t reg, const uint8_t value, const bool stop) {
+static void ICACHE_FLASH_ATTR mpu_write_register(const uint8_t addr,
+    const uint8_t reg, const uint8_t value, bool stop) {
     uint8_t reg_value[] = { reg, value };
-    i2c_start();
-    bool ret = i2c_transmit_to(addr);
-    ret &= i2c_write_bytes(reg_value, 2);
-    if (stop) i2c_stop();
-    return ret ? 0 : -1;
+    brzo_i2c_write(reg_value, 2, !stop);
 }
 
 int ICACHE_FLASH_ATTR mpu_read_registers(const uint8_t addr,
-    const uint8_t first_reg, const uint8_t len, uint8_t * const data) {
-    i2c_start();
-    bool ret = i2c_transmit_to(addr);
-    i2c_write_byte(first_reg);
-    ret &= i2c_check_ack();
-    i2c_start();
-    ret &= i2c_receive_from(addr);
-    ret &= i2c_read_bytes(data, len);
-    i2c_stop();
-    return ret ? 0 : -1;
+    uint8_t first_reg, const uint8_t len, uint8_t * const data) {
+    brzo_i2c_start_transaction(MPU_ADDR, MPU_BITRATE);
+    brzo_i2c_write(&first_reg, 1, true);
+    brzo_i2c_read(data, len, false);
+    return brzo_i2c_end_transaction();
 }
 
 int ICACHE_FLASH_ATTR mpu_read_int_status(const uint8_t addr) {
@@ -56,46 +48,22 @@ int ICACHE_FLASH_ATTR mpu_read_int_status(const uint8_t addr) {
 int ICACHE_FLASH_ATTR mpu_read_raw_data(const uint8_t addr,
     int16_t * const data) {
     uint8_t *my_data = (uint8_t *)data;
-    uint8_t reg = MPU_ACCEL_XOUT_H;
-    i2c_start();
-    bool ret = i2c_transmit_to(addr) &&
-        i2c_write_bytes(&reg, 1);
-    i2c_start();
-    ret = ret && i2c_receive_from(addr);
+    uint8_t buf[14];
+    int ret = mpu_read_registers(MPU_ADDR, MPU_ACCEL_XOUT_H, 14, buf);
+    if (ret != 0) { return ret; }
 
-    if (ret) {
-        // Read accelerometer data
-        for (int8_t i = 0; i < 3; i++) {
-            *(my_data + 1) = i2c_read_byte();
-            i2c_send_ack(true);
-            *my_data = i2c_read_byte();
-            i2c_send_ack(true);
-            my_data += 2;
-        }
-        // Read and discard temperature data
-        i2c_read_byte();
-        i2c_send_ack(true);
-        i2c_read_byte();
-        i2c_send_ack(true);
-        // Read gyroscope data
-        for (int8_t i = 0; i < 2; i++) {
-            *(my_data + 1) = i2c_read_byte();
-            i2c_send_ack(true);
-            *my_data = i2c_read_byte();
-            i2c_send_ack(true);
-            my_data += 2;
-        }
-        *(my_data + 1) = i2c_read_byte();
-        i2c_send_ack(true);
-        *my_data = i2c_read_byte();
-        i2c_send_ack(false);
-    }
+    my_data[0] = buf[1]; my_data[1] = buf[0];      // ACC_X
+    my_data[2] = buf[3]; my_data[3] = buf[2];      // ACC_Y
+    my_data[4] = buf[5]; my_data[5] = buf[4];      // ACC_Z
+    my_data[6] = buf[9]; my_data[7] = buf[8];      // GYRO_X
+    my_data[8] = buf[11]; my_data[9] = buf[10];    // GYRO_Y
+    my_data[10] = buf[13]; my_data[11] = buf[12];  // GYRO_Z
 
-    i2c_stop();
-    return ret ? 0 : -1;
+    return ret;
 }
 
 bool ICACHE_FLASH_ATTR mpu_init(void) {
+    brzo_i2c_start_transaction(MPU_ADDR, MPU_BITRATE);
     // Wake up
     mpu_write_register(MPU_ADDR, MPU_PWR_MGMT_1,
         MPU_CLK_PLL_ZGYRO | MPU_TEMP_DIS, false);
@@ -112,19 +80,19 @@ bool ICACHE_FLASH_ATTR mpu_init(void) {
     // Check if the MPU still responds with its own address
     uint8_t addr = 0;
     mpu_read_registers(MPU_ADDR, MPU_WHO_AM_I, 1, &addr);
-    return addr == MPU_ADDR;
+    return brzo_i2c_end_transaction() == 0 && addr == MPU_ADDR;
 }
 
 bool ICACHE_FLASH_ATTR mpu_set_gyro_offsets(int16_t *offsets) {
-    bool ret = i2c_transmit_to(MPU_ADDR);
-    if (!ret) return ret;
+    brzo_i2c_start_transaction(MPU_ADDR, MPU_BITRATE);
     uint8_t data[] = {
         MPU_XG_OFFS_USRH,
         offsets[0] >> 8, offsets[0] & 0xff,
         offsets[1] >> 8, offsets[1] & 0xff,
         offsets[2] >> 8, offsets[2] & 0xff
     };
-    return i2c_write_bytes(data, 7);
+    brzo_i2c_write(data, 7, false);
+    return brzo_i2c_end_transaction();
 }
 
 void ICACHE_FLASH_ATTR mpu_go_to_sleep(void) {

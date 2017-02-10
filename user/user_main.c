@@ -27,8 +27,9 @@
 #include "webpages-espfs.h"
 #include "cgiwebsocket.h"
 
+#include "brzo_i2c.h"
+
 // internal includes
-#include "i2c.h"
 #include "mpu6050.h"
 #include "imu.h"
 #include "pid.h"
@@ -41,7 +42,7 @@
 #define QUEUE_LEN 1
 #define M_PI 3.14159265359f
 
-#define LOGMODE LOG_NONE
+#define LOGMODE LOG_FREQ
 
 #define FALL_LOWER_BOUND FLT_TO_Q16(STABLE_ANGLE - FALL_LIMIT)
 #define FALL_UPPER_BOUND FLT_TO_Q16(STABLE_ANGLE + FALL_LIMIT)
@@ -443,6 +444,10 @@ HttpdBuiltInUrl builtInUrls[]={
 
 void ICACHE_FLASH_ATTR user_init(void) {
     system_update_cpu_freq(80);
+    uart_init(BIT_RATE_115200, BIT_RATE_115200);
+
+    brzo_i2c_setup(2000);
+    mpu_init_succeeded = mpu_init();
 
     if (!read_flash_config(&my_config, sizeof(espway_config), CONFIG_VERSION)) {
         // Load default parameters
@@ -464,10 +469,6 @@ void ICACHE_FLASH_ATTR user_init(void) {
     pid_reset(0, 0, &pid_settings_arr[VEL], &vel_pid_state);
     calculate_madgwick_params(&imuparams, MADGWICK_BETA,
         2.0f * M_PI / 180.0f * 2000.0f, SAMPLE_TIME);
-
-    uart_init(BIT_RATE_115200, BIT_RATE_115200);
-    i2c_gpio_init();
-    mpu_init_succeeded = mpu_init();
 
     wifi_init();
 

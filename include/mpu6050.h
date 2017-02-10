@@ -22,6 +22,7 @@
 #include <stdint.h>
 
 #define MPU_ADDR 0x68
+#define MPU_BITRATE 400
 #define MPU_RATE 0
 
 // Register addresses and bits as per the MPU-6050 datasheet
@@ -75,10 +76,8 @@
 #define MPU_ZG_OFFS_USRH 0x17
 #define MPU_ZG_OFFS_USRL 0x18
 
-int mpu_write_register(const uint8_t addr,
-    const uint8_t reg, const uint8_t value, const bool stop);
 int mpu_read_registers(const uint8_t addr,
-    const uint8_t firstReg, const uint8_t len, uint8_t * const data);
+    uint8_t firstReg, const uint8_t len, uint8_t * const data);
 int mpu_read_int_status(const uint8_t addr);
 int mpu_read_raw_data(const uint8_t addr, int16_t * const data);
 

@@ -51,8 +51,8 @@ APPGEN		?= $(SDK_BASE)/tools/gen_appbin.py
 TARGET		= httpd
 
 # which modules (subdirectories) of the project to include in compiling
-MODULES		= user lib ESP8266_new_pwm esp8266ws2812i2s
-EXTRA_INCDIR	= include libesphttpd/include esp8266ws2812i2s $(SDK_BASE)/driver_lib/include
+MODULES		= user lib ESP8266_new_pwm esp8266ws2812i2s brzo_i2c
+EXTRA_INCDIR	= include libesphttpd/include esp8266ws2812i2s brzo_i2c $(SDK_BASE)/driver_lib/include
 
 # libraries used in this project, mainly provided by the SDK
 LIBS		= c gcc hal phy pp net80211 wpa main lwip crypto driver
