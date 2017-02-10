@@ -42,7 +42,7 @@
 #define QUEUE_LEN 1
 #define M_PI 3.14159265359f
 
-#define LOGMODE LOG_FREQ
+#define LOGMODE LOG_NONE
 
 #define FALL_LOWER_BOUND FLT_TO_Q16(STABLE_ANGLE - FALL_LIMIT)
 #define FALL_UPPER_BOUND FLT_TO_Q16(STABLE_ANGLE + FALL_LIMIT)
@@ -280,6 +280,8 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
         return;
     }
 
+    system_os_post(2, 0, 0);
+
     static unsigned long last_battery_check = 0;
     static unsigned int battery_value = 1024;
     static bool send_battery = false;
@@ -380,8 +382,6 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
         send_quaternion(&quat);
         last_sent_quat = current_time;
     }
-
-    system_os_post(2, 0, 0);
 }
 
 void ICACHE_FLASH_ATTR wifi_init(void) {
