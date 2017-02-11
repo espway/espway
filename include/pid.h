@@ -39,13 +39,15 @@ typedef struct {
     q16 last_input;
 } pidstate;
 
-void pid_initialize(q16 Kp, q16 Ki, q16 Kd, q16 dt, q16 out_min, q16 out_max,
+
+typedef struct {
+    q16 p, i, d;
+} pid_coeffs;
+
+void pid_initialize(const pid_coeffs * coeffs, q16 dt, q16 out_min, q16 out_max,
     bool invert, pidsettings *settings);
-void pid_update_params(q16 Kp, q16 Ki, q16 Kd, pidsettings *settings);
-void pid_initialize_flt(float Kp, float Ki, float Kd, float dt, q16 out_min,
-    q16 out_max, bool invert, pidsettings *settings);
-q16 pid_compute(q16 input, q16 setpoint,
-    pidsettings *settings, pidstate *state);
+void pid_update_params(const pid_coeffs * coeffs, pidsettings *settings);
+q16 pid_compute(q16 input, q16 setpoint, pidsettings *settings, pidstate *state);
 void pid_reset(q16 input, q16 output, pidsettings *settings, pidstate *state);
 
 #ifdef __cplusplus

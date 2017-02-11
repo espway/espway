@@ -22,30 +22,25 @@ static inline q16 clamp(q16 x, q16 a, q16 b) {
     return x > a ? (x < b ? x : b) : a;
 }
 
-void ICACHE_FLASH_ATTR pid_initialize(q16 Kp, q16 Ki, q16 Kd, q16 dt,
+void ICACHE_FLASH_ATTR pid_initialize(const pid_coeffs * coeffs, q16 dt,
     q16 out_min, q16 out_max, bool invert, pidsettings *settings) {
     settings->dt = dt;
     settings->out_min = out_min;
     settings->out_max = out_max;
     settings->invert = invert;
-    pid_update_params(Kp, Ki, Kd, settings);
+    pid_update_params(coeffs, settings);
 }
 
-void ICACHE_FLASH_ATTR pid_update_params(q16 Kp, q16 Ki, q16 Kd, pidsettings *settings) {
-    settings->Kp = Kp;
-    settings->Ki_times_dt = q16_mul(Ki, settings->dt);
-    settings->Kd_over_dt = q16_div(Kd, settings->dt);
+void ICACHE_FLASH_ATTR pid_update_params(const pid_coeffs * coeffs,
+    pidsettings *settings) {
+    settings->Kp = coeffs->p;
+    settings->Ki_times_dt = q16_mul(coeffs->i, settings->dt);
+    settings->Kd_over_dt = q16_div(coeffs->d, settings->dt);
     if (settings->invert) {
         settings->Kp *= -1;
         settings->Ki_times_dt *= -1;
         settings->Kd_over_dt *= -1;
     }
-}
-
-void ICACHE_FLASH_ATTR pid_initialize_flt(float Kp, float Ki, float Kd, float dt, q16 out_min,
-    q16 out_max, bool invert, pidsettings *settings) {
-    pid_initialize(FLT_TO_Q16(Kp), FLT_TO_Q16(Ki), FLT_TO_Q16(Kd),
-        FLT_TO_Q16(dt), out_min, out_max, invert, settings);
 }
 
 q16 ICACHE_FLASH_ATTR pid_compute(q16 input, q16 setpoint,

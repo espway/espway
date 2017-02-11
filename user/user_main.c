@@ -110,10 +110,6 @@ typedef enum {
 } pid_controller_index;
 
 typedef struct {
-    q16 p, i, d;
-} pid_coeffs;
-
-typedef struct {
     pid_coeffs pid_coeffs_arr[3];
     int16_t gyro_offsets[3];
 } espway_config;
@@ -150,22 +146,13 @@ void ICACHE_FLASH_ATTR load_hardcoded_config(void) {
 }
 
 void ICACHE_FLASH_ATTR apply_config_params(void) {
-    pid_initialize(
-        my_config.pid_coeffs_arr[ANGLE].p,
-        my_config.pid_coeffs_arr[ANGLE].i,
-        my_config.pid_coeffs_arr[ANGLE].d,
+    pid_initialize(&my_config.pid_coeffs_arr[ANGLE],
         FLT_TO_Q16(SAMPLE_TIME),
         -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE]);
-    pid_initialize(
-        my_config.pid_coeffs_arr[ANGLE_HIGH].p,
-        my_config.pid_coeffs_arr[ANGLE_HIGH].i,
-        my_config.pid_coeffs_arr[ANGLE_HIGH].d,
+    pid_initialize(&my_config.pid_coeffs_arr[ANGLE_HIGH],
         FLT_TO_Q16(SAMPLE_TIME),
         -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE_HIGH]);
-    pid_initialize(
-        my_config.pid_coeffs_arr[VEL].p,
-        my_config.pid_coeffs_arr[VEL].i,
-        my_config.pid_coeffs_arr[VEL].d,
+    pid_initialize(&my_config.pid_coeffs_arr[VEL],
         FLT_TO_Q16(SAMPLE_TIME), FALL_LOWER_BOUND, FALL_UPPER_BOUND, true,
         &pid_settings_arr[VEL]);
 
@@ -204,11 +191,11 @@ void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d) {
         return;
     }
 
-    pid_update_params(p, i, d, &pid_settings_arr[idx]);
     pid_coeffs *p_coeffs = &my_config.pid_coeffs_arr[idx];
     p_coeffs->p = p;
     p_coeffs->i = i;
     p_coeffs->d = d;
+    pid_update_params(p_coeffs, &pid_settings_arr[idx]);
 }
 
 int upload_firmware(HttpdConnData *connData) {
