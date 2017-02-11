@@ -73,7 +73,7 @@
             <slider id='dslider' label='D'></slider>
 
             <button id='btnSaveConfig' class='commandBtn'>Save values to flash</button>
-            <button id='btnClearConfig' class='commandBtn'>Clear flash config</button>
+            <button id='btnLoadDefaults' class='commandBtn'>Load default values</button>
         </div>
 
         <script type='riot/tag' src='slider.js'></script>
@@ -145,10 +145,18 @@
                     ws.send(buf)
                 }
 
-                function showPidValues(p, i, d) {
+                function showPidValues(dataView) {
                     let pidName = pidSelect.value
-                    mountSliders(PID_LIMITS[pidName],
-                        { pValue: p, iValue: i, dValue: d })
+                    let pidIndex = dataView.getUint8(1)
+                    if (pidIndex !== PID_INDICES[pidName]) { return }
+                    let p = dataView.getInt32(2, true),
+                        i = dataView.getInt32(6, true),
+                        d = dataView.getInt32(10, true)
+                    mountSliders(PID_LIMITS[pidName], {
+                        pValue: p * Q16_TO_FLOAT,
+                        iValue: i * Q16_TO_FLOAT,
+                        dValue: d * Q16_TO_FLOAT
+                    })
                 }
 
                 function fetchPidValues() {
@@ -160,6 +168,8 @@
                     ws.send(buf)
                 }
 
+                let pidSendIntervalId = 0
+
                 function wsRecv(e) {
                     let buf = e.data
                     let dv = new DataView(buf)
@@ -167,17 +177,7 @@
                     switch (command) {
                         case 8:
                             if (buf.byteLength != 14) { break }
-                            let pidIndex = dv.getUint8(1)
-                            let p = dv.getInt32(2, true),
-                                i = dv.getInt32(6, true),
-                                d = dv.getInt32(10, true)
-
-                            showPidValues(
-                                p * Q16_TO_FLOAT,
-                                i * Q16_TO_FLOAT,
-                                d * Q16_TO_FLOAT
-                            )
-
+                            showPidValues(dv)
                             break
 
                         case 13:
@@ -196,23 +196,22 @@
                             fetchValuesAndStartSending()
                             break
 
-                        case 17:
-                            if (buf.byteLength != 1) { break }
-                            fetchValuesAndStartSending()
+                        case 19:
+                            if (buf.byteLength != 14) { break }
+                            showPidValues(dv)
+
+                            pidSendIntervalId =
+                                setInterval(sendPidValues, PID_SEND_INTERVAL)
+
                             break
                     }
                 }
 
-                let pidSendIntervalId = 0
-                function fetchValuesAndStartSending() {
+                pidSelect.addEventListener('change', fetchPidValues)
+                ws.addEventListener('open', () => {
                     fetchPidValues()
                     pidSendIntervalId =
                         setInterval(sendPidValues, PID_SEND_INTERVAL)
-                }
-
-                pidSelect.addEventListener('change', fetchPidValues)
-                ws.addEventListener('open', () => {
-                    fetchValuesAndStartSending()
                 })
                 ws.addEventListener('message', wsRecv)
 
@@ -223,14 +222,16 @@
                     ws.send(buf)
                 })
 
-                byId('btnClearConfig').addEventListener('click', () => {
-                    let buf = new ArrayBuffer(1)
+                byId('btnLoadDefaults').addEventListener('click', () => {
+                    let buf = new ArrayBuffer(2)
                     let dv = new DataView(buf)
+                    let pidIndex = PID_INDICES[pidSelect.value]
                     if (pidSendIntervalId !== 0) {
                         clearInterval(pidSendIntervalId)
                         pidSendIntervalId = 0
                     }
-                    dv.setUint8(0, 15)
+                    dv.setUint8(0, 18)
+                    dv.setUint8(1, pidIndex)
                     ws.send(buf)
                 })
             })

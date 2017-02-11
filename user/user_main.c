@@ -211,7 +211,6 @@ void send_default_pid_params(pid_controller_index idx) {
     params[0] = DEFAULT_CONFIG.pid_coeffs_arr[idx].p;
     params[1] = DEFAULT_CONFIG.pid_coeffs_arr[idx].i;
     params[2] = DEFAULT_CONFIG.pid_coeffs_arr[idx].d;
-    printf("sent %d, %d, %d\n", params[0], params[1], params[2]);
     cgiWebsockBroadcast("/ws", (char *)payload, 14, WEBSOCK_FLAG_BIN);
 }
 
@@ -223,7 +222,6 @@ void send_pid_params(pid_controller_index idx) {
     params[0] = my_config.pid_coeffs_arr[idx].p;
     params[1] = my_config.pid_coeffs_arr[idx].i;
     params[2] = my_config.pid_coeffs_arr[idx].d;
-    printf("sent %d, %d, %d\n", params[0], params[1], params[2]);
     cgiWebsockBroadcast("/ws", (char *)payload, 14, WEBSOCK_FLAG_BIN);
 }
 
