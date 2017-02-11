@@ -527,6 +527,8 @@ HttpdBuiltInUrl builtInUrls[]={
 
     {"/ws", cgiWebsocket, websocket_connect_cb},
     {"/", cgiRedirect, "/index.html"},
+    {"/pid", cgiRedirect, "/pid.html"},
+    {"/cube", cgiRedirect, "/cube.html"},
     {"*", cgiEspFsHook, NULL}, //Catch-all cgi function for the filesystem
     {NULL, NULL, NULL}
 };
