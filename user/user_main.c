@@ -96,8 +96,11 @@ typedef enum {
     RES_CLEAR_CONFIG_FAILURE = 16,
     RES_CLEAR_CONFIG_SUCCESS = 17,
 
-    REQ_ENABLE_MOTORS = 18,
-    REQ_DISABLE_MOTORS = 19
+    REQ_GET_DEFAULT_PID_PARAMS = 18,
+    RES_DEFAULT_PID_PARAMS = 19,
+
+    REQ_ENABLE_MOTORS = 20,
+    REQ_DISABLE_MOTORS = 21
 } ws_msg_type;
 
 typedef enum {
@@ -114,6 +117,15 @@ typedef struct {
     pid_coeffs pid_coeffs_arr[3];
     int16_t gyro_offsets[3];
 } espway_config;
+
+const espway_config DEFAULT_CONFIG = {
+    .pid_coeffs_arr = {
+        { FLT_TO_Q16(ANGLE_KP), FLT_TO_Q16(ANGLE_KI), FLT_TO_Q16(ANGLE_KD) },
+        { FLT_TO_Q16(ANGLE_HIGH_KP), FLT_TO_Q16(ANGLE_HIGH_KI), FLT_TO_Q16(ANGLE_HIGH_KD) },
+        { FLT_TO_Q16(VEL_KP), FLT_TO_Q16(VEL_KI), FLT_TO_Q16(VEL_KD) }
+    },
+    .gyro_offsets = { GYRO_X_OFFSET, GYRO_Y_OFFSET, GYRO_Z_OFFSET }
+};
 
 madgwickparams imuparams;
 pidstate vel_pid_state;
@@ -134,16 +146,7 @@ espway_config my_config;
 
 void ICACHE_FLASH_ATTR load_hardcoded_config(void) {
     // Load default parameters
-    my_config.pid_coeffs_arr[ANGLE].p = FLT_TO_Q16(ANGLE_KP);
-    my_config.pid_coeffs_arr[ANGLE].i = FLT_TO_Q16(ANGLE_KI);
-    my_config.pid_coeffs_arr[ANGLE].d = FLT_TO_Q16(ANGLE_KD);
-    my_config.pid_coeffs_arr[ANGLE_HIGH].p = FLT_TO_Q16(ANGLE_HIGH_KP);
-    my_config.pid_coeffs_arr[ANGLE_HIGH].i = FLT_TO_Q16(ANGLE_HIGH_KI);
-    my_config.pid_coeffs_arr[ANGLE_HIGH].d = FLT_TO_Q16(ANGLE_HIGH_KD);
-    my_config.pid_coeffs_arr[VEL].p = FLT_TO_Q16(VEL_KP);
-    my_config.pid_coeffs_arr[VEL].i = FLT_TO_Q16(VEL_KI);
-    my_config.pid_coeffs_arr[VEL].d = FLT_TO_Q16(VEL_KD);
-    os_memcpy(my_config.gyro_offsets, GYRO_OFFSETS, 3 * sizeof(int16_t));
+    os_memcpy(&my_config, &DEFAULT_CONFIG, sizeof(espway_config));
 }
 
 void ICACHE_FLASH_ATTR apply_config_params(void) {
@@ -213,6 +216,18 @@ int upload_firmware(HttpdConnData *connData) {
     return cgiUploadFirmware(connData);
 }
 
+void send_default_pid_params(pid_controller_index idx) {
+    uint8_t payload[14];
+    payload[0] = RES_DEFAULT_PID_PARAMS;
+    payload[1] = idx;
+    int32_t *params = (int32_t *)(&payload[2]);
+    params[0] = DEFAULT_CONFIG.pid_coeffs_arr[idx].p;
+    params[1] = DEFAULT_CONFIG.pid_coeffs_arr[idx].i;
+    params[2] = DEFAULT_CONFIG.pid_coeffs_arr[idx].d;
+    printf("sent %d, %d, %d\n", params[0], params[1], params[2]);
+    cgiWebsockBroadcast("/ws", (char *)payload, 14, WEBSOCK_FLAG_BIN);
+}
+
 void send_pid_params(pid_controller_index idx) {
     uint8_t payload[14];
     payload[0] = RES_PID_PARAMS;
@@ -274,6 +289,17 @@ void websocket_recv_cb(Websock *ws, char *signed_data, int len, int flags) {
 
             if (payload[0] <= 2) {
                 send_pid_params(payload[0]);
+            }
+
+            break;
+
+        case REQ_GET_DEFAULT_PID_PARAMS:
+            if (data_len != 1) {
+                break;
+            }
+
+            if (payload[0] <= 2) {
+                send_default_pid_params(payload[0]);
             }
 
             break;
@@ -461,16 +487,6 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
 }
 
 void ICACHE_FLASH_ATTR wifi_init(void) {
-    wifi_softap_dhcps_stop();
-
-    struct ip_info info;
-    IP4_ADDR(&info.ip, 192, 168, 4, 1);
-    IP4_ADDR(&info.gw, 192, 168, 4, 1);
-    IP4_ADDR(&info.netmask, 255, 255, 255, 0);
-    wifi_set_ip_info(SOFTAP_IF, &info);
-
-    wifi_softap_dhcps_start();
-
     wifi_set_opmode(0x02);
     wifi_set_phy_mode(PHY_MODE_11G);
     struct softap_config config;
@@ -485,6 +501,14 @@ void ICACHE_FLASH_ATTR wifi_init(void) {
     config.channel = WIFI_CHANNEL;
     config.ssid_hidden = 0;
     wifi_softap_set_config(&config);
+
+    wifi_softap_dhcps_stop();
+    struct ip_info info;
+    IP4_ADDR(&info.ip, 192, 168, 4, 1);
+    IP4_ADDR(&info.gw, 192, 168, 4, 1);
+    IP4_ADDR(&info.netmask, 255, 255, 255, 0);
+    wifi_set_ip_info(SOFTAP_IF, &info);
+    wifi_softap_dhcps_start();
 }
 
 #ifdef ESPFS_POS

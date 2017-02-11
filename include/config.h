@@ -29,7 +29,9 @@
 
 #define STABLE_ANGLE -0.2
 
-const int16_t GYRO_OFFSETS[] = { -27, -89, 14 };
+#define GYRO_X_OFFSET -27
+#define GYRO_Y_OFFSET -89
+#define GYRO_Z_OFFSET 14
 
 // Undervoltage cutoff check
 #define BATTERY_THRESHOLD 7.4
