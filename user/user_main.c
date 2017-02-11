@@ -474,17 +474,19 @@ void ICACHE_FLASH_ATTR wifi_init(void) {
 
     wifi_softap_dhcps_start();
 
-    struct softap_config config;
-    wifi_set_opmode_current(0x02);
-    wifi_softap_get_config(&config);
+    wifi_set_opmode(0x02);
     wifi_set_phy_mode(PHY_MODE_11G);
+    struct softap_config config;
+    uint8_t ssid_len = sizeof(WIFI_SSID) / sizeof(uint8_t);
     os_memset(config.ssid, 0, 32);
     os_memset(config.password, 0, 64);
-    os_memcpy(config.ssid, "ESPway", 6);
+    os_memcpy(config.ssid, WIFI_SSID, ssid_len);
     config.authmode = AUTH_OPEN;
-    config.ssid_len = 0;
+    config.ssid_len = ssid_len;
     config.beacon_interval = 100;
     config.max_connection = 1;
+    config.channel = WIFI_CHANNEL;
+    config.ssid_hidden = 0;
     wifi_softap_set_config(&config);
 }
 

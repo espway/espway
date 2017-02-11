@@ -38,3 +38,6 @@ const int16_t GYRO_OFFSETS[] = { -27, -89, 14 };
 #define ENABLE_BATTERY_CHECK true
 #define ENABLE_BATTERY_CUTOFF false
 
+#define WIFI_SSID "ESPway"
+#define WIFI_CHANNEL 1
+
