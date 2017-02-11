@@ -76,7 +76,7 @@ void ICACHE_RAM_ATTR brzo_i2c_write(uint8_t *data, uint32_t no_of_bytes, bool re
 		// Disable all interrupts, i.e. interrupts up to the highest interrupt level of 15
 		//   the current level is saved in %[r_temp1] but we will not use that value again, 
 		//   instead we will just enable all interrupt levels at the end of this routine
-		"RSIL   %[r_temp1], 15;"
+		//"RSIL   %[r_temp1], 15;"
 		"MOVI   %[r_set], 0x60000304;"
 
 		// Check if bus is free and send START
@@ -384,7 +384,7 @@ void ICACHE_RAM_ATTR brzo_i2c_read(uint8_t *data, uint32_t nr_of_bytes, bool rep
 
 	asm volatile (
 		// Disable all interrupts, i.e. interrupts up to the highest interrupt level of 15
-		"RSIL   %[r_temp1], 15;"
+		//"RSIL   %[r_temp1], 15;"
 		"MOVI   %[r_set], 0x60000304;"
 
 		// Check if bus is free and send START
@@ -758,7 +758,7 @@ void ICACHE_RAM_ATTR brzo_i2c_ACK_polling(uint16_t ACK_polling_time_out_usec) {
 		// Disable all interrupts, i.e. interrupts up to the highest interrupt level of 15
 		//   the current level is saved in %[r_temp1] but we will not use that value again, 
 		//   instead we will just enable all interrupt levels at the end of this routine
-		"RSIL   %[r_temp1], 15;"
+		//"RSIL   %[r_temp1], 15;"
 		"MOVI   %[r_set], 0x60000304;"
 
 		// Check if bus is free and send START

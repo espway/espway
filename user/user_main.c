@@ -312,8 +312,10 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
         }
     }
 
+    current_time = system_get_time() / 1024;
+
     // Perform MPU quaternion update
-    int16_t raw_data[6];
+    static int16_t raw_data[6];
     mpu_read_raw_data(MPU_ADDR, raw_data);
     // Update orientation estimate
     static quaternion_fix quat = { Q16_ONE, 0, 0, 0 };
@@ -449,7 +451,7 @@ void ICACHE_FLASH_ATTR user_init(void) {
     system_update_cpu_freq(80);
     uart_init(BIT_RATE_115200, BIT_RATE_115200);
 
-    brzo_i2c_setup(2000);
+    brzo_i2c_setup(10);
     mpu_init_succeeded = mpu_init();
 
     if (!read_flash_config(&my_config, sizeof(espway_config), CONFIG_VERSION)) {
