@@ -90,7 +90,14 @@ typedef enum {
 
     REQ_SAVE_CONFIG = 12,
     RES_SAVE_CONFIG_FAILURE = 13,
-    RES_SAVE_CONFIG_SUCCESS = 14
+    RES_SAVE_CONFIG_SUCCESS = 14,
+
+    REQ_CLEAR_CONFIG = 15,
+    RES_CLEAR_CONFIG_FAILURE = 16,
+    RES_CLEAR_CONFIG_SUCCESS = 17,
+
+    REQ_ENABLE_MOTORS = 18,
+    REQ_DISABLE_MOTORS = 19
 } ws_msg_type;
 
 typedef enum {
@@ -120,10 +127,26 @@ q16 steering_bias = 0;
 bool mpu_init_succeeded = false;
 bool send_quat = false;
 bool ota_started = false;
+bool save_config = false;
+bool clear_config = false;
 
 espway_config my_config;
 
-void apply_config_params() {
+void ICACHE_FLASH_ATTR load_hardcoded_config(void) {
+    // Load default parameters
+    my_config.pid_coeffs_arr[ANGLE].p = FLT_TO_Q16(ANGLE_KP);
+    my_config.pid_coeffs_arr[ANGLE].i = FLT_TO_Q16(ANGLE_KI);
+    my_config.pid_coeffs_arr[ANGLE].d = FLT_TO_Q16(ANGLE_KD);
+    my_config.pid_coeffs_arr[ANGLE_HIGH].p = FLT_TO_Q16(ANGLE_HIGH_KP);
+    my_config.pid_coeffs_arr[ANGLE_HIGH].i = FLT_TO_Q16(ANGLE_HIGH_KI);
+    my_config.pid_coeffs_arr[ANGLE_HIGH].d = FLT_TO_Q16(ANGLE_HIGH_KD);
+    my_config.pid_coeffs_arr[VEL].p = FLT_TO_Q16(VEL_KP);
+    my_config.pid_coeffs_arr[VEL].i = FLT_TO_Q16(VEL_KI);
+    my_config.pid_coeffs_arr[VEL].d = FLT_TO_Q16(VEL_KD);
+    os_memcpy(my_config.gyro_offsets, GYRO_OFFSETS, 3 * sizeof(int16_t));
+}
+
+void ICACHE_FLASH_ATTR apply_config_params(void) {
     pid_initialize(
         my_config.pid_coeffs_arr[ANGLE].p,
         my_config.pid_coeffs_arr[ANGLE].i,
@@ -144,6 +167,33 @@ void apply_config_params() {
         &pid_settings_arr[VEL]);
 
     mpu_set_gyro_offsets(my_config.gyro_offsets);
+}
+
+bool ICACHE_FLASH_ATTR do_save_config(void) {
+    uint8_t response;
+    bool success =
+        write_flash_config(&my_config, sizeof(espway_config), CONFIG_VERSION);
+    if (success) {
+        response = RES_SAVE_CONFIG_SUCCESS;
+    } else {
+        response = RES_SAVE_CONFIG_FAILURE;
+    }
+    cgiWebsockBroadcast("/ws", (char *)&response, 1, WEBSOCK_FLAG_BIN);
+    return success;
+}
+
+bool ICACHE_FLASH_ATTR do_clear_config(void) {
+    uint8_t response;
+    // Clear the configuration by writing config version zero
+    bool success = clear_flash_config();
+    if (success) {
+        response = RES_CLEAR_CONFIG_SUCCESS;
+        load_hardcoded_config();
+    } else {
+        response = RES_CLEAR_CONFIG_FAILURE;
+    }
+    cgiWebsockBroadcast("/ws", (char *)&response, 1, WEBSOCK_FLAG_BIN);
+    return success;
 }
 
 void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d) {
@@ -226,6 +276,20 @@ void websocket_recv_cb(Websock *ws, char *signed_data, int len, int flags) {
                 send_pid_params(payload[0]);
             }
 
+            break;
+
+        case REQ_SAVE_CONFIG:
+            if (data_len != 0) {
+                break;
+            }
+            save_config = true;
+            break;
+
+        case REQ_CLEAR_CONFIG:
+            if (data_len != 0) {
+                break;
+            }
+            clear_config = true;
             break;
     }
 }
@@ -387,6 +451,16 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
         send_quaternion(&quat);
         last_sent_quat = current_time;
     }
+
+    if (save_config) {
+        save_config = false;
+        do_save_config();
+    }
+
+    if (clear_config) {
+        clear_config = false;
+        do_clear_config();
+    }
 }
 
 void ICACHE_FLASH_ATTR wifi_init(void) {
@@ -455,17 +529,7 @@ void ICACHE_FLASH_ATTR user_init(void) {
     mpu_init_succeeded = mpu_init();
 
     if (!read_flash_config(&my_config, sizeof(espway_config), CONFIG_VERSION)) {
-        // Load default parameters
-        my_config.pid_coeffs_arr[ANGLE].p = FLT_TO_Q16(ANGLE_KP);
-        my_config.pid_coeffs_arr[ANGLE].i = FLT_TO_Q16(ANGLE_KI);
-        my_config.pid_coeffs_arr[ANGLE].d = FLT_TO_Q16(ANGLE_KD);
-        my_config.pid_coeffs_arr[ANGLE_HIGH].p = FLT_TO_Q16(ANGLE_HIGH_KP);
-        my_config.pid_coeffs_arr[ANGLE_HIGH].i = FLT_TO_Q16(ANGLE_HIGH_KI);
-        my_config.pid_coeffs_arr[ANGLE_HIGH].d = FLT_TO_Q16(ANGLE_HIGH_KD);
-        my_config.pid_coeffs_arr[VEL].p = FLT_TO_Q16(VEL_KP);
-        my_config.pid_coeffs_arr[VEL].i = FLT_TO_Q16(VEL_KI);
-        my_config.pid_coeffs_arr[VEL].d = FLT_TO_Q16(VEL_KD);
-        os_memcpy(my_config.gyro_offsets, GYRO_OFFSETS, 3 * sizeof(int16_t));
+        load_hardcoded_config();
     }
     apply_config_params();
 

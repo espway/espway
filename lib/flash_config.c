@@ -52,3 +52,8 @@ bool ICACHE_FLASH_ATTR write_flash_config(void * config, size_t config_size,
         aligned_size + 4);
 }
 
+bool ICACHE_FLASH_ATTR clear_flash_config(void) {
+    uint32_t zero_version = 0;
+    return system_param_save_with_protect(CONFIG_SECTOR, &zero_version, 4);
+}
+
