@@ -21,8 +21,6 @@
 
 #include "flash_config.h"
 
-#define ALIGN_FOUR_BYTES(addr) (((addr) + 3) & ~3)
-
 static uint32_t config_buf[MAX_CONFIG_SIZE];
 
 bool ICACHE_FLASH_ATTR read_flash_config(void * config, size_t config_size,

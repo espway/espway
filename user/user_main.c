@@ -140,6 +140,43 @@ bool clear_config = false;
 
 espway_config my_config;
 
+static const char CONFIG_PRETTY_PRINT_FORMAT[] ICACHE_RODATA_ATTR =
+    "\n\nESPway current config:\n\n"
+    "#define ANGLE_KP %d\n"
+    "#define ANGLE_KI %d\n"
+    "#define ANGLE_KD %d\n"
+    "#define ANGLE_HIGH_KP %d\n"
+    "#define ANGLE_HIGH_KI %d\n"
+    "#define ANGLE_HIGH_KD %d\n"
+    "#define VEL_KP %d\n"
+    "#define VEL_KI %d\n"
+    "#define VEL_KD %d\n"
+    "#define GYRO_X_OFFSET %d\n"
+    "#define GYRO_Y_OFFSET %d\n"
+    "#define GYRO_Z_OFFSET %d\n"
+    "\n\n";
+
+void ICACHE_FLASH_ATTR pretty_print_config(void) {
+    size_t fmt_len = ALIGN_FOUR_BYTES(os_strlen(CONFIG_PRETTY_PRINT_FORMAT));
+    char *format = (char *)os_malloc(fmt_len);
+    os_memcpy(format, CONFIG_PRETTY_PRINT_FORMAT, fmt_len);
+    os_printf(format,
+        my_config.pid_coeffs_arr[ANGLE].p,
+        my_config.pid_coeffs_arr[ANGLE].i,
+        my_config.pid_coeffs_arr[ANGLE].d,
+        my_config.pid_coeffs_arr[ANGLE_HIGH].p,
+        my_config.pid_coeffs_arr[ANGLE_HIGH].i,
+        my_config.pid_coeffs_arr[ANGLE_HIGH].d,
+        my_config.pid_coeffs_arr[VEL].p,
+        my_config.pid_coeffs_arr[VEL].i,
+        my_config.pid_coeffs_arr[VEL].d,
+        my_config.gyro_offsets[0],
+        my_config.gyro_offsets[1],
+        my_config.gyro_offsets[2]
+    );
+    os_free(format);
+}
+
 void ICACHE_FLASH_ATTR load_hardcoded_config(void) {
     // Load default parameters
     os_memcpy(&my_config, &DEFAULT_CONFIG, sizeof(espway_config));
@@ -542,6 +579,7 @@ void ICACHE_FLASH_ATTR user_init(void) {
         load_hardcoded_config();
     }
     apply_config_params();
+    pretty_print_config();
 
     // Parameter calculation & initialization
     pid_reset(0, 0, &pid_settings_arr[ANGLE], &angle_pid_state);

@@ -22,6 +22,8 @@
 #define CONFIG_SECTOR 0x7d
 #define MAX_CONFIG_SIZE 1024
 
+#define ALIGN_FOUR_BYTES(addr) (((addr) + 3) & ~3)
+
 bool read_flash_config(void * config, size_t config_size, uint32_t version);
 bool write_flash_config(void * config, size_t config_size, uint32_t version);
 bool clear_flash_config(void);
