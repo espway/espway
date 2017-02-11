@@ -353,30 +353,27 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
     static unsigned int battery_value = 1024;
     static bool send_battery = false;
 
-    unsigned long current_time;
+    unsigned long current_time = system_get_time() / 1024;
 
-    while (!mpu_read_int_status(MPU_ADDR)) {
-        current_time = system_get_time() / 1024;
-        if (ENABLE_BATTERY_CHECK &&
-            current_time - last_battery_check > BATTERY_CHECK_INTERVAL) {
-            last_battery_check = current_time;
-            battery_value = q16_exponential_smooth(battery_value, system_adc_read(),
-                FLT_TO_Q16(0.25f));
-            send_battery = true;
+    if (ENABLE_BATTERY_CHECK &&
+        current_time - last_battery_check > BATTERY_CHECK_INTERVAL) {
+        last_battery_check = current_time;
+        battery_value = q16_exponential_smooth(battery_value, system_adc_read(),
+            FLT_TO_Q16(0.25f));
+        send_battery = true;
 
-            if (ENABLE_BATTERY_CUTOFF && battery_value <
-                (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR)) {
-                set_both_eyes(BLACK);
-                // Put MPU6050 to sleep
-                mpu_go_to_sleep();
-                set_motors(0, 0);
-                system_deep_sleep(UINT32_MAX);
-                return;
-            }
+        if (ENABLE_BATTERY_CUTOFF && battery_value <
+            (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR)) {
+            set_both_eyes(BLACK);
+            // Put MPU6050 to sleep
+            mpu_go_to_sleep();
+            set_motors(0, 0);
+            system_deep_sleep(UINT32_MAX);
+            return;
         }
     }
 
-    current_time = system_get_time() / 1024;
+    if (!mpu_read_int_status(MPU_ADDR)) { return; }
 
     // Perform MPU quaternion update
     static int16_t raw_data[6];
