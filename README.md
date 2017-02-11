@@ -10,7 +10,7 @@ make blankflash
 ```
 to upload initial parameters required by the firmware.
 
-Then you can build and flashthe firmware by running
+Then you can build and flash the firmware by running
 ```
 make clean && make && make flash
 ```
