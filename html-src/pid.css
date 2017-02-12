@@ -1,0 +1,47 @@
+body, html {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: white;
+    color: #334;
+    margin: 0 auto;
+}
+
+body, button {
+    font-family: monospace;
+}
+
+button {
+    border-radius: 0.5em;
+    border-style: none;
+    padding: 0.5em;
+    background-color: #0bf;
+    color: white;
+    font-weight: bold;
+    height: 2.5em;
+    border: none;
+}
+
+button:disabled {
+    background-color: #ddd;
+    border: none;
+}
+
+.commandBtn {
+    width: 100%;
+    margin-top: 1em;
+}
+
+.mainContainer {
+    margin: 0 auto;
+    padding: 1em;
+    width: 320px;
+}
+
+.mainContainer > select {
+    width: 100%;
+    margin-bottom: 0.5em;
+}
+
