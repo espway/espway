@@ -1,3 +1,5 @@
+import './cube.css'
+
 (function() {
     'use strict'
 

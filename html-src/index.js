@@ -1,3 +1,5 @@
+import './index.css'
+
 window.addEventListener('load', () => {
     'use strict'
 

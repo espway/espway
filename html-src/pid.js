@@ -1,5 +1,6 @@
 import riot from 'riot'
 import './slider.tag'
+import './pid.css'
 
 window.addEventListener('load', () => {
     'use strict'
