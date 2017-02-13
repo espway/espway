@@ -21,7 +21,7 @@ module.exports = {
                 enforce: 'pre',
                 use: [
                     { loader: 'babel-loader', options: { presets: ['es2015'] } },
-                    { loader: 'riotjs-loader' }
+                    { loader: './riot-loader.js' }
                 ]
             },
 
