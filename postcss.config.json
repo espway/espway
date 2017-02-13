@@ -1,9 +1,0 @@
-{
-    "use": ["postcss-cssnext", "cssnano"],
-    "postcss-cssnext": {
-        "browsers": "> 1%"
-    },
-    "cssnano": {
-        "autoprefixer": false
-    }
-}

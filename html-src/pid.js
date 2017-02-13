@@ -1,5 +1,5 @@
-let riot = require('riot')
-require('./slider.tag')
+import riot from 'riot'
+import './slider.tag'
 
 window.addEventListener('load', () => {
     'use strict'

@@ -3,14 +3,7 @@
   "version": "1.0.0",
   "description": "Frontend for a Segway-like robot",
   "scripts": {
-    "riot-build": "riot html-src tags-tmp",
-    "babel-build": "babel html-src tags-tmp -d html",
-    "postcss-build": "postcss --config postcss.config.json --dir html html-src/*.css",
-    "build": "npm run riot-build && npm run babel-build && npm run postcss-build",
-    "watch": "npm run riot-build -- --watch & npm run babel-build -- --watch & npm run postcss-build --watch",
-    "riot": "riot",
-    "babel": "babel",
-    "postcss": "postcss"
+    "webpack": "webpack"
   },
   "repository": {
     "type": "git",
@@ -23,13 +16,18 @@
   },
   "homepage": "https://github.com/flannelhead/espway#readme",
   "devDependencies": {
-    "babel-cli": "^6.22.2",
-    "babel-preset-babili": "0.0.11",
+    "babel-loader": "^6.2.10",
     "babel-preset-es2015": "^6.22.0",
+    "css-loader": "^0.26.1",
     "cssnano": "^3.10.0",
     "postcss": "^5.2.12",
     "postcss-cli": "^2.6.0",
     "postcss-cssnext": "^2.9.0",
-    "riot": "^3.2.1"
+    "postcss-loader": "^1.3.0",
+    "riot": "^3.2.1",
+    "riotjs-loader": "^4.0.0",
+    "style-loader": "^0.13.1",
+    "webpack": "^2.2.1",
+    "webpack-dev-server": "^2.3.0"
   }
 }

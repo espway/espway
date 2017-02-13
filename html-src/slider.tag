@@ -22,6 +22,8 @@
         </div>
     </div>
 
+    import './slider.css'
+
     function log10(x) {
         return Math.log(x) * Math.LOG10E;
     }
