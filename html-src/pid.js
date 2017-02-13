@@ -131,12 +131,12 @@ window.addEventListener('load', () => {
     }
 
     pidSelect.addEventListener('change', fetchPidValues)
+    ws.addEventListener('message', wsRecv)
     ws.addEventListener('open', () => {
         fetchPidValues()
         pidSendIntervalId =
             setInterval(sendPidValues, PID_SEND_INTERVAL)
     })
-    ws.addEventListener('message', wsRecv)
 
     byId('btnSaveConfig').addEventListener('click', () => {
         let buf = new ArrayBuffer(1)
