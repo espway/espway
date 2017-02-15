@@ -9,19 +9,37 @@ body {
     margin: 0 auto;
 }
 
-body, button {
+body, button, select, label {
     font-family: monospace;
 }
 
-button {
+button, select, label {
+    color: white;
+    font-weight: bold;
+}
+
+button, select {
     border-radius: 0.5em;
     border-style: none;
     padding: 0.5em;
     background-color: #0bf;
-    color: white;
-    font-weight: bold;
     height: 2.5em;
     border: none;
+}
+
+select {
+    width: 100%;
+    appearance: none;
+}
+
+label {
+    position: relative;
+}
+
+label:after {
+    content: '▼';
+    right: 1.5em;
+    position: absolute;
 }
 
 button:disabled {
