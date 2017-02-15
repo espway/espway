@@ -36,6 +36,10 @@ module.exports = {
                 use: [ 'style-loader', 'css-loader', 'postcss-loader' ]
             }
         ]
+    },
+
+    devServer: {
+        contentBase: path.resolve(__dirname, 'html')
     }
 };
 
