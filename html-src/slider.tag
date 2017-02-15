@@ -11,7 +11,7 @@
         </div>
     </div>
 
-    <div class='sliderInnerContainer'>
+    <div class='inner-container'>
         <div class='bound left'>
             <span class='times' show={ centered }>× </span>10<sup>{ boundMin }</sup>
         </div>
