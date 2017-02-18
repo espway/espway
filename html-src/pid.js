@@ -28,7 +28,20 @@ window.addEventListener('load', () => {
     ws.binaryType = 'arraybuffer'
 
     let byId = id => document.getElementById(id)
-    let pidSelect = byId('pidSelect')
+
+    document.querySelectorAll('input[name=pid-select]').forEach(function(el) {
+        el.addEventListener('click', fetchPidValues)
+    })
+
+    function selectedPid() {
+        let checked = document.querySelector('input[name=pid-select]:checked')
+
+        if (checked === null) {
+            return 'angle'
+        } else {
+            return checked.value
+        }
+    }
 
     function mountSliders(limits, values) {
         riot.mount('#pslider', {
@@ -49,7 +62,7 @@ window.addEventListener('load', () => {
     }
 
     function sendPidValues() {
-        let pidIndex = PID_INDICES[pidSelect.value]
+        let pidIndex = PID_INDICES[selectedPid()]
         let buf = new ArrayBuffer(14)
         let dv = new DataView(buf)
         dv.setUint8(0, 5)
@@ -64,7 +77,7 @@ window.addEventListener('load', () => {
     }
 
     function showPidValues(dataView) {
-        let pidName = pidSelect.value
+        let pidName = selectedPid()
         let pidIndex = dataView.getUint8(1)
         if (pidIndex !== PID_INDICES[pidName]) { return }
         let p = dataView.getInt32(2, true),
@@ -78,7 +91,7 @@ window.addEventListener('load', () => {
     }
 
     function fetchPidValues() {
-        let pidIndex = PID_INDICES[pidSelect.value]
+        let pidIndex = PID_INDICES[selectedPid()]
         let buf = new ArrayBuffer(2)
         let dv = new DataView(buf)
         dv.setUint8(0, 7)
@@ -117,7 +130,6 @@ window.addEventListener('load', () => {
         }
     }
 
-    pidSelect.addEventListener('change', fetchPidValues)
     ws.addEventListener('message', wsRecv)
     ws.addEventListener('open', () => {
         fetchPidValues()
@@ -133,7 +145,7 @@ window.addEventListener('load', () => {
     byId('btnLoadDefaults').addEventListener('click', () => {
         let buf = new ArrayBuffer(1)
         let dv = new DataView(buf)
-        let pidIndex = PID_INDICES[pidSelect.value]
+        let pidIndex = PID_INDICES[selectedPid()]
         if (pidSendIntervalId !== 0) {
             clearInterval(pidSendIntervalId)
             pidSendIntervalId = 0

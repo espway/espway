@@ -9,16 +9,16 @@ body {
     margin: 0 auto;
 }
 
-body, button, select, label {
+body, button, label {
     font-family: monospace;
 }
 
-button, select, label {
+button, label {
     color: white;
     font-weight: bold;
 }
 
-button, select {
+button {
     border-radius: 0.5em;
     border-style: none;
     padding: 0.5em;
@@ -27,19 +27,40 @@ button, select {
     border: none;
 }
 
-select {
-    width: 100%;
-    appearance: none;
+input[type='radio'] {
+    display: none;
 }
 
-label {
-    position: relative;
+input[type='radio'] + label {
+    color: white;
+    background-color: #0bf;
+    border: 1px #0bf solid;
 }
 
-label:after {
-    content: '▼';
-    right: 1.5em;
-    position: absolute;
+input[type='radio']:checked + label {
+    color: #0bf;
+    background-color: white;
+}
+
+label.radio {
+    margin: 0;
+    padding: 0.5em 0;
+    width: 50%;
+    display: inline-block;
+    text-align: center;
+}
+
+label.radio-right {
+    border-radius: 0 0.5em 0.5em 0;
+}
+
+label.radio-left {
+    border-radius: 0.5em 0 0 0.5em;
+}
+
+.radio-container {
+    display: flex;
+    padding-bottom: 1em;
 }
 
 button:disabled {
@@ -56,10 +77,5 @@ button:disabled {
     margin: 0 auto;
     padding: 1em;
     width: 320px;
-}
-
-.mainContainer > select {
-    width: 100%;
-    margin-bottom: 0.5em;
 }
 

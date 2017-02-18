@@ -13,12 +13,12 @@
         <div class='mainContainer'>
             <h3>ESPway PID tuning</h3>
 
-            <label>
-                <select id='pidSelect' value='angle'>
-                    <option value='angle'>Angle PID</option>
-                    <option value='vel'>Velocity PID</option>
-                </select>
-            </label>
+            <div class='radio-container'>
+                <input type='radio' name='pid-select' id='angle-pid' value='angle' checked />
+                <label class='radio radio-left' for='angle-pid'>Angle PID</label>
+                <input type='radio' name='pid-select' id='vel-pid' value='vel' />
+                <label class='radio radio-right' for='vel-pid'>Velocity PID</label>
+            </div>
 
             <slider id='pslider' label='P'></slider>
             <slider id='islider' label='I'></slider>
