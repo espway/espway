@@ -584,7 +584,7 @@ void ICACHE_FLASH_ATTR user_init(void) {
     system_update_cpu_freq(80);
     uart_init(BIT_RATE_115200, BIT_RATE_115200);
 
-    brzo_i2c_setup(10);
+    brzo_i2c_setup(2000);
     mpu_init_succeeded = mpu_init();
 
     load_stored_config();
