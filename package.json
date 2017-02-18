@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "description": "Frontend for a Segway-like robot",
   "scripts": {
-    "build-dev": "webpack",
-    "build-production": "webpack -p",
-    "serve": "webpack-dev-server"
+    "build": "webpack -p",
+    "serve": "webpack-dev-server -d"
   },
   "repository": {
     "type": "git",
