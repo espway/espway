@@ -17,6 +17,28 @@ make clean && make && make flash
 with the WEMOS D1 mini connected. This will upload both the firmware and the
 filesystem containing the HTML UI.
 
+## Supported browsers
+Please use the latest Firefox or Chrome if possible. The HTML/JS UI uses some
+recent JavaScript features which might not be supported by older browsers.
+
+## Schematic & BOM
+
+See the `schematic` folder for the schematic. It is drawn with [KiCad](http://kicad-pcb.org/) and there's a [rendered PDF](https://github.com/flannelhead/espway/raw/master/schematic/espway.pdf) in the repo.
+
+Tentative BOM (not including PCB, connectors, wire etc. materials):
+
+* WEMOS D1 Mini board
+* GY-521 (MPU6050 breakout board)
+* L293D motor driver IC. **N.B.** this is what I used so far, but I'm intending to change to DRV8833 for a smaller voltage drop across the H-bridge
+* 2x 6V 300rpm metal gear motor (search for "12ga 300rpm" or "n20 300rpm"), these should be $3-5 per piece
+* 2x WS2812B neopixels for eyes and showing current state
+* AMS1117 5V regulator
+* 5x 100n ceramic capacitors
+* 2x 1000u 10V electrolytic capacitor
+* 470 ohm resistor
+* 10 kohm resistor
+* 680 kohm resistor
+
 ## Developing the frontend
 The HTML/JS frontend uses [Webpack](https://webpack.github.io/) as the build system. You will need [NodeJS](https://nodejs.org/en/) and NPM (the package manager) to build the frontend pages. It does jobs like bundling the JavaScript modules together, minifying and transpiling the [ES2015](https://babeljs.io/learn-es2015/) code for older browsers, compiling [Riot tags](http://riotjs.com/), minifying/autoprefixing CSS etc.
 
@@ -39,28 +61,12 @@ Kudos to all the above developers. Without these libraries this project wouldn't
 
 [Riot.js](http://riotjs.com/) is used on the HTML+JS frontend for facilitating some UI components. Other compile-time JavaScript dependencies are listed in `package.json`.
 
-## Schematic & BOM
+## TODO
+Some items I wish to implement soon:
 
-See the `schematic` folder for the schematic. It is drawn with [KiCad](http://kicad-pcb.org/) and there's a [rendered PDF](https://github.com/flannelhead/espway/raw/master/schematic/espway.pdf) in the repo.
-
-Tentative BOM (not including PCB, connectors, wire etc. materials):
-
-* WEMOS D1 Mini board
-* GY-521 (MPU6050 breakout board)
-* L293D motor driver IC. **N.B.** this is what I used so far, but I'm intending to change to DRV8833 for a smaller voltage drop across the H-bridge
-* 2x 6V 300rpm metal gear motor (search for "12ga 300rpm" or "n20 300rpm"), these should be $3-5 per piece
-* 2x WS2812B neopixels for eyes and showing current state
-* AMS1117 5V regulator
-* 5x 100n ceramic capacitors
-* 2x 1000u 10V electrolytic capacitor
-* 470 ohm resistor
-* 10 kohm resistor
-* 680 kohm resistor
-
-## Supported browsers
-
-Please use the latest Firefox or Chrome if possible. The HTML/JS UI uses some
-recent JavaScript features which might not be supported by older browsers.
+* Gyro calibration. Calibration values are already stored in the flash, just need to implement a calibration routine
+* Improve frontend usability (mobile browser ergonomics)
+* Make the frontend a single-page application
 
 ## License
 The project is licensed under GPLv3.
