@@ -17,6 +17,16 @@ make clean && make && make flash
 with the WEMOS D1 mini connected. This will upload both the firmware and the
 filesystem containing the HTML UI.
 
+## Developing the frontend
+The HTML/JS frontend uses [Webpack](https://webpack.github.io/) as the build system. You will need [NodeJS](https://nodejs.org/en/) and NPM (the package manager) to build the frontend pages. It does jobs like bundling the JavaScript modules together, minifying and transpiling the [ES2015](https://babeljs.io/learn-es2015/) code for older browsers, compiling [Riot tags](http://riotjs.com/), minifying/autoprefixing CSS etc.
+
+After you've cloned this repo, run `npm install` in the root folder to install the package dependencies. There are two commands specified in `package.json` which run Webpack:
+
+* `npm run serve` start a web server which serves the static HTML files in the `html` directory. It also watches for changes in the source files in `html-src` and automatically rebuilds and reloads them. Use this while hacking on the frontend.
+* `npm run build` produces a production build of the frontend JS/CSS bundles. Use this before uploading your work to the ESP8266.
+
+If the frontend on the ESP is not updated for some reason when flashing, please run `make clean` to ensure the flash filesystem gets rebuilt.
+
 ## Dependencies
 The project utilizes some third-party libraries, in their respective folders:
 
@@ -27,7 +37,7 @@ The project utilizes some third-party libraries, in their respective folders:
 
 Kudos to all the above developers. Without these libraries this project wouldn't exist in such quality. The libraries are intentionally included in this repo because I had to make some minor adjustments to be able to build them under the NONOS SDK and strict `-Wall -Werror` compile flags.
 
-[Riot.js](http://riotjs.com/) is used on the HTML+JS frontend for facilitating some UI components.
+[Riot.js](http://riotjs.com/) is used on the HTML+JS frontend for facilitating some UI components. Other compile-time JavaScript dependencies are listed in `package.json`.
 
 ## Schematic & BOM
 
@@ -51,10 +61,6 @@ Tentative BOM (not including PCB, connectors, wire etc. materials):
 
 Please use the latest Firefox or Chrome if possible. The HTML/JS UI uses some
 recent JavaScript features which might not be supported by older browsers.
-
-I'm intending to setup JavaScript transpilation with `gulp` to support older browsers.
-Before that is done, it might not make much sense to use any other than the
-aforementioned browsers, as I have no means of testing the code on anything else.
 
 ## License
 The project is licensed under GPLv3.
