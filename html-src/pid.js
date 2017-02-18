@@ -12,11 +12,6 @@ window.addEventListener('load', () => {
             iMin: -3, iMax: 2,
             dMin: -3, dMax: 2
         },
-        'angle_high': {
-            pMin: -3, pMax: 2,
-            iMin: -3, iMax: 2,
-            dMin: -3, dMax: 2
-        },
         'vel': {
             pMin: -3, pMax: 2,
             iMin: -3, iMax: 2,
@@ -24,7 +19,7 @@ window.addEventListener('load', () => {
         }
     }
     const PID_INDICES = {
-        'angle': 0, 'angle_high': 1, 'vel': 2
+        'angle': 0, 'vel': 2
     }
     const FLOAT_TO_Q16 = (1 << 16)
     const Q16_TO_FLOAT = 1 / FLOAT_TO_Q16
@@ -113,12 +108,6 @@ window.addEventListener('load', () => {
             case 14:
                 if (buf.byteLength != 1) { break }
                 window.alert('Settings saved to flash')
-                break
-
-            case 16:
-                if (buf.byteLength != 1) { break }
-                window.alert('Clearing parameters failed')
-                fetchValuesAndStartSending()
                 break
 
             case 19:

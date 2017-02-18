@@ -240,6 +240,16 @@ void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d) {
     p_coeffs->i = i;
     p_coeffs->d = d;
     pid_update_params(p_coeffs, &pid_settings_arr[idx]);
+
+    if (idx == ANGLE) {
+        // If ANGLE PID coefficients are updated, automatically update the
+        // high gain PID
+        pid_coeffs *p_coeffs = &my_config.pid_coeffs_arr[ANGLE_HIGH];
+        p_coeffs->p = q16_mul(FLT_TO_Q16(1.5f), p);
+        p_coeffs->i = i;
+        p_coeffs->d = d;
+        pid_update_params(p_coeffs, &pid_settings_arr[ANGLE_HIGH]);
+    }
 }
 
 int upload_firmware(HttpdConnData *connData) {
