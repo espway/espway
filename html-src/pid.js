@@ -101,6 +101,8 @@ window.addEventListener('load', () => {
             case 8:
                 if (buf.byteLength != 14) { break }
                 showPidValues(dv)
+                pidSendIntervalId =
+                    setInterval(sendPidValues, PID_SEND_INTERVAL)
                 break
 
             case 13:
@@ -120,12 +122,8 @@ window.addEventListener('load', () => {
                 break
 
             case 19:
-                if (buf.byteLength != 14) { break }
-                showPidValues(dv)
-
-                pidSendIntervalId =
-                    setInterval(sendPidValues, PID_SEND_INTERVAL)
-
+                if (buf.byteLength != 1) { break }
+                fetchPidValues()
                 break
         }
     }
@@ -134,8 +132,6 @@ window.addEventListener('load', () => {
     ws.addEventListener('message', wsRecv)
     ws.addEventListener('open', () => {
         fetchPidValues()
-        pidSendIntervalId =
-            setInterval(sendPidValues, PID_SEND_INTERVAL)
     })
 
     byId('btnSaveConfig').addEventListener('click', () => {
@@ -146,7 +142,7 @@ window.addEventListener('load', () => {
     })
 
     byId('btnLoadDefaults').addEventListener('click', () => {
-        let buf = new ArrayBuffer(2)
+        let buf = new ArrayBuffer(1)
         let dv = new DataView(buf)
         let pidIndex = PID_INDICES[pidSelect.value]
         if (pidSendIntervalId !== 0) {
@@ -154,7 +150,6 @@ window.addEventListener('load', () => {
             pidSendIntervalId = 0
         }
         dv.setUint8(0, 18)
-        dv.setUint8(1, pidIndex)
         ws.send(buf)
     })
 })

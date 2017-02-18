@@ -96,12 +96,12 @@ typedef enum {
     RES_CLEAR_CONFIG_FAILURE = 16,
     RES_CLEAR_CONFIG_SUCCESS = 17,
 
-    REQ_GET_DEFAULT_PID_PARAMS = 18,
-    RES_DEFAULT_PID_PARAMS = 19,
+    REQ_LOAD_FLASH_CONFIG = 18,
+    RES_LOAD_FLASH_CONFIG_DONE = 19,
 
     REQ_ENABLE_MOTORS = 20,
     REQ_DISABLE_MOTORS = 21
-} ws_msg_type;
+} ws_msg_t;
 
 typedef enum {
     ANGLE = 0,
@@ -137,6 +137,7 @@ bool send_quat = false;
 bool ota_started = false;
 bool save_config = false;
 bool clear_config = false;
+bool load_default_config = false;
 
 espway_config my_config;
 
@@ -180,6 +181,12 @@ void ICACHE_FLASH_ATTR pretty_print_config(void) {
 void ICACHE_FLASH_ATTR load_hardcoded_config(void) {
     // Load default parameters
     os_memcpy(&my_config, &DEFAULT_CONFIG, sizeof(espway_config));
+}
+
+void ICACHE_FLASH_ATTR load_stored_config(void) {
+    if (!read_flash_config(&my_config, sizeof(espway_config), CONFIG_VERSION)) {
+        load_hardcoded_config();
+    }
 }
 
 void ICACHE_FLASH_ATTR apply_config_params(void) {
@@ -240,17 +247,6 @@ int upload_firmware(HttpdConnData *connData) {
     return cgiUploadFirmware(connData);
 }
 
-void send_default_pid_params(pid_controller_index idx) {
-    uint8_t payload[14];
-    payload[0] = RES_DEFAULT_PID_PARAMS;
-    payload[1] = idx;
-    int32_t *params = (int32_t *)(&payload[2]);
-    params[0] = DEFAULT_CONFIG.pid_coeffs_arr[idx].p;
-    params[1] = DEFAULT_CONFIG.pid_coeffs_arr[idx].i;
-    params[2] = DEFAULT_CONFIG.pid_coeffs_arr[idx].d;
-    cgiWebsockBroadcast("/ws", (char *)payload, 14, WEBSOCK_FLAG_BIN);
-}
-
 void send_pid_params(pid_controller_index idx) {
     uint8_t payload[14];
     payload[0] = RES_PID_PARAMS;
@@ -288,7 +284,8 @@ void websocket_recv_cb(Websock *ws, char *signed_data, int len, int flags) {
 
         case REQ_SET_PID_PARAMS:
             // Parameters: pid index (uint8_t), P (q16/int32_t), I (q16), D (q16)
-            if (data_len != 13) {
+            if (data_len != 13 || load_default_config) {
+                // Ignore the request if we are about to load the default config
                 break;
             }
 
@@ -315,14 +312,12 @@ void websocket_recv_cb(Websock *ws, char *signed_data, int len, int flags) {
 
             break;
 
-        case REQ_GET_DEFAULT_PID_PARAMS:
-            if (data_len != 1) {
+        case REQ_LOAD_FLASH_CONFIG:
+            if (data_len != 0) {
                 break;
             }
 
-            if (payload[0] <= 2) {
-                send_default_pid_params(payload[0]);
-            }
+            load_default_config = true;
 
             break;
 
@@ -498,13 +493,20 @@ void ICACHE_FLASH_ATTR compute(os_event_t *e) {
     }
 
     if (save_config) {
-        save_config = false;
         do_save_config();
+        save_config = false;
     }
 
     if (clear_config) {
-        clear_config = false;
         do_clear_config();
+        clear_config = false;
+    }
+
+    if (load_default_config) {
+        load_stored_config();
+        uint8_t response = RES_LOAD_FLASH_CONFIG_DONE;
+        cgiWebsockBroadcast("/ws", (char *)&response, 1, WEBSOCK_FLAG_BIN);
+        load_default_config = false;
     }
 }
 
@@ -575,9 +577,7 @@ void ICACHE_FLASH_ATTR user_init(void) {
     brzo_i2c_setup(10);
     mpu_init_succeeded = mpu_init();
 
-    if (!read_flash_config(&my_config, sizeof(espway_config), CONFIG_VERSION)) {
-        load_hardcoded_config();
-    }
+    load_stored_config();
     apply_config_params();
     pretty_print_config();
 
