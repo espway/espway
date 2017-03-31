@@ -60,12 +60,14 @@ LIBS		= c gcc hal phy pp net80211 wpa main lwip crypto driver
 LIBS += esphttpd
 
 # compiler flags using during compilation of source files
-CFLAGS		= -Os -ggdb -std=gnu99 -Werror -Wpointer-arith -Wundef -Wall -Wl,-EL -fno-inline-functions \
+CFLAGS		= -Os -ggdb -std=gnu99 -Wpointer-arith -Wundef -Wall -Wl,-EL -fno-inline-functions \
+		-ffunction-sections -fdata-sections \
 		-nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH \
 		-Wno-address
 
 # linker flags used to generate the main object file
-LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
+LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static \
+			  -gc-sections
 
 
 # various paths from the SDK used in this project
