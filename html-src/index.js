@@ -127,7 +127,7 @@ window.addEventListener('load', () => {
             return;
         }
         let dview = new DataView(new ArrayBuffer(3))
-        dview.setUint8(0)
+        dview.setUint8(0, 0)
         dview.setInt8(1, turning * 127)
         dview.setInt8(2, speed * 127)
         ws.send(dview.buffer)
