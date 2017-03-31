@@ -24,10 +24,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef _BRZO_I2C_h
 #define _BRZO_I2C_h
 
+// Set this variable to zero to opt out of disabling interrupts during I2C
+// transactions
+#define BRZO_I2C_DISABLE_INTERRUPTS 1
+
 #ifdef ARDUINO
 #include "Arduino.h"
 #else
-#include <esp8266.h>
+#include <c_types.h>
 
 // SDA on GPIO4, SCL on GPIO5
 #define BRZO_I2C_SDA_MUX PERIPHS_IO_MUX_GPIO4_U
