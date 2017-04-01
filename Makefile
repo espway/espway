@@ -55,7 +55,7 @@ MODULES		= user lib ESP8266_new_pwm esp8266ws2812i2s brzo_i2c
 EXTRA_INCDIR	= include libesphttpd/include esp8266ws2812i2s brzo_i2c $(SDK_BASE)/driver_lib/include
 
 # libraries used in this project, mainly provided by the SDK
-LIBS		= c gcc hal phy pp net80211 wpa main lwip crypto driver
+LIBS		= c gcc phy pp net80211 wpa main lwip_open driver
 #Add in esphttpd lib
 LIBS += esphttpd
 
@@ -63,7 +63,7 @@ LIBS += esphttpd
 CFLAGS		= -Os -ggdb -std=gnu99 -Wpointer-arith -Wundef -Wall -Wl,-EL -fno-inline-functions \
 		-ffunction-sections -fdata-sections \
 		-nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH \
-		-Wno-address
+		-Wno-address -DLWIP_OPEN_SRC
 
 # linker flags used to generate the main object file
 LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static \

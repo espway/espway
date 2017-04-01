@@ -52,7 +52,7 @@ EXTRA_INCDIR	= ./include \
 
 
 # compiler flags using during compilation of source files
-CFLAGS		= -Os -ggdb -std=c99 -Werror -Wpointer-arith -Wundef -Wall -Wl,-EL -fno-inline-functions \
+CFLAGS		= -Os -ggdb -std=c99 -Wpointer-arith -Wundef -Wall -Wl,-EL -fno-inline-functions \
 		-nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH \
 		-ffunction-sections -fdata-sections \
 		-Wno-address -DHTTPD_MAX_CONNECTIONS=$(HTTPD_MAX_CONNECTIONS) -DHTTPD_STACKSIZE=$(HTTPD_STACKSIZE) \
@@ -62,6 +62,9 @@ CFLAGS		= -Os -ggdb -std=c99 -Werror -Wpointer-arith -Wundef -Wall -Wl,-EL -fno-
 SDK_LIBDIR	= lib
 SDK_LDDIR	= ld
 
+ifeq ("$(USE_OPENSDK)", "yes")
+CFLAGS += -DLWIP_OPEN_SRC
+endif
 
 ifeq ("$(FREERTOS)","yes")
 ifeq ("$(ESP32)","yes")
@@ -76,7 +79,7 @@ SDK_INCDIR	= include \
 			third_party/include/lwip/ipv4 \
 			third_party/include/lwip/ipv6 \
 			third_party/include/ssl
-CFLAGS		+= -DESP32 -DFREERTOS -DLWIP_OPEN_SRC
+CFLAGS		+= -DESP32 -DFREERTOS
 else
 SDK_INCDIR	= include \
 			include/freertos \
@@ -87,7 +90,7 @@ SDK_INCDIR	= include \
 			include/lwip/lwip \
 			include/lwip/ipv4 \
 			include/lwip/ipv6
-CFLAGS		+= -DFREERTOS -DLWIP_OPEN_SRC
+CFLAGS		+= -DFREERTOS
 endif
 SDK_INCDIR	:= $(addprefix -I$(SDK_PATH)/,$(SDK_INCDIR))
 else

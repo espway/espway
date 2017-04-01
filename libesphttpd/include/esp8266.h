@@ -19,8 +19,6 @@
 
 #else
 #include <c_types.h>
-#include <ip_addr.h>
-#include <espconn.h>
 #include <ets_sys.h>
 #include <gpio.h>
 #include <mem.h>

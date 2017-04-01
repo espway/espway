@@ -29,7 +29,11 @@ typedef RtosConnType* ConnTypePtr;
 #define strstr(a, b) os_strstr(a, b)
 #define strlen(a) os_strlen(a)
 #define memcmp(a, b, c) os_memcmp(a, b, c)
+#ifdef LWIP_OPEN_SRC
+typedef struct tcp_pcb* ConnTypePtr;
+#else
 typedef struct espconn* ConnTypePtr;
+#endif
 #define httpd_printf(format, ...) os_printf(format, ##__VA_ARGS__)
 #endif
 

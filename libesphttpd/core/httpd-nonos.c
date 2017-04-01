@@ -2,12 +2,16 @@
 ESP8266 web server - platform-dependent routines, nonos version
 */
 
+#if !defined(FREERTOS) && !defined(LWIP_OPEN_SRC)
+
 #include <esp8266.h>
+
+#include <ip_addr.h>
+#include <espconn.h>
+
 #include "httpd.h"
 #include "platform.h"
 #include "httpd-platform.h"
-
-#ifndef FREERTOS
 
 //Listening connection data
 static struct espconn httpdConn;

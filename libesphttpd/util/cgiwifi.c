@@ -274,8 +274,8 @@ int ICACHE_FLASH_ATTR cgiWiFiConnStatus(HttpdConnData *connData) {
 		if (st==STATION_GOT_IP) {
 			wifi_get_ip_info(0, &info);
 			len=sprintf(buff, "{\n \"status\": \"success\",\n \"ip\": \"%d.%d.%d.%d\" }\n", 
-				(info.ip.addr>>0)&0xff, (info.ip.addr>>8)&0xff, 
-				(info.ip.addr>>16)&0xff, (info.ip.addr>>24)&0xff);
+				(int)(info.ip.addr>>0)&0xff, (int)(info.ip.addr>>8)&0xff, 
+				(int)(info.ip.addr>>16)&0xff, (int)(info.ip.addr>>24)&0xff);
 			//Reset into AP-only mode sooner.
 			os_timer_disarm(&resetTimer);
 			os_timer_setfn(&resetTimer, resetTimerCb, NULL);
