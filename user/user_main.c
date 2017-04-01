@@ -396,7 +396,7 @@ void ICACHE_FLASH_ATTR do_log(int16_t *raw_accel, int16_t *raw_gyro,
 void ICACHE_FLASH_ATTR compute(os_event_t *e) {
     if (!mpu_init_succeeded || ota_started) {
         set_motors(0, 0);
-        set_both_eyes(LILA);
+        set_both_eyes(ota_started ? LILA : RED);
         return;
     }
 
