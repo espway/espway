@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <ESP8266WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <brzo_i2c.h>
+#include <ArduinoOTA.h>
 
 #include "flash_config.h"
 #include "motors.h"
@@ -378,9 +379,13 @@ void do_log(int16_t *raw_accel, int16_t *raw_gyro, q16 sin_pitch) {
 }
 
 void loop() {
-    if (!mpu_init_succeeded || ota_started) {
+    if (ota_started) {
+        ArduinoOTA.handle();
+        return;
+    }
+
+    if (!mpu_init_succeeded) {
         set_motors(0, 0);
-        set_both_eyes(ota_started ? LILA : RED);
         return;
     }
 
@@ -499,6 +504,8 @@ void loop() {
         ws.binaryAll(&response, 1);
         load_default_config = false;
     }
+
+    ArduinoOTA.handle();
 }
 
 void wifi_init() {
@@ -561,5 +568,12 @@ void setup() {
     server.onFileUpload(onUpload);
     server.onRequestBody(onBody);
     server.begin();
+
+    ArduinoOTA.onStart([]() {
+        ota_started = true;
+        set_motors(0, 0);
+        set_both_eyes(LILA);
+    });
+    ArduinoOTA.begin();
 }
 
