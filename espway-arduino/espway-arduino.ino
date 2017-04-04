@@ -121,7 +121,7 @@ pidsettings pid_settings_arr[3];
 q16 target_speed = 0;
 q16 steering_bias = 0;
 
-bool mpu_init_succeeded = false;
+bool mpu_online = false;
 bool send_quat = false;
 bool ota_started = false;
 bool save_config = false;
@@ -384,12 +384,14 @@ void loop() {
         return;
     }
 
-    if (!mpu_init_succeeded) {
+    if (!mpu_online) {
         set_motors(0, 0);
+        set_both_eyes(RED);
         return;
     }
 
     static unsigned long last_battery_check = 0;
+    static unsigned long mpu_last_online = 0;
     static unsigned int battery_value = 1024;
     static bool send_battery = false;
 
@@ -413,7 +415,13 @@ void loop() {
         }
     }
 
-    while (!mpu_read_int_status(MPU_ADDR)) { yield(); }
+    while (!mpu_read_int_status(MPU_ADDR)) { 
+        if (millis() - mpu_last_online > 100) {
+            mpu_online = false;
+            return;
+        }
+        yield();
+    }
 
     // Perform MPU quaternion update
     static int16_t raw_data[6];
@@ -434,6 +442,7 @@ void loop() {
     static state my_state = STABILIZING_ORIENTATION;
     static unsigned long stage_started = 0;
     current_time = millis();
+    mpu_last_online = current_time;
     if (my_state == STABILIZING_ORIENTATION) {
         if (current_time - stage_started > ORIENTATION_STABILIZE_DURATION) {
             my_state = RUNNING;
@@ -542,7 +551,7 @@ void setup() {
     flash_config_begin();
 
     brzo_i2c_setup(4, 5, 2000);
-    mpu_init_succeeded = mpu_init();
+    mpu_online = mpu_init();
 
     load_stored_config();
     apply_config_params();
@@ -556,7 +565,7 @@ void setup() {
 
     pinMode(A0, INPUT);
     eyes_init();
-    set_both_eyes(mpu_init_succeeded ? YELLOW : RED);
+    set_both_eyes(mpu_online ? YELLOW : RED);
 
     wifi_init();
 
