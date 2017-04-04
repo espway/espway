@@ -408,7 +408,7 @@ void loop() {
         }
     }
 
-    if (!mpu_read_int_status(MPU_ADDR)) { return; }
+    while (!mpu_read_int_status(MPU_ADDR)) { yield(); }
 
     // Perform MPU quaternion update
     static int16_t raw_data[6];
@@ -529,6 +529,8 @@ void onUpload(AsyncWebServerRequest *request, String, size_t, uint8_t *,
 }
 
 void setup() {
+    motors_init();
+
     Serial.begin(115200);
 
     flash_config_begin();
@@ -547,7 +549,6 @@ void setup() {
         2.0f * M_PI / 180.0f * 2000.0f, SAMPLE_TIME);
 
     pinMode(A0, INPUT);
-    motors_init();
     eyes_init();
     set_both_eyes(mpu_init_succeeded ? YELLOW : RED);
 
