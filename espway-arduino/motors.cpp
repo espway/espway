@@ -58,6 +58,6 @@ void motors_init(void) {
         // PWM init
     pwm_add_channel(13);
     pwm_add_channel(14);
-    pwm_init();
+    pwm_init(4000);
 }
 
