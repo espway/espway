@@ -573,6 +573,8 @@ void setup() {
     ws.onEvent(websocket_recv_cb);
     server.addHandler(&ws);
     server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
+    server.serveStatic("/pid", SPIFFS, "/pid.html");
+    server.serveStatic("/cube", SPIFFS, "/cube.html");
     server.onNotFound(onRequest);
     server.onFileUpload(onUpload);
     server.onRequestBody(onBody);
