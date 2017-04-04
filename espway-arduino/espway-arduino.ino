@@ -415,7 +415,7 @@ void loop() {
         }
     }
 
-    while (!mpu_read_int_status(MPU_ADDR)) { 
+    while ((mpu_read_int_status(MPU_ADDR) & MPU_DATA_RDY_INT) == 0) {
         if (millis() - mpu_last_online > 100) {
             mpu_online = false;
             return;
