@@ -415,8 +415,7 @@ void loop() {
     mpu_read_raw_data(MPU_ADDR, raw_data);
     // Update orientation estimate
     static quaternion_fix quat = { Q16_ONE, 0, 0, 0 };
-    madgwick_ahrs_update_imu(&imuparams, &raw_data[0], &raw_data[3],
-        &quat);
+    madgwick_ahrs_update_imu(&imuparams, &raw_data[0], &raw_data[3], &quat);
     // Calculate sine of pitch angle from quaternion
     q16 sin_pitch = -gravity_z(&quat);
 
