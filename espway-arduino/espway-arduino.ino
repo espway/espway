@@ -39,6 +39,8 @@ extern "C" {
 #define FALL_UPPER_BOUND FLT_TO_Q16(STABLE_ANGLE + FALL_LIMIT)
 #define RECOVER_LOWER_BOUND FLT_TO_Q16(STABLE_ANGLE - RECOVER_LIMIT)
 #define RECOVER_UPPER_BOUND FLT_TO_Q16(STABLE_ANGLE + RECOVER_LIMIT)
+#define ROLL_LOWER_BOUND FLT_TO_Q16(-ROLL_LIMIT)
+#define ROLL_UPPER_BOUND FLT_TO_Q16(ROLL_LIMIT)
 
 #define BATTERY_COEFFICIENT FLT_TO_Q16(100.0f / BATTERY_CALIBRATION_FACTOR)
 
@@ -431,6 +433,7 @@ void loop() {
     madgwick_ahrs_update_imu(&imuparams, &raw_data[0], &raw_data[3], &quat);
     // Calculate sine of pitch angle from quaternion
     q16 sin_pitch = -gravity_z(&quat);
+    q16 sin_roll = gravity_y(&quat);
 
     static q16 travel_speed = 0;
     static q16 smoothed_target_speed = 0;
@@ -449,7 +452,8 @@ void loop() {
             stage_started = current_time;
         }
     } else if (my_state == RUNNING) {
-        if (sin_pitch < FALL_UPPER_BOUND && sin_pitch > FALL_LOWER_BOUND) {
+        if (sin_pitch < FALL_UPPER_BOUND && sin_pitch > FALL_LOWER_BOUND &&
+            sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND) {
             // Perform PID update
             q16 target_angle = pid_compute(travel_speed, smoothed_target_speed,
                 &pid_settings_arr[VEL], &vel_pid_state);
@@ -473,7 +477,9 @@ void loop() {
             set_motors(0, 0);
         }
     } else if (my_state == FALLEN) {
-        if (sin_pitch < RECOVER_UPPER_BOUND && sin_pitch > RECOVER_LOWER_BOUND) {
+        if (sin_pitch < RECOVER_UPPER_BOUND &&
+            sin_pitch > RECOVER_LOWER_BOUND &&
+            sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND) {
             my_state = RUNNING;
             set_both_eyes(GREEN);
             pid_reset(sin_pitch, 0, &pid_settings_arr[ANGLE], &angle_pid_state);

@@ -26,6 +26,7 @@
 #define FALL_LIMIT 0.75
 #define RECOVER_LIMIT 0.2
 #define HIGH_PID_LIMIT 0.2
+#define ROLL_LIMIT 0.5
 
 #define STABLE_ANGLE -0.2
 
