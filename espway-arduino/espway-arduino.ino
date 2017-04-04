@@ -553,6 +553,7 @@ void setup() {
 
     wifi_init();
 
+    SPIFFS.begin();
     ws.onEvent(websocket_recv_cb);
     server.addHandler(&ws);
     server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
