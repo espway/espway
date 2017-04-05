@@ -59,7 +59,7 @@ const color_t LILA = { 180, 0, 180 };
 const color_t BLACK = { 0, 0, 0 };
 
 enum logmode { LOG_FREQ, LOG_RAW, LOG_PITCH, LOG_NONE };
-enum state { STABILIZING_ORIENTATION, RUNNING, FALLEN };
+enum state { STABILIZING_ORIENTATION, RUNNING, FALLEN, WOUND_UP };
 
 enum ws_msg_t {
     STEERING = 0,
@@ -444,6 +444,7 @@ void loop() {
 
     static state my_state = STABILIZING_ORIENTATION;
     static unsigned long stage_started = 0;
+    static unsigned long last_wind_up = 0;
     current_time = millis();
     mpu_last_online = current_time;
     if (my_state == STABILIZING_ORIENTATION) {
@@ -451,7 +452,7 @@ void loop() {
             my_state = RUNNING;
             stage_started = current_time;
         }
-    } else if (my_state == RUNNING) {
+    } else if (my_state == RUNNING || my_state == WOUND_UP) {
         if (sin_pitch < FALL_UPPER_BOUND && sin_pitch > FALL_LOWER_BOUND &&
             sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND) {
             // Perform PID update
@@ -465,7 +466,18 @@ void loop() {
                                &pid_settings_arr[ANGLE],
                 &angle_pid_state);
 
-            set_motors(motor_speed + steering_bias, motor_speed - steering_bias);
+            if (my_state == WOUND_UP) {
+                set_motors(0, 0);
+            } else {
+                set_motors(motor_speed + steering_bias,
+                    motor_speed - steering_bias);
+            }
+
+            if (motor_speed != Q16_ONE && motor_speed != -Q16_ONE) {
+                last_wind_up = current_time;
+            } else if (current_time - last_wind_up > WINDUP_TIMEOUT) {
+                my_state = WOUND_UP;
+            }
 
             // Estimate travel speed by exponential smoothing
             travel_speed = q16_exponential_smooth(travel_speed, motor_speed,

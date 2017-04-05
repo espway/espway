@@ -34,6 +34,8 @@
 #define GYRO_Y_OFFSET -89
 #define GYRO_Z_OFFSET 14
 
+#define WINDUP_TIMEOUT 500
+
 // Undervoltage cutoff check
 #define BATTERY_THRESHOLD 7.4
 #define BATTERY_CALIBRATION_FACTOR 102.4
