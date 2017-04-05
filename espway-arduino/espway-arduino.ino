@@ -477,6 +477,7 @@ void loop() {
                 last_wind_up = current_time;
             } else if (current_time - last_wind_up > WINDUP_TIMEOUT) {
                 my_state = WOUND_UP;
+                set_both_eyes(BLUE);
             }
 
             // Estimate travel speed by exponential smoothing
