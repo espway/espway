@@ -42,7 +42,7 @@ bool read_flash_config(T &config, uint32_t version) {
 }
 
 template<typename T>
-bool write_flash_config(T &config, uint32_t version) {
+bool write_flash_config(const T &config, uint32_t version) {
     EEPROM.put<uint32_t>(0, version);
     EEPROM.put<T>(sizeof(uint32_t), config);
     return EEPROM.commit();
