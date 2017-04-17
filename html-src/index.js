@@ -30,6 +30,15 @@ window.addEventListener('load', () => {
     let hasDeviceOrientation = false
     let tiltControl = false
 
+    let touchById = (touches, id) => {
+        for (let touch of touches) {
+            if (touch.identifier === id) {
+                return touch
+            }
+        }
+        return null
+    }
+
     ws.addEventListener('message', e => {
         let dview = new DataView(e.data)
         let command = dview.getUint8(0)
@@ -65,13 +74,13 @@ window.addEventListener('load', () => {
 
     window.addEventListener('touchend', e => {
         if (hasCurrentTouch &&
-            e.changedTouches.item(currentTouchId) !== null) {
+            touchById(e.changedTouches, currentTouchId) !== null) {
             hasCurrentTouch = false
         }
     })
 
     window.addEventListener('touchmove', e => {
-        let item = e.changedTouches.item(currentTouchId)
+        let item = touchById(e.changedTouches, currentTouchId)
         if (hasCurrentTouch && item !== null) {
             pageX = item.pageX
             pageY = item.pageY
