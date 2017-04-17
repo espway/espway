@@ -76,7 +76,6 @@ window.addEventListener('load', () => {
             pageX = item.pageX
             pageY = item.pageY
         }
-        e.preventDefault()
     })
 
     window.addEventListener('deviceorientation', e => {

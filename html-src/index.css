@@ -10,6 +10,10 @@ body, button {
     font-family: monospace;
 }
 
+html, body, #joystick {
+    touch-action: none;
+}
+
 #joystick {
     margin: 0 auto;
     width: 310px;
