@@ -31,9 +31,9 @@ window.addEventListener('load', () => {
     let tiltControl = false
 
     let touchById = (touches, id) => {
-        for (let touch of touches) {
-            if (touch.identifier === id) {
-                return touch
+        for (let i = 0; i < touches.length; ++i) {
+            if (touches[i].identifier === id) {
+                return touches[i]
             }
         }
         return null
