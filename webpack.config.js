@@ -39,7 +39,7 @@ module.exports = {
     },
 
     devServer: {
-        contentBase: path.resolve(__dirname, 'html')
+        contentBase: path.resolve(__dirname, 'espway-arduino/data')
     }
 };
 
