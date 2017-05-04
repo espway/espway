@@ -466,6 +466,11 @@ void loop() {
                                &pid_settings_arr[ANGLE],
                 &angle_pid_state);
 
+            if (motor_speed < FLT_TO_Q16(MOTOR_DEADBAND) &&
+                motor_speed > -FLT_TO_Q16(MOTOR_DEADBAND)) {
+                motor_speed = 0;
+            }
+
             if (my_state == WOUND_UP) {
                 set_motors(0, 0);
             } else {

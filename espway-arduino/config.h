@@ -12,6 +12,8 @@
 #define VEL_KI 0.5
 #define VEL_KD 0.002
 
+#define MOTOR_DEADBAND 0.0
+
 #define STEERING_FACTOR 0.13
 #define SPEED_CONTROL_FACTOR 0.67
 
