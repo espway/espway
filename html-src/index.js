@@ -4,7 +4,7 @@ window.addEventListener('load', () => {
     'use strict'
 
     let byId = id => document.getElementById(id)
-    let ws = new WebSocket('ws://192.168.4.1/ws')
+    let ws = new WebSocket('ws://' + window.location.host + '/ws')
     ws.binaryType = 'arraybuffer'
 
     let tiltBtn = byId('tiltBtn')

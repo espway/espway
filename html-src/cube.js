@@ -7,7 +7,7 @@ import './cube.css'
     let cube = byId('cube')
     let scale = 1 / 32768.0
     let gTransform = ''
-    let ws = new WebSocket('ws://192.168.4.1/ws')
+    let ws = new WebSocket('ws://' + window.location.host + '/ws')
     ws.binaryType = 'arraybuffer'
     let sendBytes = bytes => ws.send((new Uint8Array(bytes)).buffer)
     ws.addEventListener('message', update)
