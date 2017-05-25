@@ -54,19 +54,9 @@ After you've cloned this repo, run `npm install` in the root folder to install t
 * `npm run serve` start a web server which serves the static HTML files in the `html` directory. It also watches for changes in the source files in `html-src` and automatically rebuilds and reloads them. Use this while hacking on the frontend.
 * `npm run build` produces a production build of the frontend JS/CSS bundles. Use this before uploading your work to the ESP8266.
 
-If the frontend on the ESP is not updated for some reason when flashing, please run `make clean` to ensure the flash filesystem gets rebuilt.
+## Acknowledgements
 
-## Dependencies
-The project utilizes some third-party libraries, in their respective folders:
-
-* [libesphttpd](https://github.com/Spritetm/libesphttpd) by Jeroen Domburg (Spritetm) under "THE BEER-WARE LICENSE"
-* [ESP8266_new_pwm](https://github.com/StefanBruens/ESP8266_new_pwm) by StefanBruens under GPLv2-or-later
-* [esp8266ws2812i2s](https://github.com/cnlohr/esp8266ws2812i2s) by Charles Lohr, under the Espressif MIT License, permitting use on ESP8266 systems only
-* [brzo_i2c](https://github.com/pasko-zh/brzo_i2c), a fast assembly I2C master implementation by Pascal Kurtansky, under GLPv3
-
-Kudos to all the above developers. Without these libraries this project wouldn't exist in such quality. The libraries are intentionally included in this repo because I had to make some minor adjustments to be able to build them under the NONOS SDK and strict `-Wall -Werror` compile flags.
-
-[Riot.js](http://riotjs.com/) is used on the HTML+JS frontend for facilitating some UI components. Other compile-time JavaScript dependencies are listed in `package.json`.
+TODO
 
 ## License
 The project is licensed under GPLv3.
