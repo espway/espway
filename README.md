@@ -20,7 +20,7 @@ Steps needed to build:
 
 1. Open the file `espway-arduino.ino` in the Arduino IDE.
 2. Choose your board from the list in *Tools -> Board*. If you have a choice between 1M
-   and 3M SPIFFS size, I recommend the 1M to shorten the upload time.
+   and 3M SPIFFS size in *Tools -> Board Size*, I recommend the 1M to shorten the upload time.
 3. *Sketch -> Upload* to upload the sketch.
 4. *Tools -> ESP8266* Sketch Data Upload to upload the HTML UI.
 
