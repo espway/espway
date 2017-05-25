@@ -48,36 +48,49 @@ window.addEventListener('load', () => {
         }
     })
 
-    window.addEventListener('mousemove', e => {
-        if (mouseIsDown) {
-            pageX = e.pageX
-            pageY = e.pageY
-        }
-    })
+    let optionsOrUseCapture = true
+    try {
+        let options = Object.defineProperty({}, "passive", {
+            get: function() {
+                optionsOrUseCapture = {
+                    capture: true,
+                    passive: false
+                }
+            }
+        });
+        window.addEventListener("test", null, options)
+    } catch (err) {}
 
     myCanvas.addEventListener('mousedown', e => {
         mouseIsDown = true
         pageX = e.pageX
         pageY = e.pageY
-    })
+    }, optionsOrUseCapture)
+
+    window.addEventListener('mousemove', e => {
+        if (mouseIsDown) {
+            pageX = e.pageX
+            pageY = e.pageY
+        }
+    }, optionsOrUseCapture)
 
     window.addEventListener('mouseup', e => {
         mouseIsDown = false
-    })
+    }, optionsOrUseCapture)
 
     myCanvas.addEventListener('touchstart', e => {
         currentTouchId = e.changedTouches[0].identifier
         pageX = e.changedTouches[0].pageX
         pageY = e.changedTouches[0].pageY
         hasCurrentTouch = true
-    })
+    }, optionsOrUseCapture)
 
     window.addEventListener('touchend', e => {
         if (hasCurrentTouch &&
             touchById(e.changedTouches, currentTouchId) !== null) {
             hasCurrentTouch = false
         }
-    })
+    }, optionsOrUseCapture)
 
     window.addEventListener('touchmove', e => {
         let item = touchById(e.changedTouches, currentTouchId)
@@ -85,7 +98,8 @@ window.addEventListener('load', () => {
             pageX = item.pageX
             pageY = item.pageY
         }
-    })
+        e.preventDefault()
+    }, optionsOrUseCapture)
 
     window.addEventListener('deviceorientation', e => {
         if (e.beta !== null && e.gamma !== null) {
