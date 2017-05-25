@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <ESPAsyncWebServer.h>
 #include <brzo_i2c.h>
 #include <ArduinoOTA.h>
+#include <DNSServer.h>
 
 #include "flash_config.h"
 #include "motors.h"
@@ -132,8 +133,13 @@ bool load_default_config = false;
 
 espway_config my_config;
 
+IPAddress apIP(192, 168, 4, 1);
+
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
+
+const uint8_t DNS_PORT = 53;
+DNSServer dnsServer;
 
 void pretty_print_config() {
     Serial.printf_P(PSTR(
@@ -538,14 +544,14 @@ void loop() {
         load_default_config = false;
     }
 
+    dnsServer.processNextRequest();
     ArduinoOTA.handle();
 }
 
 void wifi_init() {
     WiFi.mode(WIFI_AP);
     WiFi.softAPConfig(
-        IPAddress(192, 168, 4, 1),   // local IP
-        IPAddress(192, 168, 4, 1),   // gateway
+        apIP, apIP,
         IPAddress(255, 255, 255, 0)  // mask
     );
     WiFi.softAP(WIFI_SSID, "", WIFI_CHANNEL, 0, 1);
@@ -591,9 +597,12 @@ void setup() {
     eyes_init();
     set_both_eyes(mpu_online ? YELLOW : RED);
 
+    SPIFFS.begin();
+
     wifi_init();
 
-    SPIFFS.begin();
+    dnsServer.start(DNS_PORT, "*", apIP);
+
     ws.onEvent(websocket_recv_cb);
     server.addHandler(&ws);
     server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
