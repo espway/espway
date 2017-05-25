@@ -17,8 +17,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <brzo_i2c.h>
-
+#include "brzo_i2c/brzo_i2c.h"
 #include "mpu6050.h"
 
 static void mpu_write_register(const uint8_t addr,

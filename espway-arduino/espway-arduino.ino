@@ -18,18 +18,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <ESP8266WiFi.h>
 #include <ESPAsyncWebServer.h>
-#include <brzo_i2c.h>
 #include <ArduinoOTA.h>
 #include <DNSServer.h>
 
-#include "flash_config.h"
-#include "motors.h"
-#include "eyes.h"
+#include "src/flash_config.h"
+#include "src/motors.h"
+#include "src/eyes.h"
 
 extern "C" {
-#include "mpu6050.h"
-#include "imu.h"
-#include "pid.h"
+#include "src/brzo_i2c/brzo_i2c.h"
+#include "src/mpu6050.h"
+#include "src/imu.h"
+#include "src/pid.h"
 }
 
 #include "config.h"
