@@ -1,21 +1,29 @@
 # ESPway
-A segway-like balancing two-wheel robot built on ESP8266. It is controlled over WiFi via a HTML/JS GUI and a WebSocket. This is a work in progress. The firmware is meant to run on a WEMOS D1 mini or a similar board with 4 megabytes of flash.
+A segway-like balancing two-wheel robot built on ESP8266. It is controlled over WiFi via a HTML/JS GUI and a WebSocket. This is a work in progress. The firmware is meant to run on a WEMOS D1 mini or a similar board.
 
 ## Building
-This project is meant to be built against the ESP8266 NONOS SDK V2.0.0 20160810. You can use the [`esp-open-sdk` Makefile](https://github.com/pfalcon/esp-open-sdk) to setup the SDK and compiler toolchain. A Unix-based platform is recommended for building.
+The firmware is meant to be built with Arduino IDE using the ESP8266
+environment. Things you need to install:
 
-If this is your first time flashing this code to the WEMOS D1 mini, run
-```
-make blankflash
-```
-to upload initial parameters required by the firmware.
+* [Arduino IDE](https://www.arduino.cc/en/Main/Software)
+* [ESP8266 core for Arduino](https://github.com/esp8266/arduino). As of writing
+  this, I'm using version
+* [arduino-esp8266fs-plugin](https://github.com/esp8266/arduino-esp8266fs-plugin)
+  [2.4.0-rc1](https://github.com/esp8266/Arduino/releases/tag/2.4.0-rc1).
+* [NeoPixelBus](https://github.com/Makuna/NeoPixelBus) library
+  https://github.com/Makuna/NeoPixelBus/commit/081866e4d0b4a47d5c4d25cf097cfe99a29b061b)
+* [ESPAsyncTCP](https://github.com/me-no-dev/ESPAsyncTCP) library
+* [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer) library
 
-Then you can build and flash the firmware by running
-```
-make clean && make && make flash
-```
-with the WEMOS D1 mini connected. This will upload both the firmware and the
-filesystem containing the HTML UI.
+Since the latter two libraries are somewhat critical to make the robot tick and no stable releases exist, I'm inclined to add them as submodules locally in the repo.
+
+Steps needed to build:
+
+1. Open the file `espway-arduino.ino` in the Arduino IDE.
+2. Choose your board from the list in *Tools -> Board*. If you have a choice between 1M
+   and 3M SPIFFS size, I recommend the 1M to shorten the upload time.
+3. *Sketch -> Upload* to upload the sketch.
+4. *Tools -> ESP8266* Sketch Data Upload to upload the HTML UI.
 
 ## Supported browsers
 Please use the latest Firefox or Chrome if possible. The HTML/JS UI uses some
@@ -60,13 +68,6 @@ The project utilizes some third-party libraries, in their respective folders:
 Kudos to all the above developers. Without these libraries this project wouldn't exist in such quality. The libraries are intentionally included in this repo because I had to make some minor adjustments to be able to build them under the NONOS SDK and strict `-Wall -Werror` compile flags.
 
 [Riot.js](http://riotjs.com/) is used on the HTML+JS frontend for facilitating some UI components. Other compile-time JavaScript dependencies are listed in `package.json`.
-
-## TODO
-Some items I wish to implement soon:
-
-* Gyro calibration. Calibration values are already stored in the flash, just need to implement a calibration routine
-* Improve frontend usability (mobile browser ergonomics)
-* Make the frontend a single-page application
 
 ## License
 The project is licensed under GPLv3.
