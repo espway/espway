@@ -11,7 +11,6 @@ environment. Things you need to install:
 * [arduino-esp8266fs-plugin](https://github.com/esp8266/arduino-esp8266fs-plugin)
   [2.4.0-rc1](https://github.com/esp8266/Arduino/releases/tag/2.4.0-rc1).
 * [NeoPixelBus](https://github.com/Makuna/NeoPixelBus) library
-  https://github.com/Makuna/NeoPixelBus/commit/081866e4d0b4a47d5c4d25cf097cfe99a29b061b)
 * [ESPAsyncTCP](https://github.com/me-no-dev/ESPAsyncTCP) library
 * [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer) library
 
