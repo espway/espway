@@ -6,7 +6,8 @@ The firmware is meant to be built with Arduino IDE using the ESP8266
 environment. Things you need to install:
 
 * [Arduino IDE](https://www.arduino.cc/en/Main/Software)
-* [ESP8266 core for Arduino](https://github.com/esp8266/arduino)
+* [ESP8266 core for Arduino](https://github.com/esp8266/arduino), as of writing
+  I'm using version
   [2.4.0-rc1](https://github.com/esp8266/Arduino/releases/tag/2.4.0-rc1)
 * [arduino-esp8266fs-plugin](https://github.com/esp8266/arduino-esp8266fs-plugin)
 * [NeoPixelBus](https://github.com/Makuna/NeoPixelBus) library
