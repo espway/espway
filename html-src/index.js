@@ -114,10 +114,8 @@ window.addEventListener('load', () => {
     })
 
     function updateTiltBtnText() {
-        tiltBtn.innerText = tiltControl ?
-            '☑ Tilt control' : '☐ Tilt control'
-        tiltBtn.style.backgroundColor = tiltControl ?
-            '#0bf' : '#ddd'
+        tiltBtn.innerText = tiltControl ? '☑ Tilt control' : '☐ Tilt control'
+        tiltBtn.style.backgroundColor = tiltControl ? '#0bf' : '#ddd'
     }
 
     tiltBtn.addEventListener('click', () => {
