@@ -1,0 +1,81 @@
+body, html {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: white;
+    color: #334;
+    margin: 0 auto;
+}
+
+body, button, label {
+    font-family: monospace;
+}
+
+button, label {
+    color: white;
+    font-weight: bold;
+}
+
+button {
+    border-radius: 0.5em;
+    border-style: none;
+    padding: 0.5em;
+    background-color: #0bf;
+    height: 2.5em;
+    border: none;
+}
+
+input[type='radio'] {
+    display: none;
+}
+
+input[type='radio'] + label {
+    color: white;
+    background-color: #0bf;
+    border: 1px #0bf solid;
+}
+
+input[type='radio']:checked + label {
+    color: #0bf;
+    background-color: white;
+}
+
+label.radio {
+    margin: 0;
+    padding: 0.5em 0;
+    width: 50%;
+    display: inline-block;
+    text-align: center;
+}
+
+label.radio-right {
+    border-radius: 0 0.5em 0.5em 0;
+}
+
+label.radio-left {
+    border-radius: 0.5em 0 0 0.5em;
+}
+
+.radio-container {
+    display: flex;
+    padding-bottom: 1em;
+}
+
+button:disabled {
+    background-color: #ddd;
+    border: none;
+}
+
+.commandBtn {
+    width: 100%;
+    margin-top: 1em;
+}
+
+.mainContainer {
+    margin: 0 auto;
+    padding: 1em;
+    width: 320px;
+}
+

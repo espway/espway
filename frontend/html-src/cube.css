@@ -1,0 +1,70 @@
+html {
+    font-size: 32px;
+}
+
+body {
+    font-family: sans-serif;
+    text-align: center;
+    margin: 0 auto;
+}
+
+button {
+    font-size: 2rem;
+    width: 4rem;
+    height: 3rem;
+}
+
+#cube {
+    transform-style: preserve-3d;
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    margin: 0;
+}
+
+.square {
+    width: 200px;
+    height: 200px;
+    position: absolute;
+    margin: 0 auto;
+}
+
+#square1A, #square1B {
+    background-color: blue;
+}
+
+#square2A, #square2B {
+    background-color: red;
+}
+
+#square3A, #square3B {
+    background-color: green;
+}
+
+#square1A {
+    transform: translate3d(0, 0, 100px);
+}
+#square1B {
+    transform: translate3d(0, 0, -100px);
+}
+
+#square2A {
+    transform: rotateY(90deg) translate3d(0, 0, -100px);
+}
+#square2B {
+    transform: rotateY(90deg) translate3d(0, 0, 100px);
+}
+
+#square3A {
+    transform: rotateX(90deg) translate3d(0, 0, -100px);
+}
+#square3B {
+    transform: rotateX(90deg) translate3d(0, 0, 100px);
+}
+
+#container {
+    margin: 100px auto;
+    width: 200px;
+    height: 200px;
+}
+

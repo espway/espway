@@ -1,0 +1,52 @@
+slider .inner-container input {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+slider .inner-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5em;
+}
+
+slider .bound {
+    width: 5em;
+}
+
+slider .right {
+    text-align: right;
+}
+
+slider button {
+    border-radius: 0.5em;
+    border-style: none;
+    padding: 0.5em;
+    background-color: #0bf;
+    color: white;
+    font-weight: bold;
+    height: 2.5em;
+    border: none;
+}
+
+slider button:disabled {
+    background-color: #ddd;
+    border: none;
+}
+
+slider {
+    display: block;
+    padding-bottom: 1rem;
+    padding-top: 0.5rem;
+}
+
+slider:not(:last-child) {
+    border-bottom: #ddd 1px solid;
+}
+
+slider .bold {
+    font-weight: bold;
+}
+
