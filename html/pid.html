@@ -1,0 +1,34 @@
+<!doctype html>
+
+<html>
+    <head>
+        <meta charset='utf-8' />
+        <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no' />
+
+        <title>ESPway</title>
+    </head>
+
+    <body>
+
+        <div class='mainContainer'>
+            <h3>ESPway PID tuning</h3>
+
+            <div class='radio-container'>
+                <input type='radio' name='pid-select' id='angle-pid' value='angle' checked />
+                <label class='radio radio-left' for='angle-pid'>Angle PID</label>
+                <input type='radio' name='pid-select' id='vel-pid' value='vel' />
+                <label class='radio radio-right' for='vel-pid'>Velocity PID</label>
+            </div>
+
+            <slider id='pslider' label='P'></slider>
+            <slider id='islider' label='I'></slider>
+            <slider id='dslider' label='D'></slider>
+
+            <button id='btnSaveConfig' class='commandBtn'>Save to flash</button>
+            <button id='btnLoadDefaults' class='commandBtn'>Load from flash</button>
+        </div>
+
+        <script src='pid.bundle.js'></script>
+    </body>
+</html>
+
