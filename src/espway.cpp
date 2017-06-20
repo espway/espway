@@ -1,15 +1,19 @@
+extern "C" {
 #include <string.h>
-
 #include <espressif/esp_common.h>
 #include <esp/uart.h>
 #include <dhcpserver.h>
+#include <FreeRTOS.h>
+#include <task.h>
+#include <httpd/httpd.h>
+}
 
 #define AP_SSID "ESPway"
 
 void wifi_setup(void) {
     sdk_wifi_set_opmode(SOFTAP_MODE);
     struct ip_info ap_ip;
-    IP4_ADDR(&ap_ip.ip, 192, 168, 0, 1);
+    IP4_ADDR(&ap_ip.ip, 192, 168, 4, 1);
     IP4_ADDR(&ap_ip.gw, 0, 0, 0, 0);
     IP4_ADDR(&ap_ip.netmask, 255, 255, 255, 0);
     sdk_wifi_set_ip_info(1, &ap_ip);
@@ -24,13 +28,23 @@ void wifi_setup(void) {
     sdk_wifi_softap_set_config(&ap_config);
 
     ip_addr_t first_client_ip;
-    IP4_ADDR(&first_client_ip, 192, 168, 0, 2);
+    IP4_ADDR(&first_client_ip, 192, 168, 4, 2);
     dhcpserver_start(&first_client_ip, 4);
+}
+
+void httpd_task(void *pvParameters)
+{
+    /* websocket_register_callbacks((tWsOpenHandler) websocket_open_cb, */
+    /*         (tWsHandler) websocket_cb); */
+    httpd_init();
+
+    for (;;);
 }
 
 extern "C" void user_init(void)
 {
     uart_set_baud(0, 115200);
     wifi_setup();
+    xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, 2, NULL);
 }
 

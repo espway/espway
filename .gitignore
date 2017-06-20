@@ -3,4 +3,5 @@ node_modules
 *.bak
 *.bck
 build
+firmware
 
