@@ -13,6 +13,9 @@ $(SRC_FOLDER)/fsdata.c: frontend
 	cd frontend; npm run build
 	perl scripts/makefsdata
 
+flash: all
+	$(MAKE) -C $(SRC_FOLDER) flash
+
 clean:
 	$(MAKE) -C $(SRC_FOLDER) clean
 	rm -f $(SRC_FOLDER)/fsdata.c
