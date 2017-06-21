@@ -6,7 +6,11 @@ extern "C" {
 #include <FreeRTOS.h>
 #include <task.h>
 #include <httpd/httpd.h>
+
+#include "i2c/i2c.h"
+#include "lib/mpu6050.h"
 }
+
 
 #define AP_SSID "ESPway"
 
@@ -41,10 +45,34 @@ void httpd_task(void *pvParameters)
     for (;;);
 }
 
+void loop() {
+    static uint32_t time_old = 0;
+    static uint32_t time_new = 0;
+
+    time_new = sdk_system_get_time();
+    uint32_t looptime = time_new - time_old;
+    time_old = time_new;
+
+    while ((mpu_read_int_status(MPU_ADDR) & MPU_DATA_RDY_INT) == 0);
+
+    static int16_t raw_data[6];
+    mpu_read_raw_data(MPU_ADDR, raw_data);
+
+    printf("%d, %d, %d, t = %u, dt = %u\n", raw_data[0], raw_data[1], raw_data[2], time_new, looptime);
+}
+
+void do_loop(void *pvParameters) {
+    for (;;) loop();
+}
+
 extern "C" void user_init(void)
 {
     uart_set_baud(0, 115200);
     wifi_setup();
+    i2c_init(5, 4);
+    mpu_init();
+
     xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, 2, NULL);
+    xTaskCreate(&do_loop, "Main loop", 256, NULL, 3, NULL);
 }
 

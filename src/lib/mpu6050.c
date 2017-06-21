@@ -17,21 +17,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "brzo_i2c/brzo_i2c.h"
+#include "i2c/i2c.h"
 #include "mpu6050.h"
 
 static void mpu_write_register(const uint8_t addr,
     const uint8_t reg, const uint8_t value, bool stop) {
-    uint8_t reg_value[] = { reg, value };
-    brzo_i2c_write(reg_value, 2, !stop);
+    i2c_slave_write(MPU_ADDR, &reg, &value, 1);
 }
 
 int mpu_read_registers(const uint8_t addr,
     uint8_t first_reg, const uint8_t len, uint8_t * const data) {
-    brzo_i2c_start_transaction(MPU_ADDR, MPU_BITRATE);
-    brzo_i2c_write(&first_reg, 1, true);
-    brzo_i2c_read(data, len, false);
-    return brzo_i2c_end_transaction();
+    return i2c_slave_read(MPU_ADDR, &first_reg, data, len);
 }
 
 int mpu_read_int_status(const uint8_t addr) {
@@ -58,7 +54,6 @@ int mpu_read_raw_data(const uint8_t addr,
 }
 
 bool mpu_init(void) {
-    brzo_i2c_start_transaction(MPU_ADDR, MPU_BITRATE);
     // Wake up
     mpu_write_register(MPU_ADDR, MPU_PWR_MGMT_1,
         MPU_CLK_PLL_ZGYRO | MPU_TEMP_DIS, false);
@@ -74,20 +69,18 @@ bool mpu_init(void) {
     mpu_write_register(MPU_ADDR, MPU_INT_ENABLE, 1, false);
     // Check if the MPU still responds with its own address
     uint8_t addr = 0;
-    mpu_read_registers(MPU_ADDR, MPU_WHO_AM_I, 1, &addr);
-    return brzo_i2c_end_transaction() == 0 && addr == MPU_ADDR;
+    int ret = mpu_read_registers(MPU_ADDR, MPU_WHO_AM_I, 1, &addr);
+    return ret == 0 && addr == MPU_ADDR;
 }
 
 bool mpu_set_gyro_offsets(int16_t *offsets) {
-    brzo_i2c_start_transaction(MPU_ADDR, MPU_BITRATE);
     uint8_t data[] = {
-        MPU_XG_OFFS_USRH,
         offsets[0] >> 8, offsets[0] & 0xff,
         offsets[1] >> 8, offsets[1] & 0xff,
         offsets[2] >> 8, offsets[2] & 0xff
     };
-    brzo_i2c_write(data, 7, false);
-    return brzo_i2c_end_transaction();
+    uint8_t reg_addr = MPU_XG_OFFS_USRH;
+    return i2c_slave_write(MPU_ADDR, &reg_addr, data, 6) == 0;
 }
 
 void mpu_go_to_sleep(void) {
