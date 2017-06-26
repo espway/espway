@@ -66,6 +66,8 @@ bool mpu_init(void) {
     // Accel max sensitivity
     mpu_write_register(MPU_ADDR, MPU_ACCEL_CONFIG, 0, false);
     // Data ready interrupt on
+    mpu_write_register(MPU_ADDR, MPU_INT_PIN_CFG, 0x10, false);
+    // Data ready interrupt on
     mpu_write_register(MPU_ADDR, MPU_INT_ENABLE, 1, false);
     // Check if the MPU still responds with its own address
     uint8_t addr = 0;

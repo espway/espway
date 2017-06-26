@@ -1,11 +1,12 @@
 extern "C" {
 #include <string.h>
 #include <espressif/esp_common.h>
-#include <esp/uart.h>
 #include <dhcpserver.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include <httpd/httpd.h>
+#include <esp8266.h>
+#include <esp/uart.h>
 
 #include "i2c/i2c.h"
 #include "lib/mpu6050.h"
@@ -45,34 +46,45 @@ void httpd_task(void *pvParameters)
     for (;;);
 }
 
-void loop() {
-    static uint32_t time_old = 0;
-    static uint32_t time_new = 0;
+void do_loop(void *pvParameters) {
+    int16_t raw_data[6];
+    uint32_t time_old = 0;
+    uint32_t time_new = 0;
+    int n = 0;
 
-    time_new = sdk_system_get_time();
-    uint32_t looptime = time_new - time_old;
-    time_old = time_new;
+    for (;;) {
+        xTaskNotifyWait(0, 0, NULL, 1);
+        mpu_read_raw_data(MPU_ADDR, raw_data);
 
-    while ((mpu_read_int_status(MPU_ADDR) & MPU_DATA_RDY_INT) == 0);
-
-    static int16_t raw_data[6];
-    mpu_read_raw_data(MPU_ADDR, raw_data);
-
-    printf("%d, %d, %d, t = %u, dt = %u\n", raw_data[0], raw_data[1], raw_data[2], time_new, looptime);
+        n += 1;
+        if (n == 1024) {
+            n = 0;
+            time_new = sdk_system_get_time();
+            uint32_t looptime = time_new - time_old;
+            time_old = time_new;
+        }
+    }
 }
 
-void do_loop(void *pvParameters) {
-    for (;;) loop();
+TaskHandle_t xCalculationTask;
+
+void mpu_interrupt_handler(uint8_t gpio_num) {
+    BaseType_t xHigherPriorityTaskHasWoken = pdFALSE;
+    xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
+    portEND_SWITCHING_ISR(xHigherPriorityTaskHasWoken);
 }
 
 extern "C" void user_init(void)
 {
     uart_set_baud(0, 115200);
     wifi_setup();
-    i2c_init(5, 4);
+    i2c_init(5, 0);
     mpu_init();
 
     xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, 2, NULL);
-    xTaskCreate(&do_loop, "Main loop", 256, NULL, 3, NULL);
+    xTaskCreate(&do_loop, "Main loop", 256, NULL, 3, &xCalculationTask);
+
+    gpio_enable(4, GPIO_INPUT);
+    gpio_set_interrupt(4, GPIO_INTTYPE_EDGE_POS, mpu_interrupt_handler);
 }
 
