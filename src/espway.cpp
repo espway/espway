@@ -106,6 +106,9 @@ const espway_config DEFAULT_CONFIG = {
     .gyro_offsets = { GYRO_X_OFFSET, GYRO_Y_OFFSET, GYRO_Z_OFFSET }
 };
 
+TaskHandle_t xCalculationTask;
+TaskHandle_t xBatteryTask;
+
 madgwickparams imuparams;
 pidstate vel_pid_state;
 pidstate angle_pid_state;
@@ -562,10 +565,57 @@ void wifi_setup(void) {
     dhcpserver_start(&first_client_ip, 4);
 }
 
+void battery_task(void *pvParameter)
+{
+    struct tcp_pcb *pcb = NULL;
+    q16 battery_value = 0;
+    for (;;) {
+        battery_value = q16_exponential_smooth(battery_value, sdk_system_adc_read(),
+            FLT_TO_Q16(0.25f));
+
+        if (ENABLE_BATTERY_CUTOFF && battery_value < (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR)) {
+            set_both_eyes(BLACK);
+            mpu_go_to_sleep();
+            set_motors(0, 0);
+            sdk_system_deep_sleep(UINT32_MAX);
+            break;
+        }
+
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+
+        uint32_t notification_value = 0;
+        if (xTaskNotifyWait(0, 0, &notification_value, 0)) {
+            pcb = (struct tcp_pcb *)notification_value;
+        }
+
+        if (pcb != NULL && pcb->state == ESTABLISHED) {
+            uint8_t buf[3];
+            buf[0] = BATTERY;
+            uint16_t *payload = (uint16_t *)&buf[1];
+            payload[0] = q16_mul(battery_value, BATTERY_COEFFICIENT);
+            websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
+        }
+    }
+
+    vTaskDelete(NULL);
+}
+
+void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, u16_t data_len, uint8_t mode)
+{
+}
+
+void websocket_open_cb(struct tcp_pcb *pcb, const char *uri)
+{
+    printf("WS URI: %s\n", uri);
+    if (!strcmp(uri, "/ws")) {
+        xTaskNotify(xBatteryTask, (uint32_t)pcb, eSetValueWithOverwrite);
+    }
+}
+
 void httpd_task(void *pvParameters)
 {
-    /* websocket_register_callbacks((tWsOpenHandler) websocket_open_cb, */
-    /*         (tWsHandler) websocket_cb); */
+    websocket_register_callbacks((tWsOpenHandler) websocket_open_cb,
+        (tWsHandler) websocket_cb);
     httpd_init();
 
     for (;;);
@@ -675,8 +725,6 @@ void do_loop(void *pvParameters) {
     }
 }
 
-TaskHandle_t xCalculationTask;
-
 void mpu_interrupt_handler(uint8_t gpio_num) {
     BaseType_t xHigherPriorityTaskHasWoken = pdFALSE;
     xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
@@ -710,6 +758,7 @@ extern "C" void user_init(void)
 
     // DNS server
 
+    xTaskCreate(&battery_task, "Battery task", 128, NULL, 2, &xBatteryTask);
     xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, 2, NULL);
     xTaskCreate(&do_loop, "Main loop", 256, NULL, 3, &xCalculationTask);
 
