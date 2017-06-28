@@ -555,6 +555,7 @@ void do_loop(void *pvParameters) {
                 raw_data[0], raw_data[1], raw_data[2],
                 raw_data[3], raw_data[4], raw_data[5]);
         } else if (LOGMODE == LOG_PITCH) {
+            printf("%d\n", sin_pitch);
         }
     }
 }
