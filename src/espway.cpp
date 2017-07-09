@@ -9,6 +9,7 @@ extern "C" {
 #include <esp8266.h>
 #include <esp/uart.h>
 #include <sysparam.h>
+#include <lwip/tcpip.h>
 
 #include "i2c/i2c.h"
 #include "lib/mpu6050.h"
@@ -295,12 +296,20 @@ void send_quaternion(struct tcp_pcb *pcb, const quaternion_fix * const quat) {
     websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-void send_battery_reading(struct tcp_pcb *pcb, uint16_t battery_value) {
+typedef struct {
+    struct tcp_pcb *pcb;
+    uint16_t battery_value;
+} battery_callback_params_t;
+
+void battery_callback(void *ctx) {
+    battery_callback_params_t *params = (battery_callback_params_t *)ctx;
+
     uint8_t buf[3];
     buf[0] = BATTERY;
     uint16_t *payload = (uint16_t *)&buf[1];
-    payload[0] = q16_mul(battery_value, BATTERY_COEFFICIENT);
-    websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
+    payload[0] = q16_mul(params->battery_value, BATTERY_COEFFICIENT);
+
+    websocket_write(params->pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
 /*
@@ -329,10 +338,10 @@ void loop() {
 void wifi_setup(void) {
     sdk_wifi_set_opmode(SOFTAP_MODE);
     struct ip_info ap_ip;
-    IP4_ADDR(&ap_ip.ip, 192, 168, 4, 1);
-    IP4_ADDR(&ap_ip.gw, 0, 0, 0, 0);
+    IP4_ADDR(&ap_ip.ip, 10, 0, 0, 2);
+    IP4_ADDR(&ap_ip.gw, 10, 0, 0, 1);
     IP4_ADDR(&ap_ip.netmask, 255, 255, 255, 0);
-    sdk_wifi_set_ip_info(1, &ap_ip);
+    sdk_wifi_set_ip_info(SOFTAP_IF, &ap_ip);
 
     struct sdk_softap_config ap_config = {};
     strcpy((char *)ap_config.ssid, AP_SSID);
@@ -344,7 +353,7 @@ void wifi_setup(void) {
     sdk_wifi_softap_set_config(&ap_config);
 
     ip_addr_t first_client_ip;
-    IP4_ADDR(&first_client_ip, 192, 168, 4, 2);
+    IP4_ADDR(&first_client_ip, 10, 0, 0, 3);
     dhcpserver_start(&first_client_ip, 4);
 }
 
@@ -372,7 +381,11 @@ void battery_task(void *pvParameter)
         }
 
         if (pcb != NULL && pcb->state == ESTABLISHED) {
-            send_battery_reading(pcb, battery_value);
+            battery_callback_params_t params = {
+                pcb,
+                (uint16_t)battery_value
+            };
+            tcpip_callback(battery_callback, (void *)&params);
         }
     }
 
@@ -402,7 +415,7 @@ void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, u16_t data_len, uint8_t mo
             break;
 
         case REQ_QUATERNION:
-            if (data_len != 1) break;
+            if (data_len != 0) break;
             send_quaternion(pcb, &quat);
             break;
 
@@ -477,12 +490,12 @@ void do_loop(void *pvParameters) {
         mpu_read_raw_data(MPU_ADDR, raw_data);
 
         // Update orientation estimate
-        POLL_SEMAPHORE("loop_quat", quat_mutex);
+        /* POLL_SEMAPHORE("loop_quat", quat_mutex); */
         madgwick_ahrs_update_imu(&imuparams, &raw_data[0], &raw_data[3], &quat);
         // Calculate sine of pitch angle from quaternion
         q16 sin_pitch = -gravity_z(&quat);
         q16 sin_roll = gravity_y(&quat);
-        GIVE_SEMAPHORE("loop_quat", quat_mutex);
+        /* GIVE_SEMAPHORE("loop_quat", quat_mutex); */
 
         // Exponential smoothing of target speed
         smoothed_target_speed = q16_exponential_smooth(smoothed_target_speed,
