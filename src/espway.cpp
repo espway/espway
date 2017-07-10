@@ -214,11 +214,11 @@ bool do_save_config(struct tcp_pcb *pcb) {
 
     POLL_SEMAPHORE("save_config", pid_mutex);
     success = sysparam_set_data("ANGLE_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE],
-        sizeof(pid_coeffs), true);
-    if (success) success = sysparam_set_data("ANGLE_HIGH_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE_HIGH], sizeof(pid_coeffs), true);
-    if (success) success = sysparam_set_data("VEL_PID", (uint8_t *)&my_config.pid_coeffs_arr[VEL], sizeof(pid_coeffs), true);
+        sizeof(pid_coeffs), true) == SYSPARAM_OK;
+    if (success) success = sysparam_set_data("ANGLE_HIGH_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE_HIGH], sizeof(pid_coeffs), true) == SYSPARAM_OK;
+    if (success) success = sysparam_set_data("VEL_PID", (uint8_t *)&my_config.pid_coeffs_arr[VEL], sizeof(pid_coeffs), true) == SYSPARAM_OK;
     GIVE_SEMAPHORE("save_config", pid_mutex);
-    if (success) success = sysparam_set_data("GYRO_OFFSETS", (uint8_t *)&my_config.gyro_offsets, 3 * sizeof(int16_t), true);
+    if (success) success = sysparam_set_data("GYRO_OFFSETS", (uint8_t *)&my_config.gyro_offsets, 3 * sizeof(int16_t), true) == SYSPARAM_OK;
 
     if (success) {
         response = RES_SAVE_CONFIG_SUCCESS;
@@ -232,7 +232,8 @@ bool do_save_config(struct tcp_pcb *pcb) {
 bool clear_flash_config() {
     uint32_t base_addr, num_sectors;
     return sysparam_get_info(&base_addr, &num_sectors) == SYSPARAM_OK &&
-        sysparam_create_area(base_addr, num_sectors, true) == SYSPARAM_OK;
+        sysparam_create_area(base_addr, num_sectors, true) == SYSPARAM_OK &&
+        sysparam_init(base_addr, 0) == SYSPARAM_OK;
 }
 
 bool do_clear_config(struct tcp_pcb *pcb) {
@@ -287,13 +288,16 @@ void send_quaternion(struct tcp_pcb *pcb, const quaternion_fix * const quat) {
     uint8_t buf[9];
     buf[0] = RES_QUATERNION;
     int16_t *qdata = (int16_t *)&buf[1];
-    POLL_SEMAPHORE("send_quaternion", quat_mutex);
-    qdata[0] = quat->q0 / 2;
-    qdata[1] = quat->q1 / 2;
-    qdata[2] = quat->q2 / 2;
-    qdata[3] = quat->q3 / 2;
-    GIVE_SEMAPHORE("send_quaternion", quat_mutex);
-    websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
+    //POLL_SEMAPHORE("send_quaternion", quat_mutex);
+    if (xSemaphoreTake(quat_mutex, 1) == pdTRUE) {
+        qdata[0] = quat->q0 / 2;
+        qdata[1] = quat->q1 / 2;
+        qdata[2] = quat->q2 / 2;
+        qdata[3] = quat->q3 / 2;
+        xSemaphoreGive(quat_mutex);
+        websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
+    }
+    //GIVE_SEMAPHORE("send_quaternion", quat_mutex);
 }
 
 typedef struct {
@@ -490,12 +494,12 @@ void do_loop(void *pvParameters) {
         mpu_read_raw_data(MPU_ADDR, raw_data);
 
         // Update orientation estimate
-        /* POLL_SEMAPHORE("loop_quat", quat_mutex); */
+        POLL_SEMAPHORE("loop_quat", quat_mutex);
         madgwick_ahrs_update_imu(&imuparams, &raw_data[0], &raw_data[3], &quat);
         // Calculate sine of pitch angle from quaternion
         q16 sin_pitch = -gravity_z(&quat);
         q16 sin_roll = gravity_y(&quat);
-        /* GIVE_SEMAPHORE("loop_quat", quat_mutex); */
+        GIVE_SEMAPHORE("loop_quat", quat_mutex);
 
         // Exponential smoothing of target speed
         smoothed_target_speed = q16_exponential_smooth(smoothed_target_speed,
@@ -620,7 +624,8 @@ extern "C" void user_init(void)
 
     xTaskCreate(&battery_task, "Battery task", 256, NULL, 2, &xBatteryTask);
     xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, 2, NULL);
-    xTaskCreate(&do_loop, "Main loop", 256, NULL, 3, &xCalculationTask);
+    xTaskCreate(&do_loop, "Main loop", 256, NULL, TCPIP_THREAD_PRIO + 1,
+        &xCalculationTask);
 
     gpio_enable(4, GPIO_INPUT);
     gpio_set_interrupt(4, GPIO_INTTYPE_EDGE_POS, mpu_interrupt_handler);
