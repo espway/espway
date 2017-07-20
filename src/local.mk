@@ -8,5 +8,6 @@ WARNINGS_AS_ERRORS ?= 0
 EXTRA_COMPONENTS = extras/dhcpserver extras/httpd extras/mbedtls extras/i2c extras/i2s_dma extras/ws2812_i2s
 
 EXTRA_C_CXXFLAGS =-DLWIP_HTTPD_CGI=1
-# EXTRA_C_CXXFLAGS += -DLWIP_DEBUG=1 -DHTTPD_DEBUG=LWIP_DBG_ON
+EXTRA_C_CXXFLAGS += -DLWIP_DEBUG=1 -DHTTPD_DEBUG=LWIP_DBG_ON
+# FLAVOR = debug
 EXTRA_CXXFLAGS = -std=gnu++11
