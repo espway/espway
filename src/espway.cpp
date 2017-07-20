@@ -45,8 +45,6 @@ extern "C" {
 
 #define CONFIG_VERSION 2
 
-//#define POLL_SEMAPHORE(semaphore_handle) while (!xSemaphoreTake((semaphore_handle), 0))
-
 const color_t RED = { 180, 0, 0 };
 const color_t YELLOW = { 180, 180, 0 };
 const color_t GREEN = { 0, 180, 0 };
@@ -130,19 +128,8 @@ espway_config my_config;
 SemaphoreHandle_t quat_mutex;
 quaternion_fix quat = { Q16_ONE, 0, 0, 0 };
 
-void POLL_SEMAPHORE(const char *id, SemaphoreHandle_t xSem) {
-    /* printf("Polling %s, %d\n", id, xSem); */
-    while (!xSemaphoreTake(xSem, 0));
-    /* printf("Took %s\n", id); */
-}
-
-void GIVE_SEMAPHORE(const char *id, SemaphoreHandle_t xSem) {
-    xSemaphoreGive(xSem);
-    /* printf("Gave %s\n", id); */
-}
-
 void pretty_print_config() {
-    POLL_SEMAPHORE("pretty_print", pid_mutex);
+    xSemaphoreTake(pid_mutex, portMAX_DELAY);
     printf(
         "\n\nESPway current config:\n\n"
         "#define ANGLE_KP %d\n"
@@ -171,7 +158,7 @@ void pretty_print_config() {
         my_config.gyro_offsets[1],
         my_config.gyro_offsets[2]
     );
-    GIVE_SEMAPHORE("pretty_print", pid_mutex);
+    xSemaphoreGive(pid_mutex);
 }
 
 void load_hardcoded_config() {
@@ -179,7 +166,7 @@ void load_hardcoded_config() {
 }
 
 void load_stored_config() {
-    POLL_SEMAPHORE("load_stored", pid_mutex);
+    xSemaphoreTake(pid_mutex, portMAX_DELAY);
     load_hardcoded_config();
     sysparam_get_data_static("ANGLE_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE],
         sizeof(pid_coeffs), NULL, NULL);
@@ -189,11 +176,11 @@ void load_stored_config() {
         sizeof(pid_coeffs), NULL, NULL);
     sysparam_get_data_static("GYRO_OFFSETS", (uint8_t *)&my_config.gyro_offsets,
         3 * sizeof(int16_t), NULL, NULL);
-    GIVE_SEMAPHORE("load_stored", pid_mutex);
+    xSemaphoreGive(pid_mutex);
 }
 
 void apply_config_params() {
-    POLL_SEMAPHORE("apply_config", pid_mutex);
+    xSemaphoreTake(pid_mutex, portMAX_DELAY);
     pid_initialize(&my_config.pid_coeffs_arr[ANGLE],
         FLT_TO_Q16(SAMPLE_TIME),
         -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE]);
@@ -203,7 +190,7 @@ void apply_config_params() {
     pid_initialize(&my_config.pid_coeffs_arr[VEL],
         FLT_TO_Q16(SAMPLE_TIME), FALL_LOWER_BOUND, FALL_UPPER_BOUND, true,
         &pid_settings_arr[VEL]);
-    GIVE_SEMAPHORE("apply_config", pid_mutex);
+    xSemaphoreGive(pid_mutex);
 
     mpu_set_gyro_offsets(my_config.gyro_offsets);
 }
@@ -212,12 +199,12 @@ bool do_save_config(struct tcp_pcb *pcb) {
     uint8_t response;
     bool success = true;
 
-    POLL_SEMAPHORE("save_config", pid_mutex);
+    xSemaphoreTake(pid_mutex, portMAX_DELAY);
     success = sysparam_set_data("ANGLE_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE],
         sizeof(pid_coeffs), true) == SYSPARAM_OK;
     if (success) success = sysparam_set_data("ANGLE_HIGH_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE_HIGH], sizeof(pid_coeffs), true) == SYSPARAM_OK;
     if (success) success = sysparam_set_data("VEL_PID", (uint8_t *)&my_config.pid_coeffs_arr[VEL], sizeof(pid_coeffs), true) == SYSPARAM_OK;
-    GIVE_SEMAPHORE("save_config", pid_mutex);
+    xSemaphoreGive(pid_mutex);
     if (success) success = sysparam_set_data("GYRO_OFFSETS", (uint8_t *)&my_config.gyro_offsets, 3 * sizeof(int16_t), true) == SYSPARAM_OK;
 
     if (success) {
@@ -252,7 +239,7 @@ bool do_clear_config(struct tcp_pcb *pcb) {
 
 void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d) {
     if (idx > 2) return;
-    POLL_SEMAPHORE("update_pid", pid_mutex);
+    xSemaphoreTake(pid_mutex, portMAX_DELAY);
     pid_coeffs *p_coeffs = &my_config.pid_coeffs_arr[idx];
     p_coeffs->p = p;
     p_coeffs->i = i;
@@ -268,7 +255,7 @@ void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d) {
         p_coeffs->d = d;
         pid_update_params(p_coeffs, &pid_settings_arr[ANGLE_HIGH]);
     }
-    GIVE_SEMAPHORE("update_pid", pid_mutex);
+    xSemaphoreGive(pid_mutex);
 }
 
 void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx) {
@@ -276,11 +263,11 @@ void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx) {
     buf[0] = RES_PID_PARAMS;
     buf[1] = idx;
     int32_t *params = (int32_t *)(&buf[2]);
-    POLL_SEMAPHORE("send_pid", pid_mutex);
+    xSemaphoreTake(pid_mutex, portMAX_DELAY);
     params[0] = my_config.pid_coeffs_arr[idx].p;
     params[1] = my_config.pid_coeffs_arr[idx].i;
     params[2] = my_config.pid_coeffs_arr[idx].d;
-    GIVE_SEMAPHORE("send_pid", pid_mutex);
+    xSemaphoreGive(pid_mutex);
     websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
@@ -288,16 +275,13 @@ void send_quaternion(struct tcp_pcb *pcb, const quaternion_fix * const quat) {
     uint8_t buf[9];
     buf[0] = RES_QUATERNION;
     int16_t *qdata = (int16_t *)&buf[1];
-    //POLL_SEMAPHORE("send_quaternion", quat_mutex);
-    if (xSemaphoreTake(quat_mutex, 1) == pdTRUE) {
-        qdata[0] = quat->q0 / 2;
-        qdata[1] = quat->q1 / 2;
-        qdata[2] = quat->q2 / 2;
-        qdata[3] = quat->q3 / 2;
-        xSemaphoreGive(quat_mutex);
-        websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
-    }
-    //GIVE_SEMAPHORE("send_quaternion", quat_mutex);
+    xSemaphoreTake(quat_mutex, portMAX_DELAY);
+    qdata[0] = quat->q0 / 2;
+    qdata[1] = quat->q1 / 2;
+    qdata[2] = quat->q2 / 2;
+    qdata[3] = quat->q3 / 2;
+    xSemaphoreGive(quat_mutex);
+    websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
 typedef struct {
@@ -494,12 +478,12 @@ void do_loop(void *pvParameters) {
         mpu_read_raw_data(MPU_ADDR, raw_data);
 
         // Update orientation estimate
-        POLL_SEMAPHORE("loop_quat", quat_mutex);
+        xSemaphoreTake(quat_mutex, portMAX_DELAY);
         madgwick_ahrs_update_imu(&imuparams, &raw_data[0], &raw_data[3], &quat);
         // Calculate sine of pitch angle from quaternion
         q16 sin_pitch = -gravity_z(&quat);
         q16 sin_roll = gravity_y(&quat);
-        GIVE_SEMAPHORE("loop_quat", quat_mutex);
+        xSemaphoreGive(quat_mutex);
 
         // Exponential smoothing of target speed
         smoothed_target_speed = q16_exponential_smooth(smoothed_target_speed,
@@ -516,7 +500,7 @@ void do_loop(void *pvParameters) {
             if (sin_pitch < FALL_UPPER_BOUND && sin_pitch > FALL_LOWER_BOUND &&
                 sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND) {
                 // Perform PID update
-                POLL_SEMAPHORE("loop", pid_mutex);
+                xSemaphoreTake(pid_mutex, portMAX_DELAY);
                 q16 target_angle = pid_compute(travel_speed, smoothed_target_speed,
                     &pid_settings_arr[VEL], &vel_pid_state);
                 bool use_high_pid =
@@ -526,7 +510,7 @@ void do_loop(void *pvParameters) {
                     use_high_pid ? &pid_settings_arr[ANGLE_HIGH] :
                                    &pid_settings_arr[ANGLE],
                     &angle_pid_state);
-                GIVE_SEMAPHORE("loop", pid_mutex);
+                xSemaphoreGive(pid_mutex);
 
                 if (motor_speed < FLT_TO_Q16(MOTOR_DEADBAND) &&
                     motor_speed > -FLT_TO_Q16(MOTOR_DEADBAND)) {
