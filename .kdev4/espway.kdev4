@@ -1,0 +1,21 @@
+[Buildset]
+BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x01\x00\x00\x00\x0c\x00e\x00s\x00p\x00w\x00a\x00y)
+
+[CustomDefinesAndIncludes][ProjectPath0]
+Path=.
+parseAmbiguousAsCPP=true
+parserArguments=-ferror-limit=100 -fspell-checking -Wdocumentation -Wunused-parameter -Wunreachable-code -Wall -std=c++11
+parserArgumentsC=-ferror-limit=100 -fspell-checking -Wdocumentation -Wunused-parameter -Wunreachable-code -Wall -std=c99
+
+[CustomDefinesAndIncludes][ProjectPath0][Compiler]
+Name=Clang
+
+[CustomDefinesAndIncludes][ProjectPath0][Includes]
+1=esp-open-rtos/include/
+2=esp-open-rtos/FreeRTOS/Source/include/
+3=esp-open-rtos/lwip/include/
+4=esp-open-rtos/core/include/
+5=esp-open-rtos/lwip/lwip/src/include/
+
+[Project]
+VersionControlSupport=kdevgit
