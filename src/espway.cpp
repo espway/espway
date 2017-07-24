@@ -464,7 +464,7 @@ void httpd_task(void *pvParameters)
     for (;;);
 }
 
-void do_loop(void *pvParameters) {
+void main_loop(void *pvParameters) {
     int16_t raw_data[6];
     uint32_t time_old = 0;
     uint32_t current_time = 0;
@@ -610,7 +610,7 @@ extern "C" void user_init(void)
 
     xTaskCreate(&battery_task, "Battery task", 256, NULL, 2, &xBatteryTask);
     xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, 2, NULL);
-    xTaskCreate(&do_loop, "Main loop", 256, NULL, TCPIP_THREAD_PRIO + 1,
+    xTaskCreate(&main_loop, "Main loop", 256, NULL, TCPIP_THREAD_PRIO + 1,
         &xCalculationTask);
 
     gpio_enable(4, GPIO_INPUT);
