@@ -45,6 +45,9 @@ extern "C" {
 
 #define CONFIG_VERSION 2
 
+#define ORIENTATION_STABILIZE_DURATION_US ((ORIENTATION_STABILIZE_DURATION) * 1000)
+#define WINDUP_TIMEOUT_US ((WINDUP_TIMEOUT) * 1000)
+
 const color_t RED = { 180, 0, 0 };
 const color_t YELLOW = { 180, 180, 0 };
 const color_t GREEN = { 0, 180, 0 };
@@ -491,7 +494,7 @@ void do_loop(void *pvParameters) {
         current_time = sdk_system_get_time();
 
         if (my_state == STABILIZING_ORIENTATION) {
-            if (current_time - stage_started > ORIENTATION_STABILIZE_DURATION * 1024) {
+            if (current_time - stage_started > ORIENTATION_STABILIZE_DURATION_US) {
                 my_state = RUNNING;
                 stage_started = current_time;
             }
@@ -525,7 +528,7 @@ void do_loop(void *pvParameters) {
 
                 if (motor_speed != Q16_ONE && motor_speed != -Q16_ONE) {
                     last_wind_up = current_time;
-                } else if (current_time - last_wind_up > WINDUP_TIMEOUT * 1024) {
+                } else if (current_time - last_wind_up > WINDUP_TIMEOUT_US) {
                     my_state = WOUND_UP;
                     set_both_eyes(BLUE);
                 }
