@@ -48,3 +48,4 @@
 #define WIFI_SSID "ESPway"
 #define WIFI_CHANNEL 1
 
+#define PWM_PERIOD 1500

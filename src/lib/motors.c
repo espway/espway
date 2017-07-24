@@ -49,7 +49,7 @@ void set_motors(q16 left_speed, q16 right_speed) {
     pwm_start();
 }
 
-void motors_init(void) {
+void motors_init(int period) {
     // Motor direction pins
     gpio_enable(12, GPIO_OUTPUT);
     gpio_enable(15, GPIO_OUTPUT);
@@ -58,6 +58,6 @@ void motors_init(void) {
     // PWM init
     uint32_t duty[] = { 0, 0 };
     uint8_t pins[] = { 13, 14 };
-    pwm_init(4000, duty, 2, pins);
+    pwm_init(period, duty, 2, pins);
 }
 

@@ -249,7 +249,7 @@ void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d) {
     if (idx == ANGLE) {
         // If ANGLE PID coefficients are updated, automatically update the
         // high gain PID
-        pid_coeffs *p_coeffs = &my_config.pid_coeffs_arr[ANGLE_HIGH];
+        p_coeffs = &my_config.pid_coeffs_arr[ANGLE_HIGH];
         p_coeffs->p = q16_mul(FLT_TO_Q16(1.5f), p);
         p_coeffs->i = i;
         p_coeffs->d = d;
@@ -399,7 +399,6 @@ void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, u16_t data_len, uint8_t mo
             signed_data = (int8_t *)payload;
             steering_bias = (FLT_TO_Q16(STEERING_FACTOR) * signed_data[0]) / 128;
             target_speed = (FLT_TO_Q16(SPEED_CONTROL_FACTOR) * signed_data[1]) / 128;
-            printf("%d, %d\n", steering_bias, target_speed);
             break;
 
         case REQ_QUATERNION:
@@ -489,10 +488,10 @@ void do_loop(void *pvParameters) {
         smoothed_target_speed = q16_exponential_smooth(smoothed_target_speed,
             target_speed, FLT_TO_Q16(TARGET_SPEED_SMOOTHING));
 
-        current_time = sdk_system_get_time() / 1024;
+        current_time = sdk_system_get_time();
 
         if (my_state == STABILIZING_ORIENTATION) {
-            if (current_time - stage_started > ORIENTATION_STABILIZE_DURATION) {
+            if (current_time - stage_started > ORIENTATION_STABILIZE_DURATION * 1024) {
                 my_state = RUNNING;
                 stage_started = current_time;
             }
@@ -526,7 +525,7 @@ void do_loop(void *pvParameters) {
 
                 if (motor_speed != Q16_ONE && motor_speed != -Q16_ONE) {
                     last_wind_up = current_time;
-                } else if (current_time - last_wind_up > WINDUP_TIMEOUT) {
+                } else if (current_time - last_wind_up > WINDUP_TIMEOUT * 1024) {
                     my_state = WOUND_UP;
                     set_both_eyes(BLUE);
                 }
@@ -557,7 +556,7 @@ void do_loop(void *pvParameters) {
             if (n == 1024) {
                 n = 0;
                 uint32_t looptime = (current_time - time_old) / 1024;
-                printf("Looptime: %u\n", looptime);
+                printf("Looptime: %u us\n", looptime);
                 time_old = current_time;
             }
         } else if (LOGMODE == LOG_RAW) {
@@ -586,7 +585,7 @@ extern "C" void user_init(void)
     pid_mutex = xSemaphoreCreateMutex();
     quat_mutex = xSemaphoreCreateMutex();
 
-    motors_init();
+    motors_init(PWM_PERIOD);
 
     load_stored_config();
     apply_config_params();
