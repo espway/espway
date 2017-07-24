@@ -42,14 +42,11 @@
 #define PWM_MAX_PERIOD PWM_MAX_TICKS
 #endif
 
-#ifndef ICACHE_RAM_ATTR
-#define ICACHE_RAM_ATTR
-#endif
-
 #include "pwm.h"
 #include "esp/interrupts.h"
 #include "esp/gpio.h"
 #include "esp/timer.h"
+#include "espressif/esp8266/esp8266.h"
 
 // from SDK hw_timer.c
 #define TIMER1_DIVIDE_BY_16             0x0004
@@ -119,7 +116,7 @@ static void IRAM
 pwm_intr_handler(void)
 {
 	if ((pwm_state.current_set[pwm_state.current_phase].off_mask == 0) &&
-	    (pwm_state.current_set[pwm_state.current_phase].on_mask == 0)) {
+		(pwm_state.current_set[pwm_state.current_phase].on_mask == 0)) {
 		pwm_state.current_set = pwm_state.next_set;
 		pwm_state.current_phase = 0;
 	}
@@ -139,7 +136,7 @@ pwm_intr_handler(void)
 			if (ticks >= 16) {
 				// constant interrupt overhead
 				ticks -= 9;
-				timer->frc1_int &= ~TIMER_CTRL_INT_STATUS;
+				timer->frc1_int &= ~FRC1_INT_CLR_MASK;
 				timer->frc1_load = ticks;
 				return;
 			}
@@ -185,18 +182,20 @@ pwm_init(uint32_t period, uint32_t *duty, uint32_t pwm_channel_num,
 	for (n = 0; n < pwm_channels; n++) {
 		uint8_t gpio = gpio_pins[n];
 		gpio_enable(gpio, GPIO_OUTPUT);
-		gpio_write(gpio, 0);
 		gpio_mask[n] = 1 << gpio;
 		all |= 1 << gpio;
 		if (duty)
 			pwm_set_duty(duty[n], n);
 	}
+	GPIO.OUT_CLEAR = all;
+	GPIO.ENABLE_OUT_SET = all;
 
 	pwm_set_period(period);
 
 	_xt_isr_attach(INUM_TIMER_FRC1, (_xt_isr)pwm_intr_handler);
+	TM1_EDGE_INT_ENABLE();
 
-	timer->frc1_int &= ~TIMER_CTRL_INT_STATUS;
+	timer->frc1_int &= ~FRC1_INT_CLR_MASK;
 	timer->frc1_ctrl = 0;
 
 	pwm_start();
@@ -355,10 +354,10 @@ pwm_start(void)
 	pwm_phase_array* pwm = &pwm_phases[0];
 
 	if ((*pwm == pwm_state.next_set) ||
-	    (*pwm == pwm_state.current_set))
+		(*pwm == pwm_state.current_set))
 		pwm++;
 	if ((*pwm == pwm_state.next_set) ||
-	    (*pwm == pwm_state.current_set))
+		(*pwm == pwm_state.current_set))
 		pwm++;
 
 	uint8_t phases = _pwm_phases_prep(*pwm);
@@ -370,7 +369,7 @@ pwm_start(void)
 			printf("PWM stop\n");
 #endif
 			timer->frc1_ctrl = 0;
-			_xt_isr_mask(INUM_TIMER_FRC1);
+			_xt_isr_mask(1 << INUM_TIMER_FRC1);
 		}
 		pwm_state.next_set = NULL;
 
@@ -387,9 +386,8 @@ pwm_start(void)
 #endif
 		pwm_state.current_set = pwm_state.next_set = *pwm;
 		pwm_state.current_phase = phases - 1;
-		_xt_isr_unmask(INUM_TIMER_FRC1);
-		TIMER_FRC1.LOAD = 0;
-
+		_xt_isr_unmask(1 << INUM_TIMER_FRC1);
+		timer->frc1_load = 0;
 		timer->frc1_ctrl = TIMER1_DIVIDE_BY_16 | TIMER1_ENABLE_TIMER;
 		return;
 	}
