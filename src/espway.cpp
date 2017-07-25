@@ -451,13 +451,19 @@ void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, u16_t data_len, uint8_t mo
 
 void websocket_open_cb(struct tcp_pcb *pcb, const char *uri)
 {
-    if (!strcmp(uri, "/ws")) {
+    if (strcmp(uri, "/ws") == 0) {
         xTaskNotify(xBatteryTask, (uint32_t)pcb, eSetValueWithOverwrite);
     }
 }
 
 void httpd_task(void *pvParameters)
 {
+    tCGI pCGIs[] = {
+        {"/cube", (tCGIHandler)([](int, int, char *[], char *[]) { return "/cube.html"; })},
+        {"/pid", (tCGIHandler)([](int, int, char *[], char *[]) { return "/pid.html"; })}
+    };
+    http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
+
     websocket_register_callbacks((tWsOpenHandler) websocket_open_cb,
         (tWsHandler) websocket_cb);
     httpd_init();

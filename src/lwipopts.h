@@ -39,6 +39,8 @@
 #define ESP_TIMEWAIT_THRESHOLD              10000
 #define LWIP_TIMEVAL_PRIVATE                0
 
+#define LWIP_HTTPD_CGI                      1
+
 /*
    -----------------------------------------------
    ---------- Platform specific locking ----------
