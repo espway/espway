@@ -17,6 +17,7 @@ extern "C" {
 #include "lib/pid.h"
 #include "lib/eyes.h"
 #include "lib/motors.h"
+#include "lib/captdns.h"
 }
 
 #include "config.h"
@@ -612,6 +613,7 @@ extern "C" void user_init(void)
     xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, 2, NULL);
     xTaskCreate(&main_loop, "Main loop", 256, NULL, TCPIP_THREAD_PRIO + 1,
         &xCalculationTask);
+    captdnsInit();
 
     gpio_enable(4, GPIO_INPUT);
     gpio_set_interrupt(4, GPIO_INTTYPE_EDGE_POS, mpu_interrupt_handler);
