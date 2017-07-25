@@ -10,6 +10,7 @@ extern "C" {
 #include <esp/uart.h>
 #include <sysparam.h>
 #include <lwip/tcpip.h>
+#include <captdns.h>
 
 #include "i2c/i2c.h"
 #include "lib/mpu6050.h"
@@ -17,7 +18,6 @@ extern "C" {
 #include "lib/pid.h"
 #include "lib/eyes.h"
 #include "lib/motors.h"
-#include "lib/captdns.h"
 }
 
 #include "config.h"
@@ -605,9 +605,7 @@ extern "C" void user_init(void)
 
     wifi_setup();
 
-    // OTA init
-
-    // DNS server
+    // TODO: OTA init
 
     xTaskCreate(&battery_task, "Battery task", 256, NULL, 2, &xBatteryTask);
     xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, 2, NULL);
