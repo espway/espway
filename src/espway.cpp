@@ -10,7 +10,6 @@ extern "C" {
 #include <esp/uart.h>
 #include <sysparam.h>
 #include <lwip/tcpip.h>
-//#include <captdns.h>
 
 #include "i2c/i2c.h"
 #include "lib/mpu6050.h"
@@ -18,6 +17,7 @@ extern "C" {
 #include "lib/pid.h"
 #include "lib/eyes.h"
 #include "lib/motors.h"
+#include "lib/dnsresponder.h"
 }
 
 #include "config.h"
@@ -347,6 +347,7 @@ void wifi_setup(void) {
     ip4_addr_t first_client_ip;
     IP4_ADDR(&first_client_ip, 10, 0, 0, 3);
     dhcpserver_start(&first_client_ip, 4);
+    dnsresponder_init(ap_ip.ip);
 }
 
 void battery_task(void *pvParameter)
@@ -617,7 +618,6 @@ extern "C" void user_init(void)
     xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, 2, NULL);
     xTaskCreate(&main_loop, "Main loop", 256, NULL, TCPIP_THREAD_PRIO + 1,
         &xCalculationTask);
-    //captdnsInit();
 
     gpio_enable(4, GPIO_INPUT);
     gpio_set_interrupt(4, GPIO_INTTYPE_EDGE_POS, mpu_interrupt_handler);
