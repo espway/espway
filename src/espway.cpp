@@ -49,6 +49,12 @@ extern "C" {
 #define ORIENTATION_STABILIZE_DURATION_US ((ORIENTATION_STABILIZE_DURATION) * 1000)
 #define WINDUP_TIMEOUT_US ((WINDUP_TIMEOUT) * 1000)
 
+#define STEERING_TIMEOUT_MS 500
+#define IMU_TIMEOUT_MS      100
+
+#define PRIO_COMMUNICATION  2
+#define PRIO_MAIN_LOOP      (TCPIP_THREAD_PRIO + 1)
+
 const color_t RED = { 180, 0, 0 };
 const color_t YELLOW = { 180, 180, 0 };
 const color_t GREEN = { 0, 180, 0 };
@@ -114,6 +120,8 @@ const espway_config DEFAULT_CONFIG = {
 
 TaskHandle_t xCalculationTask;
 TaskHandle_t xBatteryTask;
+TaskHandle_t xSteeringWatcher;
+TaskHandle_t xIMUWatcher;
 
 madgwickparams imuparams;
 pidstate vel_pid_state;
@@ -304,29 +312,6 @@ void battery_callback(void *ctx) {
     websocket_write(params->pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-/*
-void loop() {
-    if (ota_started) {
-        ArduinoOTA.handle();
-        return;
-    }
-
-    if (!mpu_online) {
-        set_motors(0, 0);
-        set_both_eyes(RED);
-        return;
-    }
-
-    while ((mpu_read_int_status(MPU_ADDR) & MPU_DATA_RDY_INT) == 0) {
-        if (millis() - mpu_last_online > 100) {
-            mpu_online = false;
-            return;
-        }
-        yield();
-    }
-}
-*/
-
 void wifi_setup(void) {
     sdk_wifi_set_opmode(SOFTAP_MODE);
     struct ip_info ap_ip;
@@ -404,6 +389,7 @@ void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, u16_t data_len, uint8_t mo
             signed_data = (int8_t *)payload;
             steering_bias = (FLT_TO_Q16(STEERING_FACTOR) * signed_data[0]) / 128;
             target_speed = (FLT_TO_Q16(SPEED_CONTROL_FACTOR) * signed_data[1]) / 128;
+            xTaskNotify(xSteeringWatcher, 0, eNoAction);
             break;
 
         case REQ_QUATERNION:
@@ -577,6 +563,8 @@ void main_loop(void *pvParameters) {
         } else if (LOGMODE == LOG_PITCH) {
             printf("%d\n", sin_pitch);
         }
+
+        xTaskNotify(xIMUWatcher, 0, eNoAction);
     }
 }
 
@@ -584,6 +572,24 @@ void mpu_interrupt_handler(uint8_t gpio_num) {
     BaseType_t xHigherPriorityTaskHasWoken = pdFALSE;
     xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
     portEND_SWITCHING_ISR(xHigherPriorityTaskHasWoken);
+}
+
+void steering_watcher(void *) {
+    for (;;) {
+        if (!xTaskNotifyWait(0, 0, NULL, STEERING_TIMEOUT_MS / portTICK_PERIOD_MS)) {
+            steering_bias = 0;
+            target_speed = 0;
+        }
+    }
+}
+
+void imu_watcher(void *) {
+    for (;;) {
+        if (!xTaskNotifyWait(0, 0, NULL, IMU_TIMEOUT_MS / portTICK_PERIOD_MS)) {
+            set_motors(0, 0);
+            abort();
+        }
+    }
 }
 
 extern "C" void user_init(void)
@@ -614,10 +620,11 @@ extern "C" void user_init(void)
 
     // TODO: OTA init
 
-    xTaskCreate(&battery_task, "Battery task", 256, NULL, 2, &xBatteryTask);
-    xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, 2, NULL);
-    xTaskCreate(&main_loop, "Main loop", 256, NULL, TCPIP_THREAD_PRIO + 1,
-        &xCalculationTask);
+    xTaskCreate(&battery_task, "Battery task", 256, NULL, PRIO_COMMUNICATION, &xBatteryTask);
+    xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, PRIO_COMMUNICATION, NULL);
+    xTaskCreate(&main_loop, "Main loop", 256, NULL, PRIO_MAIN_LOOP, &xCalculationTask);
+    xTaskCreate(&steering_watcher, "Steering watcher", 128, NULL, PRIO_MAIN_LOOP + 1, &xSteeringWatcher);
+    xTaskCreate(&imu_watcher, "IMU watcher", 128, NULL, PRIO_MAIN_LOOP + 2, &xIMUWatcher);
 
     gpio_enable(4, GPIO_INPUT);
     gpio_set_interrupt(4, GPIO_INTTYPE_EDGE_POS, mpu_interrupt_handler);
