@@ -10,7 +10,7 @@ extern "C" {
 #include <esp/uart.h>
 #include <sysparam.h>
 #include <lwip/tcpip.h>
-#include <captdns.h>
+//#include <captdns.h>
 
 #include "i2c/i2c.h"
 #include "lib/mpu6050.h"
@@ -344,7 +344,7 @@ void wifi_setup(void) {
     ap_config.beacon_interval = 100;
     sdk_wifi_softap_set_config(&ap_config);
 
-    ip_addr_t first_client_ip;
+    ip4_addr_t first_client_ip;
     IP4_ADDR(&first_client_ip, 10, 0, 0, 3);
     dhcpserver_start(&first_client_ip, 4);
 }
@@ -617,7 +617,7 @@ extern "C" void user_init(void)
     xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, 2, NULL);
     xTaskCreate(&main_loop, "Main loop", 256, NULL, TCPIP_THREAD_PRIO + 1,
         &xCalculationTask);
-    captdnsInit();
+    //captdnsInit();
 
     gpio_enable(4, GPIO_INPUT);
     gpio_set_interrupt(4, GPIO_INTTYPE_EDGE_POS, mpu_interrupt_handler);
