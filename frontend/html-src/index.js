@@ -4,8 +4,9 @@ window.addEventListener('load', () => {
     'use strict'
 
     let byId = id => document.getElementById(id)
-    let ws = new WebSocket('ws://' + window.location.host + '/ws')
+    let ws = new WebSocket('ws://10.0.0.2/ws')
     ws.binaryType = 'arraybuffer'
+    ws.addEventListener('open', requestGravity)
 
     let tiltBtn = byId('tiltBtn')
     let battery = byId('battery')
@@ -26,6 +27,7 @@ window.addEventListener('load', () => {
     let currentTouchId = null
     let pageX = 0, pageY = 0
     let x = 0, y = 0
+    let tiltX = 0, tiltY = 0
     let beta = 0, gamma = 0
     let hasDeviceOrientation = false
     let tiltControl = false
@@ -45,6 +47,10 @@ window.addEventListener('load', () => {
         if (command === 3 && e.data.byteLength === 3) {
             let batteryValue = dview.getInt16(1, true) / 100
             battery.innerText = batteryValue.toFixed(2)
+        } else if (command === 2 && e.data.byteLength === 7) {
+            tiltX = -dview.getInt16(3, true) / 32768.0
+            tiltY = -dview.getInt16(5, true) / 32768.0
+            requestGravity()
         }
     })
 
@@ -160,8 +166,6 @@ window.addEventListener('load', () => {
     function draw() {
         updateXY()
 
-        let canvasX = (x + 1) / 2 * canvasWidth,
-            canvasY = (-y + 1) / 2 * canvasHeight
 
         ctx.lineWidth = 10
         ctx.clearRect(0, 0, canvasWidth, canvasHeight)
@@ -170,6 +174,17 @@ window.addEventListener('load', () => {
         ctx.lineTo(canvasX, canvasY)
         ctx.stroke()
 
+        let canvasX = (tiltX + 1) / 2 * canvasWidth,
+            canvasY = (-tiltY + 1) / 2 * canvasHeight
+
+        ctx.fillStyle = '#aaa'
+        ctx.beginPath()
+        ctx.arc(canvasX, canvasY, 15, 0, 2*Math.PI)
+        ctx.fill()
+
+        canvasX = (x + 1) / 2 * canvasWidth
+        canvasY = (-y + 1) / 2 * canvasHeight
+        ctx.fillStyle = 'red'
         ctx.lineWidth = 2
         ctx.beginPath()
         ctx.arc(canvasX, canvasY, 15, 0, 2*Math.PI)
@@ -179,5 +194,9 @@ window.addEventListener('load', () => {
         window.requestAnimationFrame(draw)
     }
     window.requestAnimationFrame(draw)
+
+    function requestGravity() {
+        ws.send((new Uint8Array([1])).buffer)
+    }
 })
 
