@@ -68,8 +68,8 @@ enum state { STABILIZING_ORIENTATION, RUNNING, FALLEN, WOUND_UP };
 enum ws_msg_t {
     STEERING = 0,
 
-    REQ_QUATERNION = 1,
-    RES_QUATERNION = 2,
+    REQ_GRAVITY = 1,
+    RES_GRAVITY = 2,
 
     BATTERY = 3,
     BATTERY_CUTOFF = 4,
@@ -123,7 +123,7 @@ TaskHandle_t xBatteryTask;
 TaskHandle_t xSteeringWatcher;
 TaskHandle_t xIMUWatcher;
 
-madgwickparams imuparams;
+complementary_filter_params imuparams;
 pidstate vel_pid_state;
 pidstate angle_pid_state;
 
@@ -137,8 +137,8 @@ bool mpu_online = false;
 
 espway_config my_config;
 
-SemaphoreHandle_t quat_mutex;
-quaternion_fix quat = { Q16_ONE, 0, 0, 0 };
+SemaphoreHandle_t orientation_mutex;
+vector3d_fix gravity = { Q16_ONE, 0, 0 };
 
 void pretty_print_config() {
     xSemaphoreTake(pid_mutex, portMAX_DELAY);
@@ -283,16 +283,15 @@ void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx) {
     websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-void send_quaternion(struct tcp_pcb *pcb, const quaternion_fix * const quat) {
+void send_gravity(struct tcp_pcb *pcb, const vector3d_fix * const grav) {
     uint8_t buf[9];
-    buf[0] = RES_QUATERNION;
+    buf[0] = RES_GRAVITY;
     int16_t *qdata = (int16_t *)&buf[1];
-    xSemaphoreTake(quat_mutex, portMAX_DELAY);
-    qdata[0] = quat->q0 / 2;
-    qdata[1] = quat->q1 / 2;
-    qdata[2] = quat->q2 / 2;
-    qdata[3] = quat->q3 / 2;
-    xSemaphoreGive(quat_mutex);
+    xSemaphoreTake(orientation_mutex, portMAX_DELAY);
+    qdata[0] = grav->x / 2;
+    qdata[1] = grav->y / 2;
+    qdata[2] = grav->z / 2;
+    xSemaphoreGive(orientation_mutex);
     websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
@@ -392,9 +391,9 @@ void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, u16_t data_len, uint8_t mo
             xTaskNotify(xSteeringWatcher, 0, eNoAction);
             break;
 
-        case REQ_QUATERNION:
+        case REQ_GRAVITY:
             if (data_len != 0) break;
-            send_quaternion(pcb, &quat);
+            send_gravity(pcb, &gravity);
             break;
 
         case REQ_SET_PID_PARAMS:
@@ -474,12 +473,13 @@ void main_loop(void *pvParameters) {
         mpu_read_raw_data(MPU_ADDR, raw_data);
 
         // Update orientation estimate
-        xSemaphoreTake(quat_mutex, portMAX_DELAY);
-        madgwick_ahrs_update_imu(&imuparams, &raw_data[0], &raw_data[3], &quat);
+        xSemaphoreTake(orientation_mutex, portMAX_DELAY);
+        complementary_filter_update(&imuparams, 1000, &raw_data[0], &raw_data[3],
+            &gravity);
         // Calculate sine of pitch angle from quaternion
-        q16 sin_pitch = -gravity_z(&quat);
-        q16 sin_roll = gravity_y(&quat);
-        xSemaphoreGive(quat_mutex);
+        q16 sin_pitch = -gravity.z;
+        q16 sin_roll = gravity.y;
+        xSemaphoreGive(orientation_mutex);
 
         // Exponential smoothing of target speed
         smoothed_target_speed = q16_exponential_smooth(smoothed_target_speed,
@@ -600,7 +600,7 @@ extern "C" void user_init(void)
     eyes_init();
 
     pid_mutex = xSemaphoreCreateMutex();
-    quat_mutex = xSemaphoreCreateMutex();
+    orientation_mutex = xSemaphoreCreateMutex();
 
     motors_init(PWM_PERIOD);
 
@@ -611,8 +611,7 @@ extern "C" void user_init(void)
     // Parameter calculation & initialization
     pid_reset(0, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
     pid_reset(0, 0, &pid_settings_arr[VEL], &vel_pid_state);
-    calculate_madgwick_params(&imuparams, MADGWICK_BETA,
-        2.0f * M_PI / 180.0f * 2000.0f, SAMPLE_TIME);
+    imuparams = { FLT_TO_Q16(0.0005f), FLT_TO_Q16(2.0f * 2000.0f * M_PI / 180.0f * 1e-6f) };
 
     set_both_eyes(mpu_online ? YELLOW : RED);
 

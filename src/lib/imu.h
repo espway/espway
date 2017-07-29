@@ -33,17 +33,17 @@ extern "C" {
 #endif
 
 typedef struct {
-    q16 q0, q1, q2, q3;
-} quaternion_fix;
-
-q16 gravity_x(const quaternion_fix * const quat);
-q16 gravity_y(const quaternion_fix * const quat);
-q16 gravity_z(const quaternion_fix * const quat);
+    q16 x, y, z;
+} vector3d_fix;
 
 typedef struct {
-    q16 beta;
-    q16 gyro_integration_factor;
-} madgwickparams;
+    q16 alpha;  // The complementary filter parameter
+    q16 gyro_conversion_factor;  // Convert gyro reading from LSB units to rad / us
+} complementary_filter_params;
+
+void complementary_filter_update(const complementary_filter_params *params,
+    const int dt, const int16_t *raw_accel, const int16_t *raw_gyro,
+    vector3d_fix *gravity);
 
 //=====================================================================================================
 // originally from MadgwickAHRS.h
@@ -58,6 +58,19 @@ typedef struct {
 // 15/11/2016	Sakari Kapanen	Additions and adaptation to ESP8266: gravity, pitch and roll calculation
 //
 //=====================================================================================================
+typedef struct {
+    q16 beta;
+    q16 gyro_integration_factor;
+} madgwickparams;
+
+typedef struct {
+    q16 q0, q1, q2, q3;
+} quaternion_fix;
+
+q16 gravity_x(const quaternion_fix * const quat);
+q16 gravity_y(const quaternion_fix * const quat);
+q16 gravity_z(const quaternion_fix * const quat);
+
 void madgwick_ahrs_update_imu(const madgwickparams * const params,
     const int16_t * const raw_accel, const int16_t * const raw_gyro,
     quaternion_fix * const q);

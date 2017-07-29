@@ -18,19 +18,56 @@
 
 #include "imu.h"
 
-q16 gravity_x(const quaternion_fix * const quat) {
-    return 2 * (q16_mul(quat->q1, quat->q3) - q16_mul(quat->q0, quat->q2));
-}
+void complementary_filter_update(const complementary_filter_params *params,
+    const int dt, const int16_t *raw_accel, const int16_t *raw_gyro,
+    vector3d_fix *gravity) {
+    q16 recip_norm;
+    // Convert the gravity vector from LSB units to rad/us and multiply by
+    // timestep length
+    q16 gyro_mult = dt * params->gyro_conversion_factor;
+    q16 gx = q16_mul(raw_gyro[0], gyro_mult),
+        gy = q16_mul(raw_gyro[1], gyro_mult),
+        gz = q16_mul(raw_gyro[2], gyro_mult);
 
-q16 gravity_y(const quaternion_fix * const quat) {
-    return 2 * (q16_mul(quat->q2, quat->q3) + q16_mul(quat->q0, quat->q1));
-}
+    // Cross product omega x gravity * dt
+    q16 dx = q16_mul(gy, gravity->z) - q16_mul(gz, gravity->y),
+        dy = q16_mul(gz, gravity->x) - q16_mul(gx, gravity->z),
+        dz = q16_mul(gx, gravity->y) - q16_mul(gy, gravity->x);
 
-q16 gravity_z(const quaternion_fix * const quat) {
-    return q16_mul(quat->q0, quat->q0) -
-        q16_mul(quat->q1, quat->q1) -
-        q16_mul(quat->q2, quat->q2) +
-        q16_mul(quat->q3, quat->q3);
+    // Update the gravity vector
+    q16 updated_x = gravity->x - dx,
+        updated_y = gravity->y - dy,
+        updated_z = gravity->z - dz;
+
+    // Handle the acceleration vector that's used as a reference for the
+    // gravity vector
+    q16 ax = raw_accel[0], ay = raw_accel[1], az = raw_accel[2];
+    if (ax != 0 || ay != 0 || az != 0) {
+        recip_norm = q16_mul(ax, ax);
+        recip_norm += q16_mul(ay, ay);
+        recip_norm += q16_mul(az, az);
+        recip_norm = q16_rsqrt(recip_norm);
+        ax = q16_mul(ax, recip_norm);
+        ay = q16_mul(ay, recip_norm);
+        az = q16_mul(az, recip_norm);
+
+        gravity->x = updated_x + q16_mul(params->alpha, ax - updated_x);
+        gravity->y = updated_y + q16_mul(params->alpha, ay - updated_y);
+        gravity->z = updated_z + q16_mul(params->alpha, az - updated_z);
+    } else {
+        gravity->x = updated_x;
+        gravity->y = updated_y;
+        gravity->z = updated_z;
+    }
+
+    // Normalize the final vector
+    recip_norm = q16_mul(gravity->x, gravity->x);
+    recip_norm += q16_mul(gravity->y, gravity->y);
+    recip_norm += q16_mul(gravity->z, gravity->z);
+    recip_norm = q16_rsqrt(recip_norm);
+    gravity->x = q16_mul(gravity->x, recip_norm);
+    gravity->y = q16_mul(gravity->y, recip_norm);
+    gravity->z = q16_mul(gravity->z, recip_norm);
 }
 
 //-----------------------------------------------------------------------------
@@ -137,3 +174,17 @@ void calculate_madgwick_params(madgwickparams * const params,
     params->beta = FLT_TO_Q16(beta / (0.5f * gyro_scale));
 }
 
+q16 gravity_x(const quaternion_fix * const quat) {
+    return 2 * (q16_mul(quat->q1, quat->q3) - q16_mul(quat->q0, quat->q2));
+}
+
+q16 gravity_y(const quaternion_fix * const quat) {
+    return 2 * (q16_mul(quat->q2, quat->q3) + q16_mul(quat->q0, quat->q1));
+}
+
+q16 gravity_z(const quaternion_fix * const quat) {
+    return q16_mul(quat->q0, quat->q0) -
+        q16_mul(quat->q1, quat->q1) -
+        q16_mul(quat->q2, quat->q2) +
+        q16_mul(quat->q3, quat->q3);
+}
