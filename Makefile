@@ -9,7 +9,7 @@ firmware: $(SRC_FOLDER)/firmware/$(PROGRAM).bin
 $(SRC_FOLDER)/firmware/$(PROGRAM).bin: $(SRC_FOLDER)/fsdata.c src/*
 	$(MAKE) -j$(N_PROCESSES) -C $(SRC_FOLDER) all
 
-$(SRC_FOLDER)/fsdata.c: frontend
+$(SRC_FOLDER)/fsdata.c: frontend/*
 	cd frontend; npm run build
 	perl scripts/makefsdata
 

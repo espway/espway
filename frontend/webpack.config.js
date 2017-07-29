@@ -7,8 +7,7 @@ module.exports = {
 
     entry: {
         index: './index.js',
-        pid: './pid.js',
-        cube: './cube.js'
+        pid: './pid.js'
     },
 
     output: {

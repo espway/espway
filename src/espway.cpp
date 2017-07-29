@@ -284,7 +284,7 @@ void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx) {
 }
 
 void send_gravity(struct tcp_pcb *pcb, const vector3d_fix * const grav) {
-    uint8_t buf[9];
+    uint8_t buf[7];
     buf[0] = RES_GRAVITY;
     int16_t *qdata = (int16_t *)&buf[1];
     xSemaphoreTake(orientation_mutex, portMAX_DELAY);
@@ -445,7 +445,6 @@ void websocket_open_cb(struct tcp_pcb *pcb, const char *uri)
 void httpd_task(void *pvParameters)
 {
     tCGI pCGIs[] = {
-        {"/cube", (tCGIHandler)([](int, int, char *[], char *[]) { return "/cube.html"; })},
         {"/pid", (tCGIHandler)([](int, int, char *[], char *[]) { return "/pid.html"; })}
     };
     http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
