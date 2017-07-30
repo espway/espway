@@ -123,13 +123,7 @@ TaskHandle_t xBatteryTask;
 TaskHandle_t xSteeringWatcher;
 TaskHandle_t xIMUWatcher;
 
-#if SENSOR_FUSION_METHOD == SENSOR_FUSION_COMPLEMENTARY
-complementary_filter_params imuparams;
-#elif SENSOR_FUSION_METHOD == SENSOR_FUSION_MADGWICK
-madgwickparams imuparams;
-#elif SENSOR_FUSION_METHOD == SENSOR_FUSION_MAHONY
 mahony_filter_state imuparams;
-#endif
 pidstate vel_pid_state;
 pidstate angle_pid_state;
 
@@ -145,7 +139,6 @@ espway_config my_config;
 
 SemaphoreHandle_t orientation_mutex;
 vector3d_fix gravity = { Q16_ONE, 0, 0 };
-quaternion_fix quat = { Q16_ONE, 0, 0, 0 };
 
 void pretty_print_config() {
     xSemaphoreTake(pid_mutex, portMAX_DELAY);
@@ -480,16 +473,7 @@ void main_loop(void *pvParameters) {
 
         // Update orientation estimate
         xSemaphoreTake(orientation_mutex, portMAX_DELAY);
-#if SENSOR_FUSION_METHOD == SENSOR_FUSION_COMPLEMENTARY
-        complementary_filter_update(&imuparams, 1000, &raw_data[0], &raw_data[3],
-            &gravity);
-#elif SENSOR_FUSION_METHOD == SENSOR_FUSION_MADGWICK
-        madgwick_ahrs_update_imu(&imuparams, &raw_data[0], &raw_data[3], &quat);
-        gravity.y = gravity_y(&quat);
-        gravity.z = gravity_z(&quat);
-#elif SENSOR_FUSION_METHOD == SENSOR_FUSION_MAHONY
         mahony_filter_update(&imuparams, &raw_data[0], &raw_data[3], &gravity);
-#endif
         // Calculate sine of pitch angle from quaternion
         q16 sin_pitch = -gravity.z;
         q16 sin_roll = gravity.y;
@@ -625,13 +609,7 @@ extern "C" void user_init(void)
     // Parameter calculation & initialization
     pid_reset(0, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
     pid_reset(0, 0, &pid_settings_arr[VEL], &vel_pid_state);
-#if SENSOR_FUSION_METHOD == SENSOR_FUSION_MADGWICK
-    calculate_madgwick_params(&imuparams, MADGWICK_BETA, 2.0f * 2000.0f * M_PI / 180.0f, 0.001f);
-#elif SENSOR_FUSION_METHOD == SENSOR_FUSION_COMPLEMENTARY
-    imuparams = { FLT_TO_Q16(COMPLEMENTARY_FILTER_ALPHA), FLT_TO_Q16(2.0f * 2000.0f * M_PI / 180.0f * 1e-6f) };
-#elif SENSOR_FUSION_METHOD == SENSOR_FUSION_MAHONY
     mahony_filter_init(&imuparams, MAHONY_FILTER_KP, MAHONY_FILTER_KI, 2.0f * 2000.0f * M_PI / 180.0f, 0.001f);
-#endif
 
     set_both_eyes(mpu_online ? YELLOW : RED);
 
