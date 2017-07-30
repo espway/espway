@@ -30,14 +30,9 @@ void complementary_filter_update(const complementary_filter_params *params,
         gz = q16_mul(raw_gyro[2], gyro_mult);
 
     // Cross product omega x gravity * dt
-    q16 dx = q16_mul(gy, gravity->z) - q16_mul(gz, gravity->y),
-        dy = q16_mul(gz, gravity->x) - q16_mul(gx, gravity->z),
-        dz = q16_mul(gx, gravity->y) - q16_mul(gy, gravity->x);
-
-    // Update the gravity vector
-    q16 updated_x = gravity->x - dx,
-        updated_y = gravity->y - dy,
-        updated_z = gravity->z - dz;
+    q16 dx = q16_mul(gz, gravity->y) - q16_mul(gy, gravity->z),
+        dy = q16_mul(gx, gravity->z) - q16_mul(gz, gravity->x),
+        dz = q16_mul(gy, gravity->x) - q16_mul(gx, gravity->y);
 
     // Handle the acceleration vector that's used as a reference for the
     // gravity vector
@@ -47,18 +42,27 @@ void complementary_filter_update(const complementary_filter_params *params,
         recip_norm += q16_mul(ay, ay);
         recip_norm += q16_mul(az, az);
         recip_norm = q16_rsqrt(recip_norm);
-        ax = q16_mul(ax, recip_norm);
-        ay = q16_mul(ay, recip_norm);
-        az = q16_mul(az, recip_norm);
 
-        gravity->x = updated_x + q16_mul(params->alpha, ax - updated_x);
-        gravity->y = updated_y + q16_mul(params->alpha, ay - updated_y);
-        gravity->z = updated_z + q16_mul(params->alpha, az - updated_z);
-    } else {
-        gravity->x = updated_x;
-        gravity->y = updated_y;
-        gravity->z = updated_z;
+        q16 ex = q16_mul(ax, recip_norm) - gravity->x,
+            ey = q16_mul(ay, recip_norm) - gravity->y,
+            ez = q16_mul(az, recip_norm) - gravity->z;
+
+        recip_norm = q16_mul(ex, ex);
+        recip_norm += q16_mul(ey, ey);
+        recip_norm += q16_mul(ez, ez);
+        recip_norm = q16_mul(params->alpha, q16_rsqrt(recip_norm));
+        ex = q16_mul(ex, recip_norm);
+        ey = q16_mul(ey, recip_norm);
+        ez = q16_mul(ez, recip_norm);
+
+        dx += ex;
+        dy += ey;
+        dz += ez;
     }
+
+    gravity->x += dx;
+    gravity->y += dy;
+    gravity->z += dz;
 
     // Normalize the final vector
     recip_norm = q16_mul(gravity->x, gravity->x);
@@ -68,6 +72,47 @@ void complementary_filter_update(const complementary_filter_params *params,
     gravity->x = q16_mul(gravity->x, recip_norm);
     gravity->y = q16_mul(gravity->y, recip_norm);
     gravity->z = q16_mul(gravity->z, recip_norm);
+}
+
+void mahony_filter_init(mahony_filter_state *state, float Kp, float Ki,
+    float gyro_factor, float dt) {
+    state->Kp = FLT_TO_Q16(Kp);
+    state->Ki = FLT_TO_Q16(Ki);
+    state->dt = FLT_TO_Q16(dt);
+    state->gyro_conversion_factor = FLT_TO_Q16(gyro_factor);
+    state->integral.x = 0;
+    state->integral.y = 0;
+    state->integral.z = 0;
+}
+
+void mahony_filter_update(mahony_filter_state *state,
+    const int16_t *raw_accel, const int16_t *raw_gyro, vector3d_fix *gravity) {
+    vector3d_fix omega, accel, verror;
+    accel.x = raw_accel[0];
+    accel.y = raw_accel[1];
+    accel.z = raw_accel[2];
+    omega.x = raw_gyro[0];
+    omega.y = raw_gyro[1];
+    omega.z = raw_gyro[2];
+
+    omega = v3d_mul(state->gyro_conversion_factor, &omega);
+
+    if (accel.x != 0 || accel.y != 0 || accel.z != 0) {
+        accel = v3d_normalize(&accel);
+        verror = v3d_cross(&accel, gravity);
+        state->integral = v3d_add(&state->integral, &verror);
+        verror = v3d_mul(state->Kp, &verror);
+        omega = v3d_add(&omega, &verror);
+    }
+
+    verror = v3d_mul(state->Ki, &state->integral);
+    verror = v3d_mul(state->dt, &verror);
+    omega = v3d_add(&omega, &verror);
+
+    vector3d_fix vupdate = v3d_cross(gravity, &omega);
+    vupdate = v3d_mul(state->dt, &vupdate);
+    *gravity = v3d_add(gravity, &vupdate);
+    *gravity = v3d_normalize(gravity);
 }
 
 //-----------------------------------------------------------------------------

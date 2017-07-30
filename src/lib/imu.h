@@ -31,10 +31,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include "vector3d.h"
 
-typedef struct {
-    q16 x, y, z;
-} vector3d_fix;
+// Complementary filter
 
 typedef struct {
     q16 alpha;  // The complementary filter parameter
@@ -44,6 +43,22 @@ typedef struct {
 void complementary_filter_update(const complementary_filter_params *params,
     const int dt, const int16_t *raw_accel, const int16_t *raw_gyro,
     vector3d_fix *gravity);
+
+// Mahony filter. Pretty similar to the complementary filter
+
+typedef struct {
+    q16 Kp;
+    q16 Ki;
+    q16 dt;
+    vector3d_fix integral;
+    q16 gyro_conversion_factor;
+} mahony_filter_state;
+
+void mahony_filter_init(mahony_filter_state *state, float Kp, float Ki,
+    float gyro_factor, float dt);
+
+void mahony_filter_update(mahony_filter_state *params,
+    const int16_t *raw_accel, const int16_t *raw_gyro, vector3d_fix *gravity);
 
 //=====================================================================================================
 // originally from MadgwickAHRS.h

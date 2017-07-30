@@ -1,43 +1,67 @@
-/*
-    Fixed-point Q16.16 format calculations
-    Copyright (C) 2017  Sakari Kapanen
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
 #include "q16.h"
 #include "q16_luts.h"
 
-// Fixed point multiplication following
-// https://github.com/PetteriAimonen/libfixmath/blob/master/libfixmath/fix16.c
-q16 q16_mul(q16 x, q16 y) {
-    int32_t xhi = x >> 16, yhi = y >> 16;
-    uint32_t xlo = x & 0xffff, ylo = y & 0xffff;
+/*
+ * q16_div is from libfixmath: https://github.com/PetteriAimonen/libfixmath/blob/master/libfixmath/fix16.c
+ * MIT license: https://opensource.org/licenses/MIT
+ */
+q16 q16_div(q16 a, q16 b) {
+    // This uses the basic binary restoring division algorithm.
+	// It appears to be faster to do the whole division manually than
+	// trying to compose a 64-bit divide out of 32-bit divisions on
+	// platforms without hardware divide.
+	
+	if (b == 0)
+		return 0x80000000;
+	
+	uint32_t remainder = (a >= 0) ? a : (-a);
+	uint32_t divider = (b >= 0) ? b : (-b);
 
-    int32_t hi = xhi*yhi;
-    int32_t mid = xhi*ylo + yhi*xlo;
-    uint32_t lo = xlo*ylo;
-    hi += mid >> 16;
-    uint32_t prod_lo = lo + (mid << 16);
-    if (prod_lo < lo) hi += 1;
-
-    return (hi << 16) | (prod_lo >> 16);
-}
-
-q16 q16_div(q16 x, q16 y) {
-    int32_t res = x / y;
-    return res << 16;
+	uint32_t quotient = 0;
+	uint32_t bit = 0x10000;
+	
+	/* The algorithm requires D >= R */
+	while (divider < remainder)
+	{
+		divider <<= 1;
+		bit <<= 1;
+	}
+	
+	if (divider & 0x80000000)
+	{
+		// Perform one step manually to avoid overflows later.
+		// We know that divider's bottom bit is 0 here.
+		if (remainder >= divider)
+		{
+				quotient |= bit;
+				remainder -= divider;
+		}
+		divider >>= 1;
+		bit >>= 1;
+	}
+	
+	/* Main division loop */
+	while (bit && remainder)
+	{
+		if (remainder >= divider)
+		{
+				quotient |= bit;
+				remainder -= divider;
+		}
+		
+		remainder <<= 1;
+		bit >>= 1;
+	}	 
+	
+	q16 result = quotient;
+	
+	/* Figure out the sign of result */
+	if ((a ^ b) & 0x80000000)
+	{
+		result = -result;
+	}
+	
+    return result;
 }
 
 q16 q16_rsqrt(q16 x) {
@@ -54,8 +78,3 @@ q16 q16_rsqrt(q16 x) {
 
     return y;
 }
-
-q16 q16_exponential_smooth(q16 prevVal, q16 newVal, q16 alpha) {
-    return prevVal + q16_mul(alpha, newVal - prevVal);
-}
-
