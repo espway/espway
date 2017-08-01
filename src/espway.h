@@ -81,12 +81,11 @@ extern q16 steering_bias;
 
 void pretty_print_config();
 void apply_config_params();
-bool do_save_config(struct tcp_pcb *pcb);
-bool do_clear_config(struct tcp_pcb *pcb);
-void load_stored_config();
+bool save_flash_config();
+bool clear_flash_config();
+void load_config();
+void load_hardcoded_config();
 
 void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, u16_t data_len, uint8_t mode);
-void send_gravity(struct tcp_pcb *pcb, const vector3d_fix * const grav);
-void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx);
 
 void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d);

@@ -1,6 +1,30 @@
 #include "espway.h"
 
-void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx) {
+static void websocket_save_config(struct tcp_pcb *pcb) {
+    uint8_t response;
+    if (save_flash_config()) {
+        response = RES_SAVE_CONFIG_SUCCESS;
+    } else {
+        response = RES_SAVE_CONFIG_FAILURE;
+    }
+    websocket_write(pcb, &response, 1, WS_BIN_MODE);
+}
+
+static bool websocket_clear_config(struct tcp_pcb *pcb) {
+    uint8_t response;
+    // Clear the configuration by writing config version zero
+    bool success = clear_flash_config();
+    if (success) {
+        response = RES_CLEAR_CONFIG_SUCCESS;
+        load_hardcoded_config();
+    } else {
+        response = RES_CLEAR_CONFIG_FAILURE;
+    }
+    websocket_write(pcb, &response, 1, WS_BIN_MODE);
+    return success;
+}
+
+static void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx) {
     uint8_t buf[14];
     buf[0] = RES_PID_PARAMS;
     buf[1] = idx;
@@ -13,7 +37,7 @@ void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx) {
     websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-void send_gravity(struct tcp_pcb *pcb, const vector3d_fix * const grav) {
+static void send_gravity(struct tcp_pcb *pcb, const vector3d_fix * const grav) {
     uint8_t buf[7];
     buf[0] = RES_GRAVITY;
     int16_t *qdata = (int16_t *)&buf[1];
@@ -74,21 +98,19 @@ void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, u16_t data_len, uint8_t mo
 
         case REQ_LOAD_FLASH_CONFIG:
             if (data_len != 0) break;
-            load_stored_config();
+            load_config();
             res = RES_LOAD_FLASH_CONFIG_DONE;
             websocket_write(pcb, &res, 1, WS_BIN_MODE);
             break;
 
         case REQ_SAVE_CONFIG:
             if (data_len != 0) break;
-            do_save_config(pcb);
+            websocket_save_config(pcb);
             break;
 
         case REQ_CLEAR_CONFIG:
             if (data_len != 0) break;
-            do_clear_config(pcb);
+            websocket_clear_config(pcb);
             break;
     }
 }
-
-#include "espway.h"

@@ -334,7 +334,7 @@ extern "C" void user_init(void)
 
     motors_init(PWM_PERIOD);
 
-    load_stored_config();
+    load_config();
     apply_config_params();
     pretty_print_config();
 
@@ -358,4 +358,3 @@ extern "C" void user_init(void)
     gpio_enable(4, GPIO_INPUT);
     gpio_set_interrupt(4, GPIO_INTTYPE_EDGE_POS, mpu_interrupt_handler);
 }
-

@@ -52,7 +52,7 @@ void load_hardcoded_config() {
     my_config = DEFAULT_CONFIG;
 }
 
-void load_stored_config() {
+void load_config() {
     xSemaphoreTake(pid_mutex, portMAX_DELAY);
     load_hardcoded_config();
     sysparam_get_data_static("ANGLE_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE],
@@ -82,8 +82,7 @@ void apply_config_params() {
     mpu_set_gyro_offsets(my_config.gyro_offsets);
 }
 
-bool do_save_config(struct tcp_pcb *pcb) {
-    uint8_t response;
+bool save_flash_config() {
     bool success = true;
 
     xSemaphoreTake(pid_mutex, portMAX_DELAY);
@@ -94,12 +93,6 @@ bool do_save_config(struct tcp_pcb *pcb) {
     xSemaphoreGive(pid_mutex);
     if (success) success = sysparam_set_data("GYRO_OFFSETS", (uint8_t *)&my_config.gyro_offsets, 3 * sizeof(int16_t), true) == SYSPARAM_OK;
 
-    if (success) {
-        response = RES_SAVE_CONFIG_SUCCESS;
-    } else {
-        response = RES_SAVE_CONFIG_FAILURE;
-    }
-    websocket_write(pcb, &response, 1, WS_BIN_MODE);
     return success;
 }
 
@@ -108,18 +101,4 @@ bool clear_flash_config() {
     return sysparam_get_info(&base_addr, &num_sectors) == SYSPARAM_OK &&
         sysparam_create_area(base_addr, num_sectors, true) == SYSPARAM_OK &&
         sysparam_init(base_addr, 0) == SYSPARAM_OK;
-}
-
-bool do_clear_config(struct tcp_pcb *pcb) {
-    uint8_t response;
-    // Clear the configuration by writing config version zero
-    bool success = clear_flash_config();
-    if (success) {
-        response = RES_CLEAR_CONFIG_SUCCESS;
-        load_hardcoded_config();
-    } else {
-        response = RES_CLEAR_CONFIG_FAILURE;
-    }
-    websocket_write(pcb, &response, 1, WS_BIN_MODE);
-    return success;
 }
