@@ -2,24 +2,19 @@ extern "C" {
 #include <string.h>
 #include <espressif/esp_common.h>
 #include "dhcpserver.h"
-#include <FreeRTOS.h>
-#include <semphr.h>
-#include <task.h>
-#include <httpd/httpd.h>
 #include <esp8266.h>
 #include <esp/uart.h>
-#include <sysparam.h>
 #include <lwip/tcpip.h>
 
 #include "i2c/i2c.h"
 #include "lib/mpu6050.h"
 #include "lib/imu.h"
-#include "lib/pid.h"
 #include "lib/eyes.h"
 #include "lib/motors.h"
 #include "lib/dnsresponder.h"
 }
 
+#include "espway.h"
 #include "config.h"
 
 #ifndef M_PI
@@ -30,19 +25,10 @@ extern "C" {
 
 #define LOGMODE LOG_NONE
 
-#define FALL_LOWER_BOUND FLT_TO_Q16(STABLE_ANGLE - FALL_LIMIT)
-#define FALL_UPPER_BOUND FLT_TO_Q16(STABLE_ANGLE + FALL_LIMIT)
-#define RECOVER_LOWER_BOUND FLT_TO_Q16(STABLE_ANGLE - RECOVER_LIMIT)
-#define RECOVER_UPPER_BOUND FLT_TO_Q16(STABLE_ANGLE + RECOVER_LIMIT)
-#define ROLL_LOWER_BOUND FLT_TO_Q16(-ROLL_LIMIT)
-#define ROLL_UPPER_BOUND FLT_TO_Q16(ROLL_LIMIT)
-
 #define BATTERY_COEFFICIENT FLT_TO_Q16(100.0f / BATTERY_CALIBRATION_FACTOR)
 
 #define FREQUENCY_SAMPLES 1024
 #define QUAT_DELAY 50
-
-#define SAMPLE_TIME ((1.0f + MPU_RATE) / 1000.0f)
 
 #define CONFIG_VERSION 2
 
@@ -65,59 +51,6 @@ const color_t BLACK = { 0, 0, 0 };
 enum logmode { LOG_FREQ, LOG_RAW, LOG_PITCH, LOG_NONE };
 enum state { STABILIZING_ORIENTATION, RUNNING, FALLEN, WOUND_UP };
 
-enum ws_msg_t {
-    STEERING = 0,
-
-    REQ_GRAVITY = 1,
-    RES_GRAVITY = 2,
-
-    BATTERY = 3,
-    BATTERY_CUTOFF = 4,
-
-    REQ_SET_PID_PARAMS = 5,
-    RES_SET_PID_PARAMS_ACK = 6,
-    REQ_GET_PID_PARAMS = 7,
-    RES_PID_PARAMS = 8,
-
-    REQ_SET_GYRO_OFFSETS = 9,
-    RES_SET_GYRO_OFFSETS_FAILURE = 10,
-    RES_SET_GYRO_OFFSETS_SUCCESS = 11,
-
-    REQ_SAVE_CONFIG = 12,
-    RES_SAVE_CONFIG_FAILURE = 13,
-    RES_SAVE_CONFIG_SUCCESS = 14,
-
-    REQ_CLEAR_CONFIG = 15,
-    RES_CLEAR_CONFIG_FAILURE = 16,
-    RES_CLEAR_CONFIG_SUCCESS = 17,
-
-    REQ_LOAD_FLASH_CONFIG = 18,
-    RES_LOAD_FLASH_CONFIG_DONE = 19,
-
-    REQ_ENABLE_MOTORS = 20,
-    REQ_DISABLE_MOTORS = 21
-};
-
-enum pid_controller_index {
-    ANGLE = 0,
-    ANGLE_HIGH = 1,
-    VEL = 2
-};
-
-struct espway_config {
-    pid_coeffs pid_coeffs_arr[3];
-    int16_t gyro_offsets[3];
-};
-
-const espway_config DEFAULT_CONFIG = {
-    .pid_coeffs_arr = {
-        { FLT_TO_Q16(ANGLE_KP), FLT_TO_Q16(ANGLE_KI), FLT_TO_Q16(ANGLE_KD) },
-        { FLT_TO_Q16(ANGLE_HIGH_KP), FLT_TO_Q16(ANGLE_HIGH_KI), FLT_TO_Q16(ANGLE_HIGH_KD) },
-        { FLT_TO_Q16(VEL_KP), FLT_TO_Q16(VEL_KI), FLT_TO_Q16(VEL_KD) }
-    },
-    .gyro_offsets = { GYRO_X_OFFSET, GYRO_Y_OFFSET, GYRO_Z_OFFSET }
-};
-
 TaskHandle_t xCalculationTask;
 TaskHandle_t xBatteryTask;
 TaskHandle_t xSteeringWatcher;
@@ -135,119 +68,8 @@ q16 steering_bias = 0;
 
 bool mpu_online = false;
 
-espway_config my_config;
-
 SemaphoreHandle_t orientation_mutex;
-vector3d_fix gravity = { Q16_ONE, 0, 0 };
-
-void pretty_print_config() {
-    xSemaphoreTake(pid_mutex, portMAX_DELAY);
-    printf(
-        "\n\nESPway current config:\n\n"
-        "#define ANGLE_KP %d\n"
-        "#define ANGLE_KI %d\n"
-        "#define ANGLE_KD %d\n"
-        "#define ANGLE_HIGH_KP %d\n"
-        "#define ANGLE_HIGH_KI %d\n"
-        "#define ANGLE_HIGH_KD %d\n"
-        "#define VEL_KP %d\n"
-        "#define VEL_KI %d\n"
-        "#define VEL_KD %d\n"
-        "#define GYRO_X_OFFSET %d\n"
-        "#define GYRO_Y_OFFSET %d\n"
-        "#define GYRO_Z_OFFSET %d\n"
-        "\n\n",
-        my_config.pid_coeffs_arr[ANGLE].p,
-        my_config.pid_coeffs_arr[ANGLE].i,
-        my_config.pid_coeffs_arr[ANGLE].d,
-        my_config.pid_coeffs_arr[ANGLE_HIGH].p,
-        my_config.pid_coeffs_arr[ANGLE_HIGH].i,
-        my_config.pid_coeffs_arr[ANGLE_HIGH].d,
-        my_config.pid_coeffs_arr[VEL].p,
-        my_config.pid_coeffs_arr[VEL].i,
-        my_config.pid_coeffs_arr[VEL].d,
-        my_config.gyro_offsets[0],
-        my_config.gyro_offsets[1],
-        my_config.gyro_offsets[2]
-    );
-    xSemaphoreGive(pid_mutex);
-}
-
-void load_hardcoded_config() {
-    my_config = DEFAULT_CONFIG;
-}
-
-void load_stored_config() {
-    xSemaphoreTake(pid_mutex, portMAX_DELAY);
-    load_hardcoded_config();
-    sysparam_get_data_static("ANGLE_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE],
-        sizeof(pid_coeffs), NULL, NULL);
-    sysparam_get_data_static("ANGLE_HIGH_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE_HIGH],
-        sizeof(pid_coeffs), NULL, NULL);
-    sysparam_get_data_static("VEL_PID", (uint8_t *)&my_config.pid_coeffs_arr[VEL],
-        sizeof(pid_coeffs), NULL, NULL);
-    sysparam_get_data_static("GYRO_OFFSETS", (uint8_t *)&my_config.gyro_offsets,
-        3 * sizeof(int16_t), NULL, NULL);
-    xSemaphoreGive(pid_mutex);
-}
-
-void apply_config_params() {
-    xSemaphoreTake(pid_mutex, portMAX_DELAY);
-    pid_initialize(&my_config.pid_coeffs_arr[ANGLE],
-        FLT_TO_Q16(SAMPLE_TIME),
-        -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE]);
-    pid_initialize(&my_config.pid_coeffs_arr[ANGLE_HIGH],
-        FLT_TO_Q16(SAMPLE_TIME),
-        -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE_HIGH]);
-    pid_initialize(&my_config.pid_coeffs_arr[VEL],
-        FLT_TO_Q16(SAMPLE_TIME), FALL_LOWER_BOUND, FALL_UPPER_BOUND, true,
-        &pid_settings_arr[VEL]);
-    xSemaphoreGive(pid_mutex);
-
-    mpu_set_gyro_offsets(my_config.gyro_offsets);
-}
-
-bool do_save_config(struct tcp_pcb *pcb) {
-    uint8_t response;
-    bool success = true;
-
-    xSemaphoreTake(pid_mutex, portMAX_DELAY);
-    success = sysparam_set_data("ANGLE_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE],
-        sizeof(pid_coeffs), true) == SYSPARAM_OK;
-    if (success) success = sysparam_set_data("ANGLE_HIGH_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE_HIGH], sizeof(pid_coeffs), true) == SYSPARAM_OK;
-    if (success) success = sysparam_set_data("VEL_PID", (uint8_t *)&my_config.pid_coeffs_arr[VEL], sizeof(pid_coeffs), true) == SYSPARAM_OK;
-    xSemaphoreGive(pid_mutex);
-    if (success) success = sysparam_set_data("GYRO_OFFSETS", (uint8_t *)&my_config.gyro_offsets, 3 * sizeof(int16_t), true) == SYSPARAM_OK;
-
-    if (success) {
-        response = RES_SAVE_CONFIG_SUCCESS;
-    } else {
-        response = RES_SAVE_CONFIG_FAILURE;
-    }
-    websocket_write(pcb, &response, 1, WS_BIN_MODE);
-    return success;
-}
-
-bool clear_flash_config() {
-    uint32_t base_addr, num_sectors;
-    return sysparam_get_info(&base_addr, &num_sectors) == SYSPARAM_OK &&
-        sysparam_create_area(base_addr, num_sectors, true) == SYSPARAM_OK &&
-        sysparam_init(base_addr, 0) == SYSPARAM_OK;
-}
-
-bool do_clear_config(struct tcp_pcb *pcb) {
-    uint8_t response;
-    // Clear the configuration by writing config version zero
-    bool success = clear_flash_config();
-    if (success) {
-        response = RES_CLEAR_CONFIG_SUCCESS;
-        load_hardcoded_config();
-    } else {
-        response = RES_CLEAR_CONFIG_FAILURE;
-    }
-    websocket_write(pcb, &response, 1, WS_BIN_MODE);
-    return success;
-}
+vector3d_fix gravity = { 0, 0, -Q16_ONE };
 
 void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d) {
     if (idx > 2) return;
@@ -268,31 +90,6 @@ void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d) {
         pid_update_params(p_coeffs, &pid_settings_arr[ANGLE_HIGH]);
     }
     xSemaphoreGive(pid_mutex);
-}
-
-void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx) {
-    uint8_t buf[14];
-    buf[0] = RES_PID_PARAMS;
-    buf[1] = idx;
-    int32_t *params = (int32_t *)(&buf[2]);
-    xSemaphoreTake(pid_mutex, portMAX_DELAY);
-    params[0] = my_config.pid_coeffs_arr[idx].p;
-    params[1] = my_config.pid_coeffs_arr[idx].i;
-    params[2] = my_config.pid_coeffs_arr[idx].d;
-    xSemaphoreGive(pid_mutex);
-    websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
-}
-
-void send_gravity(struct tcp_pcb *pcb, const vector3d_fix * const grav) {
-    uint8_t buf[7];
-    buf[0] = RES_GRAVITY;
-    int16_t *qdata = (int16_t *)&buf[1];
-    xSemaphoreTake(orientation_mutex, portMAX_DELAY);
-    qdata[0] = grav->x / 2;
-    qdata[1] = grav->y / 2;
-    qdata[2] = grav->z / 2;
-    xSemaphoreGive(orientation_mutex);
-    websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
 typedef struct {
@@ -369,72 +166,6 @@ void battery_task(void *pvParameter)
     vTaskDelete(NULL);
 }
 
-void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, u16_t data_len, uint8_t mode)
-{
-    if (data_len == 0 || mode != WS_BIN_MODE) return;
-
-    uint8_t msgtype = data[0];
-    uint8_t *payload = &data[1];
-    data_len -= 1;
-    int8_t *signed_data;
-    pid_controller_index pid_index;
-    int32_t *i32_data;
-    uint8_t res;
-
-    switch (msgtype) {
-        case STEERING:
-            // Parameters: velocity (int8_t), turn rate (int8_t)
-            if (data_len != 2) break;
-            signed_data = (int8_t *)payload;
-            steering_bias = (FLT_TO_Q16(STEERING_FACTOR) * signed_data[0]) / 128;
-            target_speed = (FLT_TO_Q16(SPEED_CONTROL_FACTOR) * signed_data[1]) / 128;
-            xTaskNotify(xSteeringWatcher, 0, eNoAction);
-            break;
-
-        case REQ_GRAVITY:
-            if (data_len != 0) break;
-            send_gravity(pcb, &gravity);
-            break;
-
-        case REQ_SET_PID_PARAMS:
-            // Parameters: pid index (uint8_t), P (q16/int32_t), I (q16), D (q16)
-            if (data_len != 13) break;
-
-            pid_index = (pid_controller_index)payload[0];
-            i32_data = (int32_t *)(&payload[1]);
-            if (pid_index <= 2) {
-                update_pid_controller(pid_index, i32_data[0], i32_data[1],
-                    i32_data[2]);
-                res = RES_SET_PID_PARAMS_ACK;
-                websocket_write(pcb, &res, 1, WS_BIN_MODE);
-            }
-
-            break;
-
-        case REQ_GET_PID_PARAMS:
-            if (data_len != 1) break;
-            if (payload[0] <= 2) send_pid_params(pcb, (pid_controller_index)payload[0]);
-            break;
-
-        case REQ_LOAD_FLASH_CONFIG:
-            if (data_len != 0) break;
-            load_stored_config();
-            res = RES_LOAD_FLASH_CONFIG_DONE;
-            websocket_write(pcb, &res, 1, WS_BIN_MODE);
-            break;
-
-        case REQ_SAVE_CONFIG:
-            if (data_len != 0) break;
-            do_save_config(pcb);
-            break;
-
-        case REQ_CLEAR_CONFIG:
-            if (data_len != 0) break;
-            do_clear_config(pcb);
-            break;
-    }
-}
-
 void websocket_open_cb(struct tcp_pcb *pcb, const char *uri)
 {
     if (strcmp(uri, "/ws") == 0) {
@@ -489,6 +220,7 @@ void main_loop(void *pvParameters) {
             if (current_time - stage_started > ORIENTATION_STABILIZE_DURATION_US) {
                 my_state = RUNNING;
                 stage_started = current_time;
+                imuparams.Kp = FLT_TO_Q16(MAHONY_FILTER_KP);
             }
         } else if (my_state == RUNNING || my_state == WOUND_UP) {
             if (sin_pitch < FALL_UPPER_BOUND && sin_pitch > FALL_LOWER_BOUND &&
@@ -609,7 +341,7 @@ extern "C" void user_init(void)
     // Parameter calculation & initialization
     pid_reset(0, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
     pid_reset(0, 0, &pid_settings_arr[VEL], &vel_pid_state);
-    mahony_filter_init(&imuparams, MAHONY_FILTER_KP, MAHONY_FILTER_KI, 2.0f * 2000.0f * M_PI / 180.0f, 0.001f);
+    mahony_filter_init(&imuparams, 10.0f * MAHONY_FILTER_KP, MAHONY_FILTER_KI, 2.0f * 2000.0f * M_PI / 180.0f, 0.001f);
 
     set_both_eyes(mpu_online ? YELLOW : RED);
 
