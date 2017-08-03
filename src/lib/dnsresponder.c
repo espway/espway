@@ -36,7 +36,7 @@
  *
  */
 
-static ip4_addr_t server_addr;
+static ip_addr_t server_addr;
 
 static void dns_task(void *pvParameters)
 {
@@ -48,12 +48,6 @@ static void dns_task(void *pvParameters)
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     serv_addr.sin_port = htons(53);
     bind(fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
-
-    const struct ifreq ifreq0 = { "en0" };
-    const struct ifreq ifreq1 = { "en1" };
-    lwip_setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE,
-                    sdk_wifi_get_opmode() == STATIONAP_MODE ? &ifreq1 : &ifreq0,
-                    sizeof(ifreq0));
 
     for (;;) {
         char buffer[96];
@@ -104,7 +98,7 @@ static void dns_task(void *pvParameters)
     }
 }
 
-void dnsresponder_init(ip4_addr_t addr) {
+void dnsresponder_init(ip_addr_t addr) {
     server_addr = addr;
     dhcpserver_set_router(&addr);
     dhcpserver_set_dns(&addr);

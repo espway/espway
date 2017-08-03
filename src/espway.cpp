@@ -125,7 +125,7 @@ void wifi_setup(void) {
     ap_config.beacon_interval = 100;
     sdk_wifi_softap_set_config(&ap_config);
 
-    ip4_addr_t first_client_ip;
+    ip_addr_t first_client_ip;
     IP4_ADDR(&first_client_ip, 10, 0, 0, 3);
     dhcpserver_start(&first_client_ip, 4);
     dnsresponder_init(ap_ip.ip);

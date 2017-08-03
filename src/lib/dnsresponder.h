@@ -2,5 +2,5 @@
 
 #include <lwip/ip_addr.h>
 
-void dnsresponder_init(ip4_addr_t addr);
+void dnsresponder_init(ip_addr_t addr);
 
