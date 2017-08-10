@@ -40,68 +40,68 @@ static ip_addr_t server_addr;
 
 static void dns_task(void *pvParameters)
 {
-    struct sockaddr_in serv_addr;
-    int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  struct sockaddr_in serv_addr;
+  int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
-    memset(&serv_addr, '0', sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(53);
-    bind(fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+  memset(&serv_addr, '0', sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  serv_addr.sin_port = htons(53);
+  bind(fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 
-    for (;;) {
-        char buffer[96];
-        struct sockaddr src_addr;
-        socklen_t src_addr_len = sizeof(src_addr);
-        size_t count = recvfrom(fd, buffer, sizeof(buffer), 0, (struct sockaddr*)&src_addr, &src_addr_len);
+  for (;;) {
+    char buffer[96];
+    struct sockaddr src_addr;
+    socklen_t src_addr_len = sizeof(src_addr);
+    size_t count = recvfrom(fd, buffer, sizeof(buffer), 0, (struct sockaddr*)&src_addr, &src_addr_len);
 
-        /* Drop messages that are too large to send a response in the buffer */
-        if (count > 0 && count <= sizeof(buffer) - 16 && src_addr.sa_family == AF_INET) {
-            size_t qname_len = strlen(buffer + 12) + 1;
-            uint32_t reply_len = 2 + 10 + qname_len + 16 + 4;
+    /* Drop messages that are too large to send a response in the buffer */
+    if (count > 0 && count <= sizeof(buffer) - 16 && src_addr.sa_family == AF_INET) {
+      size_t qname_len = strlen(buffer + 12) + 1;
+      uint32_t reply_len = 2 + 10 + qname_len + 16 + 4;
 
-            char *head = buffer + 2;
-            *head++ = 0x80; // Flags
-            *head++ = 0x00;
-            *head++ = 0x00; // Q count
-            *head++ = 0x01;
-            *head++ = 0x00; // A count
-            *head++ = 0x01;
-            *head++ = 0x00; // Auth count
-            *head++ = 0x00;
-            *head++ = 0x00; // Add count
-            *head++ = 0x00;
-            head += qname_len;
-            *head++ = 0x00; // Q type
-            *head++ = 0x01;
-            *head++ = 0x00; // Q class
-            *head++ = 0x01;
-            *head++ = 0xC0; // LBL offs
-            *head++ = 0x0C;
-            *head++ = 0x00; // Type
-            *head++ = 0x01;
-            *head++ = 0x00; // Class
-            *head++ = 0x01;
-            *head++ = 0x00; // TTL
-            *head++ = 0x00;
-            *head++ = 0x00;
-            *head++ = 0x78;
-            *head++ = 0x00; // RD len
-            *head++ = 0x04;
-            *head++ = ip4_addr1(&server_addr);
-            *head++ = ip4_addr2(&server_addr);
-            *head++ = ip4_addr3(&server_addr);
-            *head++ = ip4_addr4(&server_addr);
+      char *head = buffer + 2;
+      *head++ = 0x80; // Flags
+      *head++ = 0x00;
+      *head++ = 0x00; // Q count
+      *head++ = 0x01;
+      *head++ = 0x00; // A count
+      *head++ = 0x01;
+      *head++ = 0x00; // Auth count
+      *head++ = 0x00;
+      *head++ = 0x00; // Add count
+      *head++ = 0x00;
+      head += qname_len;
+      *head++ = 0x00; // Q type
+      *head++ = 0x01;
+      *head++ = 0x00; // Q class
+      *head++ = 0x01;
+      *head++ = 0xC0; // LBL offs
+      *head++ = 0x0C;
+      *head++ = 0x00; // Type
+      *head++ = 0x01;
+      *head++ = 0x00; // Class
+      *head++ = 0x01;
+      *head++ = 0x00; // TTL
+      *head++ = 0x00;
+      *head++ = 0x00;
+      *head++ = 0x78;
+      *head++ = 0x00; // RD len
+      *head++ = 0x04;
+      *head++ = ip4_addr1(&server_addr);
+      *head++ = ip4_addr2(&server_addr);
+      *head++ = ip4_addr3(&server_addr);
+      *head++ = ip4_addr4(&server_addr);
 
-            sendto(fd, buffer, reply_len, 0, &src_addr, src_addr_len);
-        }
+      sendto(fd, buffer, reply_len, 0, &src_addr, src_addr_len);
     }
+  }
 }
 
 void dnsresponder_init(ip_addr_t addr) {
-    server_addr = addr;
-    dhcpserver_set_router(&addr);
-    dhcpserver_set_dns(&addr);
-    xTaskCreate(dns_task, "WiFi Cfg DNS", 384, NULL, 2, NULL);
+  server_addr = addr;
+  dhcpserver_set_router(&addr);
+  dhcpserver_set_dns(&addr);
+  xTaskCreate(dns_task, "WiFi Cfg DNS", 384, NULL, 2, NULL);
 }
 

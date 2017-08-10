@@ -1,3 +1,21 @@
+/*
+ * Firmware for a segway-style robot using ESP8266.
+ * Copyright (C) 2017  Sakari Kapanen
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 extern "C" {
 #include <string.h>
 #include <espressif/esp_common.h>
@@ -72,289 +90,289 @@ SemaphoreHandle_t orientation_mutex;
 vector3d_fix gravity = { 0, 0, -Q16_ONE };
 
 void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d) {
-    if (idx > 2) return;
-    xSemaphoreTake(pid_mutex, portMAX_DELAY);
-    pid_coeffs *p_coeffs = &my_config.pid_coeffs_arr[idx];
-    p_coeffs->p = p;
+  if (idx > 2) return;
+  xSemaphoreTake(pid_mutex, portMAX_DELAY);
+  pid_coeffs *p_coeffs = &my_config.pid_coeffs_arr[idx];
+  p_coeffs->p = p;
+  p_coeffs->i = i;
+  p_coeffs->d = d;
+  pid_update_params(p_coeffs, &pid_settings_arr[idx]);
+
+  if (idx == ANGLE) {
+    // If ANGLE PID coefficients are updated, automatically update the
+    // high gain PID
+    p_coeffs = &my_config.pid_coeffs_arr[ANGLE_HIGH];
+    p_coeffs->p = q16_mul(FLT_TO_Q16(1.5f), p);
     p_coeffs->i = i;
     p_coeffs->d = d;
-    pid_update_params(p_coeffs, &pid_settings_arr[idx]);
-
-    if (idx == ANGLE) {
-        // If ANGLE PID coefficients are updated, automatically update the
-        // high gain PID
-        p_coeffs = &my_config.pid_coeffs_arr[ANGLE_HIGH];
-        p_coeffs->p = q16_mul(FLT_TO_Q16(1.5f), p);
-        p_coeffs->i = i;
-        p_coeffs->d = d;
-        pid_update_params(p_coeffs, &pid_settings_arr[ANGLE_HIGH]);
-    }
-    xSemaphoreGive(pid_mutex);
+    pid_update_params(p_coeffs, &pid_settings_arr[ANGLE_HIGH]);
+  }
+  xSemaphoreGive(pid_mutex);
 }
 
 typedef struct {
-    struct tcp_pcb *pcb;
-    uint16_t battery_value;
+  struct tcp_pcb *pcb;
+  uint16_t battery_value;
 } battery_callback_params_t;
 
 void battery_callback(void *ctx) {
-    battery_callback_params_t *params = (battery_callback_params_t *)ctx;
+  battery_callback_params_t *params = (battery_callback_params_t *)ctx;
 
-    uint8_t buf[3];
-    buf[0] = BATTERY;
-    uint16_t *payload = (uint16_t *)&buf[1];
-    payload[0] = q16_mul(params->battery_value, BATTERY_COEFFICIENT);
+  uint8_t buf[3];
+  buf[0] = BATTERY;
+  uint16_t *payload = (uint16_t *)&buf[1];
+  payload[0] = q16_mul(params->battery_value, BATTERY_COEFFICIENT);
 
-    websocket_write(params->pcb, buf, sizeof(buf), WS_BIN_MODE);
+  websocket_write(params->pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
 void wifi_setup(void) {
-    sdk_wifi_set_opmode(SOFTAP_MODE);
-    struct ip_info ap_ip;
-    IP4_ADDR(&ap_ip.ip, 10, 0, 0, 2);
-    IP4_ADDR(&ap_ip.gw, 10, 0, 0, 1);
-    IP4_ADDR(&ap_ip.netmask, 255, 255, 255, 0);
-    sdk_wifi_set_ip_info(SOFTAP_IF, &ap_ip);
+  sdk_wifi_set_opmode(SOFTAP_MODE);
+  struct ip_info ap_ip;
+  IP4_ADDR(&ap_ip.ip, 10, 0, 0, 2);
+  IP4_ADDR(&ap_ip.gw, 10, 0, 0, 1);
+  IP4_ADDR(&ap_ip.netmask, 255, 255, 255, 0);
+  sdk_wifi_set_ip_info(SOFTAP_IF, &ap_ip);
 
-    struct sdk_softap_config ap_config = {};
-    strcpy((char *)ap_config.ssid, AP_SSID);
-    ap_config.channel = 3;
-    ap_config.ssid_len = strlen(AP_SSID);
-    ap_config.authmode = AUTH_OPEN;
-    ap_config.max_connection = 1;
-    ap_config.beacon_interval = 100;
-    sdk_wifi_softap_set_config(&ap_config);
+  struct sdk_softap_config ap_config = {};
+  strcpy((char *)ap_config.ssid, AP_SSID);
+  ap_config.channel = 3;
+  ap_config.ssid_len = strlen(AP_SSID);
+  ap_config.authmode = AUTH_OPEN;
+  ap_config.max_connection = 1;
+  ap_config.beacon_interval = 100;
+  sdk_wifi_softap_set_config(&ap_config);
 
-    ip_addr_t first_client_ip;
-    IP4_ADDR(&first_client_ip, 10, 0, 0, 3);
-    dhcpserver_start(&first_client_ip, 4);
-    dnsresponder_init(ap_ip.ip);
+  ip_addr_t first_client_ip;
+  IP4_ADDR(&first_client_ip, 10, 0, 0, 3);
+  dhcpserver_start(&first_client_ip, 4);
+  dnsresponder_init(ap_ip.ip);
 }
 
 void battery_task(void *pvParameter)
 {
-    struct tcp_pcb *pcb = NULL;
-    q16 battery_value = 0;
-    for (;;) {
-        battery_value = q16_exponential_smooth(battery_value, sdk_system_adc_read(),
-            FLT_TO_Q16(0.25f));
+  struct tcp_pcb *pcb = NULL;
+  q16 battery_value = 0;
+  for (;;) {
+    battery_value = q16_exponential_smooth(battery_value, sdk_system_adc_read(),
+        FLT_TO_Q16(0.25f));
 
-        if (ENABLE_BATTERY_CUTOFF && battery_value < (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR)) {
-            set_both_eyes(BLACK);
-            mpu_go_to_sleep();
-            set_motors(0, 0);
-            sdk_system_deep_sleep(UINT32_MAX);
-            break;
-        }
-
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-
-        uint32_t notification_value = 0;
-        if (xTaskNotifyWait(0, 0, &notification_value, 0)) {
-            pcb = (struct tcp_pcb *)notification_value;
-        }
-
-        if (pcb != NULL && pcb->state == ESTABLISHED) {
-            battery_callback_params_t params = {
-                pcb,
-                (uint16_t)battery_value
-            };
-            tcpip_callback(battery_callback, (void *)&params);
-        }
+    if (ENABLE_BATTERY_CUTOFF && battery_value < (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR)) {
+      set_both_eyes(BLACK);
+      mpu_go_to_sleep();
+      set_motors(0, 0);
+      sdk_system_deep_sleep(UINT32_MAX);
+      break;
     }
 
-    vTaskDelete(NULL);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+
+    uint32_t notification_value = 0;
+    if (xTaskNotifyWait(0, 0, &notification_value, 0)) {
+      pcb = (struct tcp_pcb *)notification_value;
+    }
+
+    if (pcb != NULL && pcb->state == ESTABLISHED) {
+      battery_callback_params_t params = {
+        pcb,
+        (uint16_t)battery_value
+      };
+      tcpip_callback(battery_callback, (void *)&params);
+    }
+  }
+
+  vTaskDelete(NULL);
 }
 
 void websocket_open_cb(struct tcp_pcb *pcb, const char *uri)
 {
-    if (strcmp(uri, "/ws") == 0) {
-        xTaskNotify(xBatteryTask, (uint32_t)pcb, eSetValueWithOverwrite);
-    }
+  if (strcmp(uri, "/ws") == 0) {
+    xTaskNotify(xBatteryTask, (uint32_t)pcb, eSetValueWithOverwrite);
+  }
 }
 
 void httpd_task(void *pvParameters)
 {
-    tCGI pCGIs[] = {
-        {"/pid", (tCGIHandler)([](int, int, char *[], char *[]) { return "/pid.html"; })}
-    };
-    http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
+  tCGI pCGIs[] = {
+    {"/pid", (tCGIHandler)([](int, int, char *[], char *[]) { return "/pid.html"; })}
+  };
+  http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
 
-    websocket_register_callbacks((tWsOpenHandler) websocket_open_cb,
-        (tWsHandler) websocket_cb);
-    httpd_init();
+  websocket_register_callbacks((tWsOpenHandler) websocket_open_cb,
+      (tWsHandler) websocket_cb);
+  httpd_init();
 
-    for (;;);
+  for (;;);
 }
 
 void main_loop(void *pvParameters) {
-    int16_t raw_data[6];
-    uint32_t time_old = 0;
-    uint32_t current_time = 0;
-    int n = 0;
-    q16 travel_speed = 0;
-    q16 smoothed_target_speed = 0;
-    state my_state = STABILIZING_ORIENTATION;
-    unsigned long stage_started = 0;
-    unsigned long last_wind_up = 0;
+  int16_t raw_data[6];
+  uint32_t time_old = 0;
+  uint32_t current_time = 0;
+  int n = 0;
+  q16 travel_speed = 0;
+  q16 smoothed_target_speed = 0;
+  state my_state = STABILIZING_ORIENTATION;
+  unsigned long stage_started = 0;
+  unsigned long last_wind_up = 0;
 
-    for (;;) {
-        xTaskNotifyWait(0, 0, NULL, 1);
-        mpu_read_raw_data(MPU_ADDR, raw_data);
+  for (;;) {
+    xTaskNotifyWait(0, 0, NULL, 1);
+    mpu_read_raw_data(MPU_ADDR, raw_data);
 
-        // Update orientation estimate
-        xSemaphoreTake(orientation_mutex, portMAX_DELAY);
-        mahony_filter_update(&imuparams, &raw_data[0], &raw_data[3], &gravity);
-        // Calculate sine of pitch angle from quaternion
-        q16 sin_pitch = -gravity.z;
-        q16 sin_roll = gravity.y;
-        xSemaphoreGive(orientation_mutex);
+    // Update orientation estimate
+    xSemaphoreTake(orientation_mutex, portMAX_DELAY);
+    mahony_filter_update(&imuparams, &raw_data[0], &raw_data[3], &gravity);
+    // Calculate sine of pitch angle from quaternion
+    q16 sin_pitch = -gravity.z;
+    q16 sin_roll = gravity.y;
+    xSemaphoreGive(orientation_mutex);
 
-        // Exponential smoothing of target speed
-        smoothed_target_speed = q16_exponential_smooth(smoothed_target_speed,
-            target_speed, FLT_TO_Q16(TARGET_SPEED_SMOOTHING));
+    // Exponential smoothing of target speed
+    smoothed_target_speed = q16_exponential_smooth(smoothed_target_speed,
+        target_speed, FLT_TO_Q16(TARGET_SPEED_SMOOTHING));
 
-        current_time = sdk_system_get_time();
+    current_time = sdk_system_get_time();
 
-        if (my_state == STABILIZING_ORIENTATION) {
-            if (current_time - stage_started > ORIENTATION_STABILIZE_DURATION_US) {
-                my_state = RUNNING;
-                stage_started = current_time;
-                imuparams.Kp = FLT_TO_Q16(MAHONY_FILTER_KP);
-            }
-        } else if (my_state == RUNNING || my_state == WOUND_UP) {
-            if (sin_pitch < FALL_UPPER_BOUND && sin_pitch > FALL_LOWER_BOUND &&
-                sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND) {
-                // Perform PID update
-                xSemaphoreTake(pid_mutex, portMAX_DELAY);
-                q16 target_angle = pid_compute(travel_speed, smoothed_target_speed,
-                    &pid_settings_arr[VEL], &vel_pid_state);
-                bool use_high_pid =
-                    sin_pitch < (target_angle - FLT_TO_Q16(HIGH_PID_LIMIT)) ||
-                    sin_pitch > (target_angle + FLT_TO_Q16(HIGH_PID_LIMIT));
-                q16 motor_speed = pid_compute(sin_pitch, target_angle,
-                    use_high_pid ? &pid_settings_arr[ANGLE_HIGH] :
-                                   &pid_settings_arr[ANGLE],
-                    &angle_pid_state);
-                xSemaphoreGive(pid_mutex);
+    if (my_state == STABILIZING_ORIENTATION) {
+      if (current_time - stage_started > ORIENTATION_STABILIZE_DURATION_US) {
+        my_state = RUNNING;
+        stage_started = current_time;
+        imuparams.Kp = FLT_TO_Q16(MAHONY_FILTER_KP);
+      }
+    } else if (my_state == RUNNING || my_state == WOUND_UP) {
+      if (sin_pitch < FALL_UPPER_BOUND && sin_pitch > FALL_LOWER_BOUND &&
+          sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND) {
+        // Perform PID update
+        xSemaphoreTake(pid_mutex, portMAX_DELAY);
+        q16 target_angle = pid_compute(travel_speed, smoothed_target_speed,
+            &pid_settings_arr[VEL], &vel_pid_state);
+        bool use_high_pid =
+          sin_pitch < (target_angle - FLT_TO_Q16(HIGH_PID_LIMIT)) ||
+          sin_pitch > (target_angle + FLT_TO_Q16(HIGH_PID_LIMIT));
+        q16 motor_speed = pid_compute(sin_pitch, target_angle,
+            use_high_pid ? &pid_settings_arr[ANGLE_HIGH] :
+            &pid_settings_arr[ANGLE],
+            &angle_pid_state);
+        xSemaphoreGive(pid_mutex);
 
-                if (motor_speed < FLT_TO_Q16(MOTOR_DEADBAND) &&
-                    motor_speed > -FLT_TO_Q16(MOTOR_DEADBAND)) {
-                    motor_speed = 0;
-                }
-
-                if (my_state == WOUND_UP) {
-                    set_motors(0, 0);
-                } else {
-                    set_motors(motor_speed + steering_bias,
-                        motor_speed - steering_bias);
-                }
-
-                if (motor_speed != Q16_ONE && motor_speed != -Q16_ONE) {
-                    last_wind_up = current_time;
-                } else if (current_time - last_wind_up > WINDUP_TIMEOUT_US) {
-                    my_state = WOUND_UP;
-                    set_both_eyes(BLUE);
-                }
-
-                // Estimate travel speed by exponential smoothing
-                travel_speed = q16_exponential_smooth(travel_speed, motor_speed,
-                    FLT_TO_Q16(TRAVEL_SPEED_SMOOTHING));
-            } else {
-                my_state = FALLEN;
-                set_both_eyes(BLUE);
-                travel_speed = 0;
-                set_motors(0, 0);
-            }
-        } else if (my_state == FALLEN) {
-            if (sin_pitch < RECOVER_UPPER_BOUND &&
-                sin_pitch > RECOVER_LOWER_BOUND &&
-                sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND) {
-                my_state = RUNNING;
-                set_both_eyes(GREEN);
-                pid_reset(sin_pitch, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
-                pid_reset(0, FLT_TO_Q16(STABLE_ANGLE), &pid_settings_arr[VEL],
-                    &vel_pid_state);
-            }
+        if (motor_speed < FLT_TO_Q16(MOTOR_DEADBAND) &&
+            motor_speed > -FLT_TO_Q16(MOTOR_DEADBAND)) {
+          motor_speed = 0;
         }
 
-        if (LOGMODE == LOG_FREQ) {
-            n += 1;
-            if (n == 1024) {
-                n = 0;
-                uint32_t looptime = (current_time - time_old) / 1024;
-                printf("Looptime: %u us\n", looptime);
-                time_old = current_time;
-            }
-        } else if (LOGMODE == LOG_RAW) {
-            printf("%d, %d, %d, %d, %d, %d\n",
-                raw_data[0], raw_data[1], raw_data[2],
-                raw_data[3], raw_data[4], raw_data[5]);
-        } else if (LOGMODE == LOG_PITCH) {
-            printf("%d\n", sin_pitch);
+        if (my_state == WOUND_UP) {
+          set_motors(0, 0);
+        } else {
+          set_motors(motor_speed + steering_bias,
+              motor_speed - steering_bias);
         }
 
-        xTaskNotify(xIMUWatcher, 0, eNoAction);
+        if (motor_speed != Q16_ONE && motor_speed != -Q16_ONE) {
+          last_wind_up = current_time;
+        } else if (current_time - last_wind_up > WINDUP_TIMEOUT_US) {
+          my_state = WOUND_UP;
+          set_both_eyes(BLUE);
+        }
+
+        // Estimate travel speed by exponential smoothing
+        travel_speed = q16_exponential_smooth(travel_speed, motor_speed,
+            FLT_TO_Q16(TRAVEL_SPEED_SMOOTHING));
+      } else {
+        my_state = FALLEN;
+        set_both_eyes(BLUE);
+        travel_speed = 0;
+        set_motors(0, 0);
+      }
+    } else if (my_state == FALLEN) {
+      if (sin_pitch < RECOVER_UPPER_BOUND &&
+          sin_pitch > RECOVER_LOWER_BOUND &&
+          sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND) {
+        my_state = RUNNING;
+        set_both_eyes(GREEN);
+        pid_reset(sin_pitch, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
+        pid_reset(0, FLT_TO_Q16(STABLE_ANGLE), &pid_settings_arr[VEL],
+            &vel_pid_state);
+      }
     }
+
+    if (LOGMODE == LOG_FREQ) {
+      n += 1;
+      if (n == 1024) {
+        n = 0;
+        uint32_t looptime = (current_time - time_old) / 1024;
+        printf("Looptime: %u us\n", looptime);
+        time_old = current_time;
+      }
+    } else if (LOGMODE == LOG_RAW) {
+      printf("%d, %d, %d, %d, %d, %d\n",
+          raw_data[0], raw_data[1], raw_data[2],
+          raw_data[3], raw_data[4], raw_data[5]);
+    } else if (LOGMODE == LOG_PITCH) {
+      printf("%d\n", sin_pitch);
+    }
+
+    xTaskNotify(xIMUWatcher, 0, eNoAction);
+  }
 }
 
 void mpu_interrupt_handler(uint8_t gpio_num) {
-    BaseType_t xHigherPriorityTaskHasWoken = pdFALSE;
-    xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
-    portEND_SWITCHING_ISR(xHigherPriorityTaskHasWoken);
+  BaseType_t xHigherPriorityTaskHasWoken = pdFALSE;
+  xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
+  portEND_SWITCHING_ISR(xHigherPriorityTaskHasWoken);
 }
 
 void steering_watcher(void *) {
-    for (;;) {
-        if (!xTaskNotifyWait(0, 0, NULL, STEERING_TIMEOUT_MS / portTICK_PERIOD_MS)) {
-            steering_bias = 0;
-            target_speed = 0;
-        }
+  for (;;) {
+    if (!xTaskNotifyWait(0, 0, NULL, STEERING_TIMEOUT_MS / portTICK_PERIOD_MS)) {
+      steering_bias = 0;
+      target_speed = 0;
     }
+  }
 }
 
 void imu_watcher(void *) {
-    for (;;) {
-        if (!xTaskNotifyWait(0, 0, NULL, IMU_TIMEOUT_MS / portTICK_PERIOD_MS)) {
-            set_motors(0, 0);
-            abort();
-        }
+  for (;;) {
+    if (!xTaskNotifyWait(0, 0, NULL, IMU_TIMEOUT_MS / portTICK_PERIOD_MS)) {
+      set_motors(0, 0);
+      abort();
     }
+  }
 }
 
 extern "C" void user_init(void)
 {
-    uart_set_baud(0, 115200);
-    i2c_init(5, 0);
-    mpu_online = mpu_init();
-    eyes_init();
+  uart_set_baud(0, 115200);
+  i2c_init(5, 0);
+  mpu_online = mpu_init();
+  eyes_init();
 
-    pid_mutex = xSemaphoreCreateMutex();
-    orientation_mutex = xSemaphoreCreateMutex();
+  pid_mutex = xSemaphoreCreateMutex();
+  orientation_mutex = xSemaphoreCreateMutex();
 
-    motors_init(PWM_PERIOD);
+  motors_init(PWM_PERIOD);
 
-    load_config();
-    apply_config_params();
-    pretty_print_config();
+  load_config();
+  apply_config_params();
+  pretty_print_config();
 
-    // Parameter calculation & initialization
-    pid_reset(0, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
-    pid_reset(0, 0, &pid_settings_arr[VEL], &vel_pid_state);
-    mahony_filter_init(&imuparams, 10.0f * MAHONY_FILTER_KP, MAHONY_FILTER_KI, 2.0f * 2000.0f * M_PI / 180.0f, 0.001f);
+  // Parameter calculation & initialization
+  pid_reset(0, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
+  pid_reset(0, 0, &pid_settings_arr[VEL], &vel_pid_state);
+  mahony_filter_init(&imuparams, 10.0f * MAHONY_FILTER_KP, MAHONY_FILTER_KI, 2.0f * 2000.0f * M_PI / 180.0f, 0.001f);
 
-    set_both_eyes(mpu_online ? YELLOW : RED);
+  set_both_eyes(mpu_online ? YELLOW : RED);
 
-    wifi_setup();
+  wifi_setup();
 
-    // TODO: OTA init
+  // TODO: OTA init
 
-    xTaskCreate(&battery_task, "Battery task", 256, NULL, PRIO_COMMUNICATION, &xBatteryTask);
-    xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, PRIO_COMMUNICATION, NULL);
-    xTaskCreate(&main_loop, "Main loop", 256, NULL, PRIO_MAIN_LOOP, &xCalculationTask);
-    xTaskCreate(&steering_watcher, "Steering watcher", 128, NULL, PRIO_MAIN_LOOP + 1, &xSteeringWatcher);
-    xTaskCreate(&imu_watcher, "IMU watcher", 128, NULL, PRIO_MAIN_LOOP + 2, &xIMUWatcher);
+  xTaskCreate(&battery_task, "Battery task", 256, NULL, PRIO_COMMUNICATION, &xBatteryTask);
+  xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, PRIO_COMMUNICATION, NULL);
+  xTaskCreate(&main_loop, "Main loop", 256, NULL, PRIO_MAIN_LOOP, &xCalculationTask);
+  xTaskCreate(&steering_watcher, "Steering watcher", 128, NULL, PRIO_MAIN_LOOP + 1, &xSteeringWatcher);
+  xTaskCreate(&imu_watcher, "IMU watcher", 128, NULL, PRIO_MAIN_LOOP + 2, &xIMUWatcher);
 
-    gpio_enable(4, GPIO_INPUT);
-    gpio_set_interrupt(4, GPIO_INTTYPE_EDGE_POS, mpu_interrupt_handler);
+  gpio_enable(4, GPIO_INPUT);
+  gpio_set_interrupt(4, GPIO_INTTYPE_EDGE_POS, mpu_interrupt_handler);
 }
