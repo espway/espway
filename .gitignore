@@ -5,4 +5,5 @@ node_modules
 build
 firmware
 fsdata.c
+tags
 
