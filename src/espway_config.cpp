@@ -33,7 +33,8 @@ const static espway_config DEFAULT_CONFIG = {
   .gyro_offsets = { GYRO_X_OFFSET, GYRO_Y_OFFSET, GYRO_Z_OFFSET }
 };
 
-void pretty_print_config() {
+void pretty_print_config()
+{
   xSemaphoreTake(pid_mutex, portMAX_DELAY);
   printf(
       "\n\nESPway current config:\n\n"
@@ -66,11 +67,13 @@ void pretty_print_config() {
   xSemaphoreGive(pid_mutex);
 }
 
-void load_hardcoded_config() {
+void load_hardcoded_config()
+{
   my_config = DEFAULT_CONFIG;
 }
 
-void load_config() {
+void load_config()
+{
   xSemaphoreTake(pid_mutex, portMAX_DELAY);
   load_hardcoded_config();
   sysparam_get_data_static("ANGLE_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE],
@@ -84,7 +87,8 @@ void load_config() {
   xSemaphoreGive(pid_mutex);
 }
 
-void apply_config_params() {
+void apply_config_params()
+{
   xSemaphoreTake(pid_mutex, portMAX_DELAY);
   pid_initialize(&my_config.pid_coeffs_arr[ANGLE],
       FLT_TO_Q16(SAMPLE_TIME),
@@ -100,7 +104,8 @@ void apply_config_params() {
   mpu_set_gyro_offsets(my_config.gyro_offsets);
 }
 
-bool save_flash_config() {
+bool save_flash_config()
+{
   bool success = true;
 
   xSemaphoreTake(pid_mutex, portMAX_DELAY);
@@ -114,9 +119,11 @@ bool save_flash_config() {
   return success;
 }
 
-bool clear_flash_config() {
+bool clear_flash_config()
+{
   uint32_t base_addr, num_sectors;
   return sysparam_get_info(&base_addr, &num_sectors) == SYSPARAM_OK &&
     sysparam_create_area(base_addr, num_sectors, true) == SYSPARAM_OK &&
     sysparam_init(base_addr, 0) == SYSPARAM_OK;
 }
+

@@ -19,7 +19,8 @@
 #include "imu.h"
 
 void mahony_filter_init(mahony_filter_state *state, float Kp, float Ki,
-    float gyro_factor, float dt) {
+    float gyro_factor, float dt)
+{
   state->Kp = FLT_TO_Q16(Kp);
   state->Ki = FLT_TO_Q16(Ki);
   state->dt = FLT_TO_Q16(dt);
@@ -30,7 +31,8 @@ void mahony_filter_init(mahony_filter_state *state, float Kp, float Ki,
 }
 
 void mahony_filter_update(mahony_filter_state *state,
-    const int16_t *raw_accel, const int16_t *raw_gyro, vector3d_fix *gravity) {
+    const int16_t *raw_accel, const int16_t *raw_gyro, vector3d_fix *gravity)
+{
   vector3d_fix omega, accel, verror;
   accel.x = raw_accel[0];
   accel.y = raw_accel[1];
@@ -41,7 +43,8 @@ void mahony_filter_update(mahony_filter_state *state,
 
   omega = v3d_mul(state->gyro_conversion_factor, &omega);
 
-  if (accel.x != 0 || accel.y != 0 || accel.z != 0) {
+  if (accel.x != 0 || accel.y != 0 || accel.z != 0)
+  {
     accel = v3d_normalize(&accel);
     verror = v3d_cross(&accel, gravity);
     state->integral = v3d_add(&state->integral, &verror);
@@ -58,3 +61,4 @@ void mahony_filter_update(mahony_filter_state *state,
   *gravity = v3d_add(gravity, &vupdate);
   *gravity = v3d_normalize(gravity);
 }
+

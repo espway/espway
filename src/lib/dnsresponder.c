@@ -49,14 +49,16 @@ static void dns_task(void *pvParameters)
   serv_addr.sin_port = htons(53);
   bind(fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 
-  for (;;) {
+  for (;;)
+  {
     char buffer[96];
     struct sockaddr src_addr;
     socklen_t src_addr_len = sizeof(src_addr);
     size_t count = recvfrom(fd, buffer, sizeof(buffer), 0, (struct sockaddr*)&src_addr, &src_addr_len);
 
     /* Drop messages that are too large to send a response in the buffer */
-    if (count > 0 && count <= sizeof(buffer) - 16 && src_addr.sa_family == AF_INET) {
+    if (count > 0 && count <= sizeof(buffer) - 16 && src_addr.sa_family == AF_INET)
+    {
       size_t qname_len = strlen(buffer + 12) + 1;
       uint32_t reply_len = 2 + 10 + qname_len + 16 + 4;
 
@@ -98,7 +100,8 @@ static void dns_task(void *pvParameters)
   }
 }
 
-void dnsresponder_init(ip_addr_t addr) {
+void dnsresponder_init(ip_addr_t addr)
+{
   server_addr = addr;
   dhcpserver_set_router(&addr);
   dhcpserver_set_dns(&addr);

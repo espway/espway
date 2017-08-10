@@ -18,31 +18,40 @@
 
 #include "espway.h"
 
-static void websocket_save_config(struct tcp_pcb *pcb) {
+static void websocket_save_config(struct tcp_pcb *pcb)
+{
   uint8_t response;
-  if (save_flash_config()) {
+  if (save_flash_config())
+  {
     response = RES_SAVE_CONFIG_SUCCESS;
-  } else {
+  }
+  else
+  {
     response = RES_SAVE_CONFIG_FAILURE;
   }
   websocket_write(pcb, &response, 1, WS_BIN_MODE);
 }
 
-static bool websocket_clear_config(struct tcp_pcb *pcb) {
+static bool websocket_clear_config(struct tcp_pcb *pcb)
+{
   uint8_t response;
   // Clear the configuration by writing config version zero
   bool success = clear_flash_config();
-  if (success) {
+  if (success)
+  {
     response = RES_CLEAR_CONFIG_SUCCESS;
     load_hardcoded_config();
-  } else {
+  }
+  else
+  {
     response = RES_CLEAR_CONFIG_FAILURE;
   }
   websocket_write(pcb, &response, 1, WS_BIN_MODE);
   return success;
 }
 
-static void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx) {
+static void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx)
+{
   uint8_t buf[14];
   buf[0] = RES_PID_PARAMS;
   buf[1] = idx;
@@ -55,7 +64,8 @@ static void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx) {
   websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-static void send_gravity(struct tcp_pcb *pcb, const vector3d_fix * const grav) {
+static void send_gravity(struct tcp_pcb *pcb, const vector3d_fix * const grav)
+{
   uint8_t buf[7];
   buf[0] = RES_GRAVITY;
   int16_t *qdata = (int16_t *)&buf[1];
@@ -79,7 +89,8 @@ void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, u16_t data_len, uint8_t mo
   int32_t *i32_data;
   uint8_t res;
 
-  switch (msgtype) {
+  switch (msgtype)
+  {
     case STEERING:
       // Parameters: velocity (int8_t), turn rate (int8_t)
       if (data_len != 2) break;
@@ -100,7 +111,8 @@ void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, u16_t data_len, uint8_t mo
 
       pid_index = (pid_controller_index)payload[0];
       i32_data = (int32_t *)(&payload[1]);
-      if (pid_index <= 2) {
+      if (pid_index <= 2)
+      {
         update_pid_controller(pid_index, i32_data[0], i32_data[1],
             i32_data[2]);
         res = RES_SET_PID_PARAMS_ACK;

@@ -89,7 +89,8 @@ bool mpu_online = false;
 SemaphoreHandle_t orientation_mutex;
 vector3d_fix gravity = { 0, 0, -Q16_ONE };
 
-void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d) {
+void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d)
+{
   if (idx > 2) return;
   xSemaphoreTake(pid_mutex, portMAX_DELAY);
   pid_coeffs *p_coeffs = &my_config.pid_coeffs_arr[idx];
@@ -98,7 +99,8 @@ void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d) {
   p_coeffs->d = d;
   pid_update_params(p_coeffs, &pid_settings_arr[idx]);
 
-  if (idx == ANGLE) {
+  if (idx == ANGLE)
+  {
     // If ANGLE PID coefficients are updated, automatically update the
     // high gain PID
     p_coeffs = &my_config.pid_coeffs_arr[ANGLE_HIGH];
@@ -115,7 +117,8 @@ typedef struct {
   uint16_t battery_value;
 } battery_callback_params_t;
 
-void battery_callback(void *ctx) {
+void battery_callback(void *ctx)
+{
   battery_callback_params_t *params = (battery_callback_params_t *)ctx;
 
   uint8_t buf[3];
@@ -126,7 +129,8 @@ void battery_callback(void *ctx) {
   websocket_write(params->pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-void wifi_setup(void) {
+void wifi_setup(void)
+{
   sdk_wifi_set_opmode(SOFTAP_MODE);
   struct ip_info ap_ip;
   IP4_ADDR(&ap_ip.ip, 10, 0, 0, 2);
@@ -153,11 +157,13 @@ void battery_task(void *pvParameter)
 {
   struct tcp_pcb *pcb = NULL;
   q16 battery_value = 0;
-  for (;;) {
+  for (;;)
+  {
     battery_value = q16_exponential_smooth(battery_value, sdk_system_adc_read(),
         FLT_TO_Q16(0.25f));
 
-    if (ENABLE_BATTERY_CUTOFF && battery_value < (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR)) {
+    if (ENABLE_BATTERY_CUTOFF && battery_value < (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR))
+    {
       set_both_eyes(BLACK);
       mpu_go_to_sleep();
       set_motors(0, 0);
@@ -168,11 +174,13 @@ void battery_task(void *pvParameter)
     vTaskDelay(100 / portTICK_PERIOD_MS);
 
     uint32_t notification_value = 0;
-    if (xTaskNotifyWait(0, 0, &notification_value, 0)) {
+    if (xTaskNotifyWait(0, 0, &notification_value, 0))
+    {
       pcb = (struct tcp_pcb *)notification_value;
     }
 
-    if (pcb != NULL && pcb->state == ESTABLISHED) {
+    if (pcb != NULL && pcb->state == ESTABLISHED)
+    {
       battery_callback_params_t params = {
         pcb,
         (uint16_t)battery_value
@@ -186,7 +194,8 @@ void battery_task(void *pvParameter)
 
 void websocket_open_cb(struct tcp_pcb *pcb, const char *uri)
 {
-  if (strcmp(uri, "/ws") == 0) {
+  if (strcmp(uri, "/ws") == 0)
+  {
     xTaskNotify(xBatteryTask, (uint32_t)pcb, eSetValueWithOverwrite);
   }
 }
@@ -194,7 +203,8 @@ void websocket_open_cb(struct tcp_pcb *pcb, const char *uri)
 void httpd_task(void *pvParameters)
 {
   tCGI pCGIs[] = {
-    {"/pid", (tCGIHandler)([](int, int, char *[], char *[]) { return "/pid.html"; })}
+    {"/pid", (tCGIHandler)([](int, int, char *[], char *[])
+        { return "/pid.html"; })}
   };
   http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
 
@@ -205,7 +215,8 @@ void httpd_task(void *pvParameters)
   for (;;);
 }
 
-void main_loop(void *pvParameters) {
+void main_loop(void *pvParameters)
+{
   int16_t raw_data[6];
   uint32_t time_old = 0;
   uint32_t current_time = 0;
@@ -216,7 +227,8 @@ void main_loop(void *pvParameters) {
   unsigned long stage_started = 0;
   unsigned long last_wind_up = 0;
 
-  for (;;) {
+  for (;;)
+  {
     xTaskNotifyWait(0, 0, NULL, 1);
     mpu_read_raw_data(MPU_ADDR, raw_data);
 
@@ -234,15 +246,20 @@ void main_loop(void *pvParameters) {
 
     current_time = sdk_system_get_time();
 
-    if (my_state == STABILIZING_ORIENTATION) {
-      if (current_time - stage_started > ORIENTATION_STABILIZE_DURATION_US) {
+    if (my_state == STABILIZING_ORIENTATION)
+    {
+      if (current_time - stage_started > ORIENTATION_STABILIZE_DURATION_US)
+      {
         my_state = RUNNING;
         stage_started = current_time;
         imuparams.Kp = FLT_TO_Q16(MAHONY_FILTER_KP);
       }
-    } else if (my_state == RUNNING || my_state == WOUND_UP) {
+    }
+    else if (my_state == RUNNING || my_state == WOUND_UP)
+    {
       if (sin_pitch < FALL_UPPER_BOUND && sin_pitch > FALL_LOWER_BOUND &&
-          sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND) {
+          sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND)
+      {
         // Perform PID update
         xSemaphoreTake(pid_mutex, portMAX_DELAY);
         q16 target_angle = pid_compute(travel_speed, smoothed_target_speed,
@@ -257,20 +274,27 @@ void main_loop(void *pvParameters) {
         xSemaphoreGive(pid_mutex);
 
         if (motor_speed < FLT_TO_Q16(MOTOR_DEADBAND) &&
-            motor_speed > -FLT_TO_Q16(MOTOR_DEADBAND)) {
+            motor_speed > -FLT_TO_Q16(MOTOR_DEADBAND))
+        {
           motor_speed = 0;
         }
 
-        if (my_state == WOUND_UP) {
+        if (my_state == WOUND_UP)
+        {
           set_motors(0, 0);
-        } else {
+        }
+        else
+        {
           set_motors(motor_speed + steering_bias,
               motor_speed - steering_bias);
         }
 
-        if (motor_speed != Q16_ONE && motor_speed != -Q16_ONE) {
+        if (motor_speed != Q16_ONE && motor_speed != -Q16_ONE)
+        {
           last_wind_up = current_time;
-        } else if (current_time - last_wind_up > WINDUP_TIMEOUT_US) {
+        }
+        else if (current_time - last_wind_up > WINDUP_TIMEOUT_US)
+        {
           my_state = WOUND_UP;
           set_both_eyes(BLUE);
         }
@@ -278,16 +302,21 @@ void main_loop(void *pvParameters) {
         // Estimate travel speed by exponential smoothing
         travel_speed = q16_exponential_smooth(travel_speed, motor_speed,
             FLT_TO_Q16(TRAVEL_SPEED_SMOOTHING));
-      } else {
+      }
+      else
+      {
         my_state = FALLEN;
         set_both_eyes(BLUE);
         travel_speed = 0;
         set_motors(0, 0);
       }
-    } else if (my_state == FALLEN) {
+    }
+    else if (my_state == FALLEN)
+    {
       if (sin_pitch < RECOVER_UPPER_BOUND &&
           sin_pitch > RECOVER_LOWER_BOUND &&
-          sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND) {
+          sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND)
+      {
         my_state = RUNNING;
         set_both_eyes(GREEN);
         pid_reset(sin_pitch, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
@@ -296,19 +325,25 @@ void main_loop(void *pvParameters) {
       }
     }
 
-    if (LOGMODE == LOG_FREQ) {
+    if (LOGMODE == LOG_FREQ)
+    {
       n += 1;
-      if (n == 1024) {
+      if (n == 1024)
+      {
         n = 0;
         uint32_t looptime = (current_time - time_old) / 1024;
         printf("Looptime: %u us\n", looptime);
         time_old = current_time;
       }
-    } else if (LOGMODE == LOG_RAW) {
+    }
+    else if (LOGMODE == LOG_RAW)
+    {
       printf("%d, %d, %d, %d, %d, %d\n",
           raw_data[0], raw_data[1], raw_data[2],
           raw_data[3], raw_data[4], raw_data[5]);
-    } else if (LOGMODE == LOG_PITCH) {
+    }
+    else if (LOGMODE == LOG_PITCH)
+    {
       printf("%d\n", sin_pitch);
     }
 
@@ -316,24 +351,31 @@ void main_loop(void *pvParameters) {
   }
 }
 
-void mpu_interrupt_handler(uint8_t gpio_num) {
+void mpu_interrupt_handler(uint8_t gpio_num)
+{
   BaseType_t xHigherPriorityTaskHasWoken = pdFALSE;
   xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
   portEND_SWITCHING_ISR(xHigherPriorityTaskHasWoken);
 }
 
-void steering_watcher(void *) {
-  for (;;) {
-    if (!xTaskNotifyWait(0, 0, NULL, STEERING_TIMEOUT_MS / portTICK_PERIOD_MS)) {
+void steering_watcher(void *)
+{
+  for (;;)
+  {
+    if (!xTaskNotifyWait(0, 0, NULL, STEERING_TIMEOUT_MS / portTICK_PERIOD_MS))
+    {
       steering_bias = 0;
       target_speed = 0;
     }
   }
 }
 
-void imu_watcher(void *) {
-  for (;;) {
-    if (!xTaskNotifyWait(0, 0, NULL, IMU_TIMEOUT_MS / portTICK_PERIOD_MS)) {
+void imu_watcher(void *)
+{
+  for (;;)
+  {
+    if (!xTaskNotifyWait(0, 0, NULL, IMU_TIMEOUT_MS / portTICK_PERIOD_MS))
+    {
       set_motors(0, 0);
       abort();
     }
@@ -376,3 +418,4 @@ extern "C" void user_init(void)
   gpio_enable(4, GPIO_INPUT);
   gpio_set_interrupt(4, GPIO_INTTYPE_EDGE_POS, mpu_interrupt_handler);
 }
+

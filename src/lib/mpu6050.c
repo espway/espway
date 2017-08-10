@@ -21,27 +21,34 @@
 #include "mpu6050.h"
 
 static void mpu_write_register(const uint8_t addr,
-    const uint8_t reg, const uint8_t value, bool stop) {
+    const uint8_t reg, const uint8_t value, bool stop)
+{
   i2c_slave_write(MPU_ADDR, &reg, &value, 1);
 }
 
 int mpu_read_registers(const uint8_t addr,
-    uint8_t first_reg, const uint8_t len, uint8_t * const data) {
+    uint8_t first_reg, const uint8_t len, uint8_t * const data)
+{
   return i2c_slave_read(MPU_ADDR, &first_reg, data, len);
 }
 
-int mpu_read_int_status(const uint8_t addr) {
+int mpu_read_int_status(const uint8_t addr)
+{
   uint8_t tmp = 0;
   mpu_read_registers(addr, MPU_INT_STATUS, 1, &tmp);
   return tmp;
 }
 
 int mpu_read_raw_data(const uint8_t addr,
-    int16_t * const data) {
+    int16_t * const data)
+{
   uint8_t *my_data = (uint8_t *)data;
   uint8_t buf[14];
   int ret = mpu_read_registers(MPU_ADDR, MPU_ACCEL_XOUT_H, 14, buf);
-  if (ret != 0) { return ret; }
+  if (ret != 0)
+  {
+    return ret;
+  }
 
   my_data[0] = buf[1]; my_data[1] = buf[0];      // ACC_X
   my_data[2] = buf[3]; my_data[3] = buf[2];      // ACC_Y
@@ -53,7 +60,8 @@ int mpu_read_raw_data(const uint8_t addr,
   return ret;
 }
 
-bool mpu_init(void) {
+bool mpu_init(void)
+{
   // Wake up
   mpu_write_register(MPU_ADDR, MPU_PWR_MGMT_1,
       MPU_CLK_PLL_ZGYRO | MPU_TEMP_DIS, false);
@@ -75,7 +83,8 @@ bool mpu_init(void) {
   return ret == 0 && addr == MPU_ADDR;
 }
 
-bool mpu_set_gyro_offsets(int16_t *offsets) {
+bool mpu_set_gyro_offsets(int16_t *offsets)
+{
   uint8_t data[] = {
     offsets[0] >> 8, offsets[0] & 0xff,
     offsets[1] >> 8, offsets[1] & 0xff,
@@ -85,7 +94,8 @@ bool mpu_set_gyro_offsets(int16_t *offsets) {
   return i2c_slave_write(MPU_ADDR, &reg_addr, data, 6) == 0;
 }
 
-void mpu_go_to_sleep(void) {
+void mpu_go_to_sleep(void)
+{
   mpu_write_register(MPU_ADDR, MPU_PWR_MGMT_1, 1 << 6, true);
 }
 

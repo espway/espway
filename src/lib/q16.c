@@ -23,7 +23,8 @@
  * q16_div is from libfixmath: https://github.com/PetteriAimonen/libfixmath/blob/master/libfixmath/fix16.c
  * MIT license: https://opensource.org/licenses/MIT
  */
-q16 q16_div(q16 a, q16 b) {
+q16 q16_div(q16 a, q16 b)
+{
   // This uses the basic binary restoring division algorithm.
   // It appears to be faster to do the whole division manually than
   // trying to compose a 64-bit divide out of 32-bit divisions on
@@ -82,7 +83,8 @@ q16 q16_div(q16 a, q16 b) {
   return result;
 }
 
-q16 q16_rsqrt(q16 x) {
+q16 q16_rsqrt(q16 x)
+{
   int power = 14 - (__builtin_clz(x) & ~0x01);
 
   q16 x_normalized = x >> (power + 10);

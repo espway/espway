@@ -18,12 +18,14 @@
 
 #include "eyes.h"
 
-void set_both_eyes(const color_t color) {
+void set_both_eyes(const color_t color)
+{
   color_t colors[2] = { color, color };
   ws2812_i2s_update(colors);
 }
 
-void eyes_init() {
+void eyes_init()
+{
   ws2812_i2s_init(2);
 }
 

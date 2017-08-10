@@ -20,36 +20,46 @@
 #include "pwm.h"
 #include "esp/gpio.h"
 
-void set_motor_speed(int channel, int dir_pin, q16 speed, bool reverse) {
+void set_motor_speed(int channel, int dir_pin, q16 speed, bool reverse)
+{
   int32_t period = pwm_period;
   speed = Q16_TO_INT(period * speed);
 
-  if (speed > period) {
+  if (speed > period)
+  {
     speed = period;
-  } else if (speed < -period) {
+  }
+  else if (speed < -period)
+  {
     speed = -period;
   }
 
-  if (reverse) {
+  if (reverse)
+  {
     speed = -speed;
   }
 
-  if (speed < 0) {
+  if (speed < 0)
+  {
     gpio_write(dir_pin, 1);
     pwm_set_duty(period + speed, channel);
-  } else {
+  }
+  else
+  {
     gpio_write(dir_pin, 0);
     pwm_set_duty(speed, channel);
   }
 }
 
-void set_motors(q16 left_speed, q16 right_speed) {
+void set_motors(q16 left_speed, q16 right_speed)
+{
   set_motor_speed(1, 12, right_speed, REVERSE_RIGHT_MOTOR);
   set_motor_speed(0, 15, left_speed, REVERSE_LEFT_MOTOR);
   pwm_start();
 }
 
-void motors_init(int period) {
+void motors_init(int period)
+{
   // Motor direction pins
   gpio_enable(12, GPIO_OUTPUT);
   gpio_enable(15, GPIO_OUTPUT);

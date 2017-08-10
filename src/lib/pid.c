@@ -18,12 +18,14 @@
 
 #include "pid.h"
 
-static inline q16 clamp(q16 x, q16 a, q16 b) {
+static inline q16 clamp(q16 x, q16 a, q16 b)
+{
   return x > a ? (x < b ? x : b) : a;
 }
 
 void pid_initialize(const pid_coeffs * coeffs, q16 dt,
-    q16 out_min, q16 out_max, bool invert, pidsettings *settings) {
+    q16 out_min, q16 out_max, bool invert, pidsettings *settings)
+{
   settings->dt = dt;
   settings->out_min = out_min;
   settings->out_max = out_max;
@@ -32,11 +34,13 @@ void pid_initialize(const pid_coeffs * coeffs, q16 dt,
 }
 
 void pid_update_params(const pid_coeffs * coeffs,
-    pidsettings *settings) {
+    pidsettings *settings)
+{
   settings->Kp = coeffs->p;
   settings->Ki_times_dt = q16_mul(coeffs->i, settings->dt);
   settings->Kd_over_dt = q16_div(coeffs->d, settings->dt);
-  if (settings->invert) {
+  if (settings->invert)
+  {
     settings->Kp *= -1;
     settings->Ki_times_dt *= -1;
     settings->Kd_over_dt *= -1;
@@ -44,7 +48,8 @@ void pid_update_params(const pid_coeffs * coeffs,
 }
 
 q16 pid_compute(q16 input, q16 setpoint,
-    pidsettings *settings, pidstate *state) {
+    pidsettings *settings, pidstate *state)
+{
   q16 error = input - setpoint;
   q16 p_term = q16_mul(settings->Kp, error);
   state->i_term = clamp(state->i_term + q16_mul(settings->Ki_times_dt, error),
@@ -55,7 +60,8 @@ q16 pid_compute(q16 input, q16 setpoint,
   return clamp(output, settings->out_min, settings->out_max);
 }
 
-void pid_reset(q16 input, q16 output, pidsettings *settings, pidstate *state) {
+void pid_reset(q16 input, q16 output, pidsettings *settings, pidstate *state)
+{
   state->i_term = clamp(output, settings->out_min,
       settings->out_max);
   state->last_input = input;
