@@ -19,7 +19,8 @@
 extern "C" {
 #include <string.h>
 #include <espressif/esp_common.h>
-#include "dhcpserver.h"
+#include <user_exception.h>
+#include <dhcpserver.h>
 #include <esp8266.h>
 #include <esp/uart.h>
 #include <lwip/tcpip.h>
@@ -129,7 +130,7 @@ void battery_callback(void *ctx)
   websocket_write(params->pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-void wifi_setup(void)
+void wifi_setup()
 {
   sdk_wifi_set_opmode(SOFTAP_MODE);
   struct ip_info ap_ip;
@@ -376,14 +377,26 @@ void imu_watcher(void *)
   {
     if (!xTaskNotifyWait(0, 0, NULL, IMU_TIMEOUT_MS / portTICK_PERIOD_MS))
     {
-      set_motors(0, 0);
       abort();
     }
   }
 }
 
-extern "C" void user_init(void)
+void IRAM espway_exception_handler()
 {
+  _xt_isr_unmask(1 << INUM_TIMER_FRC1);  // Shut down the timer driving the PWM
+  // Make sure that the motor outputs are enabled as outputs and drive them low
+  for (uint8_t i = 12; i <= 15; ++i)
+  {
+    gpio_enable(i, GPIO_OUTPUT);
+    gpio_write(i, 0);
+  }
+}
+
+extern "C" void user_init()
+{
+  set_user_exception_handler(espway_exception_handler);
+
   uart_set_baud(0, 115200);
   i2c_init(5, 0);
   mpu_online = mpu_init();
