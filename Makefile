@@ -16,6 +16,9 @@ $(SRC_FOLDER)/fsdata.c: frontend/*
 flash: all
 	$(MAKE) -C $(SRC_FOLDER) flash
 
+erase_flash: all
+	$(MAKE) -C $(SRC_FOLDER) erase_flash
+
 clean:
 	$(MAKE) -C $(SRC_FOLDER) clean
 	rm -f $(SRC_FOLDER)/fsdata.c
