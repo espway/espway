@@ -113,23 +113,6 @@ void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d)
   xSemaphoreGive(pid_mutex);
 }
 
-typedef struct {
-  struct tcp_pcb *pcb;
-  uint16_t battery_value;
-} battery_callback_params_t;
-
-void battery_callback(void *ctx)
-{
-  battery_callback_params_t *params = (battery_callback_params_t *)ctx;
-
-  uint8_t buf[3];
-  buf[0] = BATTERY;
-  uint16_t *payload = (uint16_t *)&buf[1];
-  payload[0] = q16_mul(params->battery_value, BATTERY_COEFFICIENT);
-
-  websocket_write(params->pcb, buf, sizeof(buf), WS_BIN_MODE);
-}
-
 void wifi_setup()
 {
   sdk_wifi_set_opmode(SOFTAP_MODE);
@@ -180,14 +163,16 @@ void battery_task(void *pvParameter)
       pcb = (struct tcp_pcb *)notification_value;
     }
 
+    LOCK_TCPIP_CORE();
     if (pcb != NULL && pcb->state == ESTABLISHED)
     {
-      battery_callback_params_t params = {
-        pcb,
-        (uint16_t)battery_value
-      };
-      tcpip_callback(battery_callback, (void *)&params);
+      uint8_t buf[3];
+      buf[0] = BATTERY;
+      uint16_t *payload = (uint16_t *)&buf[1];
+      payload[0] = q16_mul(battery_value, BATTERY_COEFFICIENT);
+      websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
     }
+    UNLOCK_TCPIP_CORE();
   }
 
   vTaskDelete(NULL);
