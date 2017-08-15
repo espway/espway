@@ -77,7 +77,7 @@ static void send_gravity(struct tcp_pcb *pcb, const vector3d_fix * const grav)
   websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, u16_t data_len, uint8_t mode)
+void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, uint16_t data_len, uint8_t mode)
 {
   if (data_len == 0 || mode != WS_BIN_MODE) return;
 

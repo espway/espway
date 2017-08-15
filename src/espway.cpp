@@ -384,7 +384,7 @@ void imu_watcher(void *)
 
 void IRAM espway_exception_handler()
 {
-  _xt_isr_unmask(1 << INUM_TIMER_FRC1);  // Shut down the timer driving the PWM
+  _xt_isr_mask(1 << INUM_TIMER_FRC1);  // Shut down the timer driving the PWM
   // Make sure that the motor outputs are enabled as outputs and drive them low
   for (uint8_t i = 12; i <= 15; ++i)
   {

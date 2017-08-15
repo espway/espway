@@ -192,7 +192,7 @@ pwm_init(uint32_t period, uint32_t *duty, uint32_t pwm_channel_num,
 
 	pwm_set_period(period);
 
-	_xt_isr_attach(INUM_TIMER_FRC1, (_xt_isr)pwm_intr_handler);
+	_xt_isr_attach(INUM_TIMER_FRC1, (_xt_isr)pwm_intr_handler, NULL);
 	TM1_EDGE_INT_ENABLE();
 
 	timer->frc1_int &= ~FRC1_INT_CLR_MASK;
