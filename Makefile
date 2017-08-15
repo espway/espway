@@ -7,7 +7,7 @@ all: firmware
 firmware: $(SRC_FOLDER)/firmware/$(PROGRAM).bin
 
 $(SRC_FOLDER)/firmware/$(PROGRAM).bin: $(SRC_FOLDER)/fsdata.c src/*
-	$(MAKE) -j$(N_PROCESSES) -C $(SRC_FOLDER) all
+	$(MAKE) -j$(N_PROCESSES) -C $(SRC_FOLDER) rebuild
 
 $(SRC_FOLDER)/fsdata.c: frontend/*
 	cd frontend; npm run build
