@@ -3,7 +3,7 @@ var path = require('path');
 var TARGET_PATH = '../html';
 
 module.exports = {
-    context: path.resolve(__dirname, 'html-src'),
+    context: path.resolve(__dirname, 'src'),
 
     entry: {
         index: './index.js',

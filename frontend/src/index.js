@@ -166,7 +166,6 @@ window.addEventListener('load', () => {
     function draw() {
         updateXY()
 
-
         ctx.lineWidth = 10
         ctx.clearRect(0, 0, canvasWidth, canvasHeight)
         ctx.beginPath()
@@ -196,7 +195,7 @@ window.addEventListener('load', () => {
     window.requestAnimationFrame(draw)
 
     function requestGravity() {
-        ws.send((new Uint8Array([1])).buffer)
+        //ws.send((new Uint8Array([1])).buffer)
     }
 })
 
