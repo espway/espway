@@ -93,7 +93,9 @@
  * ATTENTION: this does not work when tcpip_input() is called from
  * interrupt context!
  */
-#define LWIP_TCPIP_CORE_LOCKING_INPUT   1
+#ifndef LWIP_TCPIP_CORE_LOCKING_INPUT
+#define LWIP_TCPIP_CORE_LOCKING_INPUT   0
+#endif
 
 /*
    ------------------------------------
@@ -603,7 +605,7 @@
 /**
  * PBUF_DEBUG: Enable debugging in pbuf.c.
  */
-#define PBUF_DEBUG                      LWIP_DBG_OFF
+#define PBUF_DEBUG                      LWIP_DBG_ON
 
 /**
  * API_LIB_DEBUG: Enable debugging in api_lib.c.
@@ -673,7 +675,7 @@
 /**
  * TCP_DEBUG: Enable debugging for TCP.
  */
-#define TCP_DEBUG                       LWIP_DBG_OFF
+#define TCP_DEBUG                       LWIP_DBG_ON
 
 /**
  * TCP_INPUT_DEBUG: Enable debugging in tcp_in.c for incoming debug.
@@ -704,7 +706,7 @@
 /**
  * TCP_OUTPUT_DEBUG: Enable debugging in tcp_out.c output functions.
  */
-#define TCP_OUTPUT_DEBUG                LWIP_DBG_OFF
+#define TCP_OUTPUT_DEBUG                LWIP_DBG_ON
 
 /**
  * TCP_RST_DEBUG: Enable debugging for TCP with the RST message.

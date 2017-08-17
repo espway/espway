@@ -155,7 +155,7 @@ void battery_task(void *pvParameter)
       break;
     }
 
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(BATTERY_CHECK_INTERVAL / portTICK_PERIOD_MS);
 
     uint32_t notification_value = 0;
     if (xTaskNotifyWait(0, 0, &notification_value, 0))
@@ -362,7 +362,7 @@ void imu_watcher(void *)
   {
     if (!xTaskNotifyWait(0, 0, NULL, IMU_TIMEOUT_MS / portTICK_PERIOD_MS))
     {
-      abort();
+      //abort();
     }
   }
 }
