@@ -31,6 +31,7 @@ window.addEventListener('load', () => {
     let beta = 0, gamma = 0
     let hasDeviceOrientation = false
     let tiltControl = false
+    let hasGravityData = false
 
     let touchById = (touches, id) => {
         for (let i = 0; i < touches.length; ++i) {
@@ -48,6 +49,7 @@ window.addEventListener('load', () => {
             let batteryValue = dview.getInt16(1, true) / 100
             battery.innerText = batteryValue.toFixed(2)
         } else if (command === 2 && e.data.byteLength === 7) {
+            hasGravityData = true
             tiltX = -dview.getInt16(3, true) / 32768.0
             tiltY = -dview.getInt16(5, true) / 32768.0
             requestGravity()
@@ -176,10 +178,12 @@ window.addEventListener('load', () => {
         let canvasX = (tiltX + 1) / 2 * canvasWidth,
             canvasY = (-tiltY + 1) / 2 * canvasHeight
 
-        ctx.fillStyle = '#aaa'
-        ctx.beginPath()
-        ctx.arc(canvasX, canvasY, 15, 0, 2*Math.PI)
-        ctx.fill()
+        if (hasGravityData) {
+          ctx.fillStyle = '#aaa'
+          ctx.beginPath()
+          ctx.arc(canvasX, canvasY, 15, 0, 2*Math.PI)
+          ctx.fill()
+        }
 
         canvasX = (x + 1) / 2 * canvasWidth
         canvasY = (-y + 1) / 2 * canvasHeight
@@ -195,7 +199,7 @@ window.addEventListener('load', () => {
     window.requestAnimationFrame(draw)
 
     function requestGravity() {
-        //ws.send((new Uint8Array([1])).buffer)
+        ws.send((new Uint8Array([1])).buffer)
     }
 })
 
