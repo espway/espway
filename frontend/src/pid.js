@@ -24,7 +24,7 @@ window.addEventListener('load', () => {
     const FLOAT_TO_Q16 = (1 << 16)
     const Q16_TO_FLOAT = 1 / FLOAT_TO_Q16
 
-    let ws = new WebSocket('ws://10.0.0.2/ws')
+    let ws = new WebSocket('ws://' + window.location.host + '/ws')
     ws.binaryType = 'arraybuffer'
 
     let byId = id => document.getElementById(id)

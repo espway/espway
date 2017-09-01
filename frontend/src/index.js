@@ -4,7 +4,7 @@ window.addEventListener('load', () => {
     'use strict'
 
     let byId = id => document.getElementById(id)
-    let ws = new WebSocket('ws://10.0.0.2/ws')
+    let ws = new WebSocket('ws://' + window.location.host + '/ws')
     ws.binaryType = 'arraybuffer'
     ws.addEventListener('open', requestGravity)
 

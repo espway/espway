@@ -30,7 +30,6 @@ extern "C" {
 #include "lib/imu.h"
 #include "lib/eyes.h"
 #include "lib/motors.h"
-#include "lib/dnsresponder.h"
 }
 
 #include "espway.h"
@@ -117,7 +116,7 @@ void wifi_setup()
 {
   sdk_wifi_set_opmode(SOFTAP_MODE);
   struct ip_info ap_ip;
-  IP4_ADDR(&ap_ip.ip, 10, 0, 0, 2);
+  IP4_ADDR(&ap_ip.ip, 10, 0, 0, 1);
   IP4_ADDR(&ap_ip.gw, 10, 0, 0, 1);
   IP4_ADDR(&ap_ip.netmask, 255, 255, 255, 0);
   sdk_wifi_set_ip_info(SOFTAP_IF, &ap_ip);
@@ -132,9 +131,8 @@ void wifi_setup()
   sdk_wifi_softap_set_config(&ap_config);
 
   ip_addr_t first_client_ip;
-  IP4_ADDR(&first_client_ip, 10, 0, 0, 3);
+  IP4_ADDR(&first_client_ip, 10, 0, 0, 2);
   dhcpserver_start(&first_client_ip, 4);
-  dnsresponder_init(ap_ip.ip);
 }
 
 void battery_task(void *pvParameter)
