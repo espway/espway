@@ -79,7 +79,7 @@ pidstate vel_pid_state;
 pidstate angle_pid_state;
 
 SemaphoreHandle_t pid_mutex;
-pidsettings pid_settings_arr[3];
+pidsettings pid_settings_arr[2];
 
 q16 target_speed = 0;
 q16 steering_bias = 0;
@@ -99,16 +99,6 @@ void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d)
   p_coeffs->d = d;
   pid_update_params(p_coeffs, &pid_settings_arr[idx]);
 
-  if (idx == ANGLE)
-  {
-    // If ANGLE PID coefficients are updated, automatically update the
-    // high gain PID
-    p_coeffs = &my_config.pid_coeffs_arr[ANGLE_HIGH];
-    p_coeffs->p = q16_mul(FLT_TO_Q16(1.5f), p);
-    p_coeffs->i = i;
-    p_coeffs->d = d;
-    pid_update_params(p_coeffs, &pid_settings_arr[ANGLE_HIGH]);
-  }
   xSemaphoreGive(pid_mutex);
 }
 
@@ -248,13 +238,22 @@ void main_loop(void *pvParameters)
         xSemaphoreTake(pid_mutex, portMAX_DELAY);
         q16 target_angle = pid_compute(travel_speed, smoothed_target_speed,
             &pid_settings_arr[VEL], &vel_pid_state);
-        bool use_high_pid =
-          sin_pitch < (target_angle - FLT_TO_Q16(HIGH_PID_LIMIT)) ||
-          sin_pitch > (target_angle + FLT_TO_Q16(HIGH_PID_LIMIT));
-        q16 motor_speed = pid_compute(sin_pitch, target_angle,
-            use_high_pid ? &pid_settings_arr[ANGLE_HIGH] :
-            &pid_settings_arr[ANGLE],
-            &angle_pid_state);
+
+        q16 motor_speed;
+
+        if (sin_pitch < (target_angle - FLT_TO_Q16(HIGH_PID_LIMIT)))
+        {
+          motor_speed = -Q16_ONE;
+        }
+        else if (sin_pitch > target_angle + FLT_TO_Q16(HIGH_PID_LIMIT))
+        {
+          motor_speed = Q16_ONE;
+        }
+        else
+        {
+          motor_speed = pid_compute(sin_pitch, target_angle,
+              &pid_settings_arr[ANGLE], &angle_pid_state);
+        }
         xSemaphoreGive(pid_mutex);
 
         if (motor_speed < FLT_TO_Q16(MOTOR_DEADBAND) &&

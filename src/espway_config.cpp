@@ -27,7 +27,6 @@ espway_config my_config;
 const static espway_config DEFAULT_CONFIG = {
   .pid_coeffs_arr = {
     { FLT_TO_Q16(ANGLE_KP), FLT_TO_Q16(ANGLE_KI), FLT_TO_Q16(ANGLE_KD) },
-    { FLT_TO_Q16(ANGLE_HIGH_KP), FLT_TO_Q16(ANGLE_HIGH_KI), FLT_TO_Q16(ANGLE_HIGH_KD) },
     { FLT_TO_Q16(VEL_KP), FLT_TO_Q16(VEL_KI), FLT_TO_Q16(VEL_KD) }
   },
   .gyro_offsets = { GYRO_X_OFFSET, GYRO_Y_OFFSET, GYRO_Z_OFFSET }
@@ -41,9 +40,6 @@ void pretty_print_config()
       "#define ANGLE_KP %d\n"
       "#define ANGLE_KI %d\n"
       "#define ANGLE_KD %d\n"
-      "#define ANGLE_HIGH_KP %d\n"
-      "#define ANGLE_HIGH_KI %d\n"
-      "#define ANGLE_HIGH_KD %d\n"
       "#define VEL_KP %d\n"
       "#define VEL_KI %d\n"
       "#define VEL_KD %d\n"
@@ -54,9 +50,6 @@ void pretty_print_config()
       my_config.pid_coeffs_arr[ANGLE].p,
       my_config.pid_coeffs_arr[ANGLE].i,
       my_config.pid_coeffs_arr[ANGLE].d,
-      my_config.pid_coeffs_arr[ANGLE_HIGH].p,
-      my_config.pid_coeffs_arr[ANGLE_HIGH].i,
-      my_config.pid_coeffs_arr[ANGLE_HIGH].d,
       my_config.pid_coeffs_arr[VEL].p,
       my_config.pid_coeffs_arr[VEL].i,
       my_config.pid_coeffs_arr[VEL].d,
@@ -78,8 +71,6 @@ void load_config()
   load_hardcoded_config();
   sysparam_get_data_static("ANGLE_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE],
       sizeof(pid_coeffs), NULL, NULL);
-  sysparam_get_data_static("ANGLE_HIGH_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE_HIGH],
-      sizeof(pid_coeffs), NULL, NULL);
   sysparam_get_data_static("VEL_PID", (uint8_t *)&my_config.pid_coeffs_arr[VEL],
       sizeof(pid_coeffs), NULL, NULL);
   sysparam_get_data_static("GYRO_OFFSETS", (uint8_t *)&my_config.gyro_offsets,
@@ -93,9 +84,6 @@ void apply_config_params()
   pid_initialize(&my_config.pid_coeffs_arr[ANGLE],
       FLT_TO_Q16(SAMPLE_TIME),
       -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE]);
-  pid_initialize(&my_config.pid_coeffs_arr[ANGLE_HIGH],
-      FLT_TO_Q16(SAMPLE_TIME),
-      -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE_HIGH]);
   pid_initialize(&my_config.pid_coeffs_arr[VEL],
       FLT_TO_Q16(SAMPLE_TIME), FALL_LOWER_BOUND, FALL_UPPER_BOUND, true,
       &pid_settings_arr[VEL]);
@@ -111,7 +99,6 @@ bool save_flash_config()
   xSemaphoreTake(pid_mutex, portMAX_DELAY);
   success = sysparam_set_data("ANGLE_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE],
       sizeof(pid_coeffs), true) == SYSPARAM_OK;
-  if (success) success = sysparam_set_data("ANGLE_HIGH_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE_HIGH], sizeof(pid_coeffs), true) == SYSPARAM_OK;
   if (success) success = sysparam_set_data("VEL_PID", (uint8_t *)&my_config.pid_coeffs_arr[VEL], sizeof(pid_coeffs), true) == SYSPARAM_OK;
   xSemaphoreGive(pid_mutex);
   if (success) success = sysparam_set_data("GYRO_OFFSETS", (uint8_t *)&my_config.gyro_offsets, 3 * sizeof(int16_t), true) == SYSPARAM_OK;

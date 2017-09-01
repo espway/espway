@@ -111,7 +111,7 @@ void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, uint16_t data_len, uint8_t
 
       pid_index = (pid_controller_index)payload[0];
       i32_data = (int32_t *)(&payload[1]);
-      if (pid_index <= 2)
+      if (pid_index < (sizeof(pid_settings_arr) / sizeof(pid_settings_arr[0])))
       {
         update_pid_controller(pid_index, i32_data[0], i32_data[1],
             i32_data[2]);
@@ -123,7 +123,10 @@ void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, uint16_t data_len, uint8_t
 
     case REQ_GET_PID_PARAMS:
       if (data_len != 1) break;
-      if (payload[0] <= 2) send_pid_params(pcb, (pid_controller_index)payload[0]);
+      if (payload[0] < (sizeof(pid_settings_arr) / sizeof(pid_settings_arr[0])))
+      {
+        send_pid_params(pcb, (pid_controller_index)payload[0]);
+      }
       break;
 
     case REQ_LOAD_FLASH_CONFIG:

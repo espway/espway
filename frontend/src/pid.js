@@ -19,7 +19,7 @@ window.addEventListener('load', () => {
         }
     }
     const PID_INDICES = {
-        'angle': 0, 'vel': 2
+        'angle': 0, 'vel': 1
     }
     const FLOAT_TO_Q16 = (1 << 16)
     const Q16_TO_FLOAT = 1 / FLOAT_TO_Q16
