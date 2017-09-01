@@ -1,6 +1,3 @@
 [submodule "esp-open-rtos"]
 	path = esp-open-rtos
 	url = https://github.com/flannelhead/esp-open-rtos
-[submodule "esp-open-sdk"]
-	path = esp-open-sdk
-	url = https://github.com/flannelhead/esp-open-sdk.git
