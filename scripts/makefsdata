@@ -5,7 +5,7 @@ $incHttpHeader = 1;
 open(OUTPUT, "> tmp/fsdata.c");
 print(OUTPUT "#include \"httpd/fsdata.h\"\n\n");
 
-chdir("html");
+chdir("frontend/output");
 open(FILES, "find . -type f |");
 
 while($file = <FILES>) {

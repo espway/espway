@@ -1,6 +1,6 @@
 var path = require('path');
 
-var TARGET_PATH = '../html';
+var TARGET_PATH = 'output';
 
 module.exports = {
     context: path.resolve(__dirname, 'src'),
