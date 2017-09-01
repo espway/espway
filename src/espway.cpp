@@ -362,7 +362,7 @@ void imu_watcher(void *)
   {
     if (!xTaskNotifyWait(0, 0, NULL, IMU_TIMEOUT_MS / portTICK_PERIOD_MS))
     {
-      //abort();
+      abort();
     }
   }
 }
