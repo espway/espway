@@ -16,7 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
+#include <espressif/esp_common.h>
+#include <lwip/tcpip.h>
+
 #include "espway.h"
+
+#define BATTERY_COEFFICIENT FLT_TO_Q16(100.0f / BATTERY_CALIBRATION_FACTOR)
 
 static void websocket_save_config(struct tcp_pcb *pcb)
 {
@@ -77,7 +83,7 @@ static void send_gravity(struct tcp_pcb *pcb, const vector3d_fix * const grav)
   websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, uint16_t data_len, uint8_t mode)
+static void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, uint16_t data_len, uint8_t mode)
 {
   if (data_len == 0 || mode != WS_BIN_MODE) return;
 
@@ -146,4 +152,68 @@ void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, uint16_t data_len, uint8_t
       websocket_clear_config(pcb);
       break;
   }
+}
+
+TaskHandle_t xBatteryTask;
+static void battery_task(void *pvParameter)
+{
+  struct tcp_pcb *pcb = NULL;
+  q16 battery_value = 0;
+  for (;;)
+  {
+    battery_value = q16_exponential_smooth(battery_value, sdk_system_adc_read(),
+        FLT_TO_Q16(0.25f));
+
+    if (ENABLE_BATTERY_CUTOFF && battery_value < (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR))
+    {
+      battery_cutoff();
+      break;
+    }
+
+    vTaskDelay(BATTERY_CHECK_INTERVAL / portTICK_PERIOD_MS);
+
+    uint32_t notification_value = 0;
+    if (xTaskNotifyWait(0, 0, &notification_value, 0))
+    {
+      pcb = (struct tcp_pcb *)notification_value;
+    }
+
+    LOCK_TCPIP_CORE();
+    if (pcb != NULL && pcb->state == ESTABLISHED)
+    {
+      uint8_t buf[3];
+      buf[0] = BATTERY;
+      uint16_t *payload = (uint16_t *)&buf[1];
+      payload[0] = q16_mul(battery_value, BATTERY_COEFFICIENT);
+      websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
+    }
+    UNLOCK_TCPIP_CORE();
+  }
+
+  vTaskDelete(NULL);
+}
+
+static void websocket_open_cb(struct tcp_pcb *pcb, const char *uri)
+{
+  if (strcmp(uri, "/ws") == 0)
+  {
+    xTaskNotify(xBatteryTask, (uint32_t)pcb, eSetValueWithOverwrite);
+  }
+}
+
+void httpd_task(void *pvParameters)
+{
+  xTaskCreate(&battery_task, "Battery task", 256, NULL, uxTaskPriorityGet(NULL), &xBatteryTask);
+
+  tCGI pCGIs[] = {
+    {"/pid", (tCGIHandler)([](int, int, char *[], char *[])
+        { return "/pid.html"; })}
+  };
+  http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
+
+  websocket_register_callbacks((tWsOpenHandler) websocket_open_cb,
+      (tWsHandler) websocket_cb);
+  httpd_init();
+
+  for (;;);
 }

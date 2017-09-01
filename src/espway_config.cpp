@@ -114,3 +114,15 @@ bool clear_flash_config()
     sysparam_init(base_addr, 0) == SYSPARAM_OK;
 }
 
+void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d)
+{
+  if (idx > 2) return;
+  xSemaphoreTake(pid_mutex, portMAX_DELAY);
+  pid_coeffs *p_coeffs = &my_config.pid_coeffs_arr[idx];
+  p_coeffs->p = p;
+  p_coeffs->i = i;
+  p_coeffs->d = d;
+  pid_update_params(p_coeffs, &pid_settings_arr[idx]);
+
+  xSemaphoreGive(pid_mutex);
+}

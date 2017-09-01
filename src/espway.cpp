@@ -23,7 +23,6 @@ extern "C" {
 #include <dhcpserver.h>
 #include <esp8266.h>
 #include <esp/uart.h>
-#include <lwip/tcpip.h>
 
 #include "i2c/i2c.h"
 #include "lib/mpu6050.h"
@@ -42,8 +41,6 @@ extern "C" {
 #define AP_SSID "ESPway"
 
 #define LOGMODE LOG_NONE
-
-#define BATTERY_COEFFICIENT FLT_TO_Q16(100.0f / BATTERY_CALIBRATION_FACTOR)
 
 #define FREQUENCY_SAMPLES 1024
 #define QUAT_DELAY 50
@@ -70,7 +67,6 @@ enum logmode { LOG_FREQ, LOG_RAW, LOG_PITCH, LOG_NONE };
 enum state { STABILIZING_ORIENTATION, RUNNING, FALLEN, WOUND_UP };
 
 TaskHandle_t xCalculationTask;
-TaskHandle_t xBatteryTask;
 TaskHandle_t xSteeringWatcher;
 TaskHandle_t xIMUWatcher;
 
@@ -89,107 +85,15 @@ bool mpu_online = false;
 SemaphoreHandle_t orientation_mutex;
 vector3d_fix gravity = { 0, 0, -Q16_ONE };
 
-void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d)
+void battery_cutoff()
 {
-  if (idx > 2) return;
-  xSemaphoreTake(pid_mutex, portMAX_DELAY);
-  pid_coeffs *p_coeffs = &my_config.pid_coeffs_arr[idx];
-  p_coeffs->p = p;
-  p_coeffs->i = i;
-  p_coeffs->d = d;
-  pid_update_params(p_coeffs, &pid_settings_arr[idx]);
-
-  xSemaphoreGive(pid_mutex);
+  set_both_eyes(BLACK);
+  mpu_go_to_sleep();
+  set_motors(0, 0);
+  sdk_system_deep_sleep(UINT32_MAX);
 }
 
-void wifi_setup()
-{
-  sdk_wifi_set_opmode(SOFTAP_MODE);
-  struct ip_info ap_ip;
-  IP4_ADDR(&ap_ip.ip, 10, 0, 0, 1);
-  IP4_ADDR(&ap_ip.gw, 10, 0, 0, 1);
-  IP4_ADDR(&ap_ip.netmask, 255, 255, 255, 0);
-  sdk_wifi_set_ip_info(SOFTAP_IF, &ap_ip);
-
-  struct sdk_softap_config ap_config = {};
-  strcpy((char *)ap_config.ssid, AP_SSID);
-  ap_config.channel = 3;
-  ap_config.ssid_len = strlen(AP_SSID);
-  ap_config.authmode = AUTH_OPEN;
-  ap_config.max_connection = 1;
-  ap_config.beacon_interval = 100;
-  sdk_wifi_softap_set_config(&ap_config);
-
-  ip_addr_t first_client_ip;
-  IP4_ADDR(&first_client_ip, 10, 0, 0, 2);
-  dhcpserver_start(&first_client_ip, 4);
-}
-
-void battery_task(void *pvParameter)
-{
-  struct tcp_pcb *pcb = NULL;
-  q16 battery_value = 0;
-  for (;;)
-  {
-    battery_value = q16_exponential_smooth(battery_value, sdk_system_adc_read(),
-        FLT_TO_Q16(0.25f));
-
-    if (ENABLE_BATTERY_CUTOFF && battery_value < (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR))
-    {
-      set_both_eyes(BLACK);
-      mpu_go_to_sleep();
-      set_motors(0, 0);
-      sdk_system_deep_sleep(UINT32_MAX);
-      break;
-    }
-
-    vTaskDelay(BATTERY_CHECK_INTERVAL / portTICK_PERIOD_MS);
-
-    uint32_t notification_value = 0;
-    if (xTaskNotifyWait(0, 0, &notification_value, 0))
-    {
-      pcb = (struct tcp_pcb *)notification_value;
-    }
-
-    LOCK_TCPIP_CORE();
-    if (pcb != NULL && pcb->state == ESTABLISHED)
-    {
-      uint8_t buf[3];
-      buf[0] = BATTERY;
-      uint16_t *payload = (uint16_t *)&buf[1];
-      payload[0] = q16_mul(battery_value, BATTERY_COEFFICIENT);
-      websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
-    }
-    UNLOCK_TCPIP_CORE();
-  }
-
-  vTaskDelete(NULL);
-}
-
-void websocket_open_cb(struct tcp_pcb *pcb, const char *uri)
-{
-  if (strcmp(uri, "/ws") == 0)
-  {
-    xTaskNotify(xBatteryTask, (uint32_t)pcb, eSetValueWithOverwrite);
-  }
-}
-
-void httpd_task(void *pvParameters)
-{
-  tCGI pCGIs[] = {
-    {"/pid", (tCGIHandler)([](int, int, char *[], char *[])
-        { return "/pid.html"; })}
-  };
-  http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
-
-  websocket_register_callbacks((tWsOpenHandler) websocket_open_cb,
-      (tWsHandler) websocket_cb);
-  httpd_init();
-
-  for (;;);
-}
-
-void main_loop(void *pvParameters)
+static void main_loop(void *pvParameters)
 {
   int16_t raw_data[6];
   uint32_t time_old = 0;
@@ -334,14 +238,14 @@ void main_loop(void *pvParameters)
   }
 }
 
-void mpu_interrupt_handler(uint8_t gpio_num)
+static void mpu_interrupt_handler(uint8_t gpio_num)
 {
   BaseType_t xHigherPriorityTaskHasWoken = pdFALSE;
   xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
   portEND_SWITCHING_ISR(xHigherPriorityTaskHasWoken);
 }
 
-void steering_watcher(void *)
+static void steering_watcher(void *)
 {
   for (;;)
   {
@@ -353,7 +257,7 @@ void steering_watcher(void *)
   }
 }
 
-void imu_watcher(void *)
+static void imu_watcher(void *)
 {
   for (;;)
   {
@@ -364,7 +268,7 @@ void imu_watcher(void *)
   }
 }
 
-void IRAM espway_exception_handler()
+static void IRAM espway_exception_handler()
 {
   _xt_isr_mask(1 << INUM_TIMER_FRC1);  // Shut down the timer driving the PWM
   // Make sure that the motor outputs are enabled as outputs and drive them low
@@ -373,6 +277,29 @@ void IRAM espway_exception_handler()
     gpio_enable(i, GPIO_OUTPUT);
     gpio_write(i, 0);
   }
+}
+
+static void wifi_setup()
+{
+  sdk_wifi_set_opmode(SOFTAP_MODE);
+  struct ip_info ap_ip;
+  IP4_ADDR(&ap_ip.ip, 10, 0, 0, 1);
+  IP4_ADDR(&ap_ip.gw, 10, 0, 0, 1);
+  IP4_ADDR(&ap_ip.netmask, 255, 255, 255, 0);
+  sdk_wifi_set_ip_info(SOFTAP_IF, &ap_ip);
+
+  struct sdk_softap_config ap_config = {};
+  strcpy((char *)ap_config.ssid, AP_SSID);
+  ap_config.channel = WIFI_CHANNEL;
+  ap_config.ssid_len = strlen(AP_SSID);
+  ap_config.authmode = AUTH_OPEN;
+  ap_config.max_connection = 1;
+  ap_config.beacon_interval = 100;
+  sdk_wifi_softap_set_config(&ap_config);
+
+  ip_addr_t first_client_ip;
+  IP4_ADDR(&first_client_ip, 10, 0, 0, 2);
+  dhcpserver_start(&first_client_ip, 1);
 }
 
 extern "C" void user_init()
@@ -404,7 +331,6 @@ extern "C" void user_init()
 
   // TODO: OTA init
 
-  xTaskCreate(&battery_task, "Battery task", 256, NULL, PRIO_COMMUNICATION, &xBatteryTask);
   xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, PRIO_COMMUNICATION, NULL);
   xTaskCreate(&main_loop, "Main loop", 256, NULL, PRIO_MAIN_LOOP, &xCalculationTask);
   xTaskCreate(&steering_watcher, "Steering watcher", 128, NULL, PRIO_MAIN_LOOP + 1, &xSteeringWatcher);
@@ -413,4 +339,3 @@ extern "C" void user_init()
   gpio_enable(4, GPIO_INPUT);
   gpio_set_interrupt(4, GPIO_INTTYPE_EDGE_POS, mpu_interrupt_handler);
 }
-
