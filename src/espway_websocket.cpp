@@ -102,7 +102,7 @@ void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, uint16_t data_len, uint8_t
 
     case REQ_GRAVITY:
       if (data_len != 0) break;
-      // send_gravity(pcb, &gravity);
+      send_gravity(pcb, &gravity);
       break;
 
     case REQ_SET_PID_PARAMS:
