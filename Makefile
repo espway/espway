@@ -20,7 +20,7 @@ EXTRA_CXXFLAGS = -std=gnu++11
 # FLAVOR = debug
 # EXTRA_C_CXX_FLAGS += -DLWIP_DEBUG=1 -DHTTPD_DEBUG=LWIP_DBG_ON
 
-all: tmp fsdata
+all: fsdata
 
 tmp:
 	mkdir tmp
@@ -29,12 +29,12 @@ clean: clean-fsdata
 
 fsdata: tmp/fsdata.c
 
-tmp/fsdata.c: frontend/*
+tmp/fsdata.c: tmp frontend/*
 	cd frontend; npm run build
 	perl scripts/makefsdata
 
 clean-fsdata:
-	rm tmp/fsdata.c
+	$(Q) rm -rf tmp
 
 parallel:
 	$(MAKE) clean
