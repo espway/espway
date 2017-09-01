@@ -2,7 +2,7 @@
 
 $incHttpHeader = 1;
 
-open(OUTPUT, "> src/fsdata.c");
+open(OUTPUT, "> tmp/fsdata.c");
 print(OUTPUT "#include \"httpd/fsdata.h\"\n\n");
 
 chdir("html");

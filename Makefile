@@ -1,25 +1,45 @@
-export PROGRAM = espway
-SRC_FOLDER = src
-N_PROCESSES ?= 5
+PROGRAM = espway
+SRC_DIR = ./src
+PROGRAM_SRC_DIR = $(SRC_DIR) $(SRC_DIR)/lib
+PROGRAM_INC_DIR = $(SRC_DIR)
 
-all: firmware
+ESPBAUD ?= 460800
+FLASH_SPEED ?= 80
+FLASH_SIZE ?= 16
+PRINTF_SCANF_FLOAT_SUPPORT ?= 0
+SPLIT_SECTIONS ?= 0
+WARNINGS_AS_ERRORS ?= 0
 
-firmware: $(SRC_FOLDER)/firmware/$(PROGRAM).bin
+N_PROCESSES = 5
 
-$(SRC_FOLDER)/firmware/$(PROGRAM).bin: $(SRC_FOLDER)/fsdata.c src/*
-	$(MAKE) -j$(N_PROCESSES) -C $(SRC_FOLDER) rebuild
+EXTRA_COMPONENTS = extras/dhcpserver extras/httpd extras/mbedtls extras/i2c extras/i2s_dma extras/ws2812_i2s
 
-$(SRC_FOLDER)/fsdata.c: frontend/*
+EXTRA_C_CXX_FLAGS = -DLWIP_HTTPD_CGI=1 -DTCP_QUEUE_OOSEQ=0 -Itmp
+EXTRA_CXXFLAGS = -std=gnu++11
+
+# FLAVOR = debug
+# EXTRA_C_CXX_FLAGS += -DLWIP_DEBUG=1 -DHTTPD_DEBUG=LWIP_DBG_ON
+
+all: tmp fsdata
+
+tmp:
+	mkdir tmp
+
+clean: clean-fsdata
+
+fsdata: tmp/fsdata.c
+
+tmp/fsdata.c: frontend/*
 	cd frontend; npm run build
 	perl scripts/makefsdata
 
-flash: all
-	$(MAKE) -C $(SRC_FOLDER) flash
+clean-fsdata:
+	rm tmp/fsdata.c
 
-erase_flash: all
-	$(MAKE) -C $(SRC_FOLDER) erase_flash
+parallel:
+	$(MAKE) clean
+	$(MAKE) fsdata
+	$(MAKE) -j$(N_PROCESSES) all
 
-clean:
-	$(MAKE) -C $(SRC_FOLDER) clean
-	rm -f $(SRC_FOLDER)/fsdata.c
+include esp-open-rtos/common.mk
 
