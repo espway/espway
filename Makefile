@@ -29,7 +29,7 @@ clean: clean-fsdata
 
 fsdata: tmp/fsdata.c
 
-tmp/fsdata.c: tmp frontend/*
+tmp/fsdata.c: tmp frontend/output/*
 	cd frontend; npm run build
 	perl scripts/makefsdata
 
