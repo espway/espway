@@ -14,7 +14,7 @@ N_PROCESSES = 5
 
 EXTRA_COMPONENTS = extras/dhcpserver extras/httpd extras/mbedtls extras/i2c extras/i2s_dma extras/ws2812_i2s
 
-EXTRA_C_CXX_FLAGS = -DLWIP_HTTPD_CGI=1 -DTCP_QUEUE_OOSEQ=0 -Itmp
+EXTRA_C_CXX_FLAGS = -DLWIP_HTTPD_CGI=1 -Itmp
 EXTRA_CXXFLAGS = -std=gnu++11
 
 # FLAVOR = debug
