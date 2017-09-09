@@ -10,9 +10,7 @@ Building ESPway is easiest on a Unix-based operated system. To build the firmwar
 
 * `git`
 * `esp-open-sdk`, see the [instructions](https://github.com/SuperHouse/esp-open-rtos/#quick-start) in the esp-open-rtos repo for the specific make command
-* `perl` for building the webserver filesystem binary (I wish to get rid of this dependency in the long run)
-
-If you wish to hack on the frontend HTML/JS code, you'll also need `nodejs` and `npm`.
+* `perl`, `nodejs` and `npm` if you wish to hack on the frontend HTML/JS code
 
 Clone this repo (recursive cloning to get also `esp-open-rtos` and its submodules):
 ```
