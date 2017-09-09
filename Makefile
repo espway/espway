@@ -14,7 +14,7 @@ N_PROCESSES = 5
 
 EXTRA_COMPONENTS = extras/dhcpserver extras/httpd extras/mbedtls extras/i2c extras/i2s_dma extras/ws2812_i2s
 
-EXTRA_C_CXX_FLAGS = -DLWIP_HTTPD_CGI=1 -Itmp
+EXTRA_C_CXX_FLAGS = -DLWIP_HTTPD_CGI=1 -Isrc
 EXTRA_CXXFLAGS = -std=gnu++11
 
 # FLAVOR = debug
@@ -22,19 +22,16 @@ EXTRA_CXXFLAGS = -std=gnu++11
 
 all: fsdata
 
-tmp:
-	mkdir tmp
-
 clean: clean-fsdata
 
-fsdata: tmp/fsdata.c
+fsdata: src/fsdata.c
 
-tmp/fsdata.c: tmp frontend/output/*
+src/fsdata.c: frontend/output/*
 	cd frontend; npm run build
 	perl scripts/makefsdata
 
 clean-fsdata:
-	$(Q) rm -rf tmp
+	$(Q) rm -f src/fsdata.c
 
 parallel:
 	$(MAKE) clean
