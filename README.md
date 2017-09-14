@@ -56,7 +56,11 @@ Meanwhile, you can still build an ESPway using breakout boards available from th
 * 10 kohm resistor
 * 680 kohm resistor
 
-See the `schematic` folder for the schematic. It is drawn with [KiCad](http://kicad-pcb.org/) and there's a [rendered PDF](https://github.com/flannelhead/espway/raw/master/schematic/espway.pdf) in the repo.
+See the `schematic-old` folder for the schematic. It is drawn with [KiCad](http://kicad-pcb.org/) and there's a [rendered PDF](https://github.com/flannelhead/espway/raw/master/schematic/espway.pdf) in the repo.
+
+There's a new schematic in the works in `schematic` folder. It uses components
+from [kicad-ESP8266](https://github.com/jdunmire/kicad-ESP8266) by J. Dunmire,
+licensed under CC-BY-SA 4.0. The schematic is also licensed under CC-BY-SA 4.0.
 
 ## Developing the frontend
 The HTML/JS frontend uses [Webpack](https://webpack.github.io/) as the build system. You will need [NodeJS](https://nodejs.org/en/) and NPM (the package manager) to build the frontend pages. It does jobs like bundling the JavaScript modules together, minifying and transpiling the [ES2015](https://babeljs.io/learn-es2015/) code for older browsers, compiling [Riot tags](http://riotjs.com/), minifying/autoprefixing CSS etc.

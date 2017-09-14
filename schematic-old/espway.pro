@@ -1,4 +1,4 @@
-update=Tue 12 Sep 2017 08:58:27 PM EEST
+update=su  5. helmikuuta 2017 09.41.29
 version=1
 last_client=kicad
 [pcbnew]
@@ -58,5 +58,17 @@ LibName26=opto
 LibName27=atmel
 LibName28=contrib
 LibName29=valves
-LibName30=kicad-ESP8266/ESP8266
-LibName31=switches
+LibName30=d1_mini
+LibName31=gy-521
+LibName32=ws2812b
+LibName33=l293d
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=
+SpiceForceRefPrefix=0
+SpiceUseNetNumbers=0
+LabSize=60
