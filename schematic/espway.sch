@@ -1,4 +1,5 @@
 EESchema Schematic File Version 2
+LIBS:espway-rescue
 LIBS:power
 LIBS:device
 LIBS:transistors
@@ -258,7 +259,7 @@ F 3 "" H 9500 5100 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L LM1117-3.3 U2
+L LM1117-3.3-RESCUE-espway U2
 U 1 1 59B82983
 P 5850 1200
 F 0 "U2" H 5950 950 50  0000 C CNN
