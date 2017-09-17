@@ -6,4 +6,5 @@ build
 firmware
 tags
 tmp
+*.kicad_pcb-bak
 
