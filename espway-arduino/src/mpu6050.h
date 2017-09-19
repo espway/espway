@@ -81,7 +81,7 @@ int mpu_read_registers(const uint8_t addr,
 int mpu_read_int_status(const uint8_t addr);
 int mpu_read_raw_data(const uint8_t addr, int16_t * const data);
 
-bool mpu_init(void);
+bool mpu_init(int *ret);
 void mpu_go_to_sleep(void);
 bool mpu_set_gyro_offsets(int16_t * offsets);
 

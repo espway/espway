@@ -581,7 +581,12 @@ void setup() {
     flash_config_begin();
 
     brzo_i2c_setup(4, 5, 2000);
-    mpu_online = mpu_init();
+    int ret;
+    mpu_online = mpu_init(&ret);
+    if (ret != 0) {
+      Serial.print("brzo_i2c error: ");
+      Serial.println(ret);
+    }
 
     load_stored_config();
     apply_config_params();

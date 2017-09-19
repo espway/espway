@@ -57,7 +57,7 @@ int mpu_read_raw_data(const uint8_t addr,
     return ret;
 }
 
-bool mpu_init(void) {
+bool mpu_init(int *ret) {
     brzo_i2c_start_transaction(MPU_ADDR, MPU_BITRATE);
     // Wake up
     mpu_write_register(MPU_ADDR, MPU_PWR_MGMT_1,
@@ -75,7 +75,8 @@ bool mpu_init(void) {
     // Check if the MPU still responds with its own address
     uint8_t addr = 0;
     mpu_read_registers(MPU_ADDR, MPU_WHO_AM_I, 1, &addr);
-    return brzo_i2c_end_transaction() == 0 && addr == MPU_ADDR;
+    if (ret != NULL) *ret = brzo_i2c_end_transaction();
+    return ret == OK && addr == MPU_ADDR;
 }
 
 bool mpu_set_gyro_offsets(int16_t *offsets) {
