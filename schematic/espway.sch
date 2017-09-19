@@ -468,7 +468,7 @@ U 1 1 59BA67C3
 P 5000 1400
 F 0 "BT1" H 5100 1500 50  0000 L CNN
 F 1 "4.8V (4*AAA NiMH)" H 5100 1400 50  0000 L CNN
-F 2 "Wire_Connections_Bridges:WireConnection_1.20mmDrill" V 5000 1460 50  0001 C CNN
+F 2 "Wire_Connections_Bridges:WireConnection_1.00mmDrill" V 5000 1460 50  0001 C CNN
 F 3 "" V 5000 1460 50  0001 C CNN
 	1    5000 1400
 	1    0    0    -1  
@@ -684,7 +684,7 @@ U 1 1 59BB2BE1
 P 1900 2550
 F 0 "J1" H 1900 2700 50  0000 C CNN
 F 1 "CONN_01X02" V 2000 2550 50  0000 C CNN
-F 2 "Wire_Connections_Bridges:WireConnection_1.20mmDrill" H 1900 2550 50  0001 C CNN
+F 2 "Wire_Connections_Bridges:WireConnection_1.00mmDrill" H 1900 2550 50  0001 C CNN
 F 3 "" H 1900 2550 50  0001 C CNN
 	1    1900 2550
 	-1   0    0    1   
@@ -701,7 +701,7 @@ U 1 1 59BB324E
 P 2200 2900
 F 0 "J2" H 2200 3050 50  0000 C CNN
 F 1 "CONN_01X02" V 2300 2900 50  0000 C CNN
-F 2 "Wire_Connections_Bridges:WireConnection_1.20mmDrill" H 2200 2900 50  0001 C CNN
+F 2 "Wire_Connections_Bridges:WireConnection_1.00mmDrill" H 2200 2900 50  0001 C CNN
 F 3 "" H 2200 2900 50  0001 C CNN
 	1    2200 2900
 	-1   0    0    1   
