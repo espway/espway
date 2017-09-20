@@ -75,8 +75,10 @@ bool mpu_init(int *ret) {
     // Check if the MPU still responds with its own address
     uint8_t addr = 0;
     mpu_read_registers(MPU_ADDR, MPU_WHO_AM_I, 1, &addr);
-    if (ret != NULL) *ret = brzo_i2c_end_transaction();
-    return ret == OK && addr == MPU_ADDR;
+
+    int retval = brzo_i2c_end_transaction();
+    if (ret != NULL) *ret = retval;
+    return retval == OK && addr == MPU_ADDR;
 }
 
 bool mpu_set_gyro_offsets(int16_t *offsets) {
