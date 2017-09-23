@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "imu.h"
+#include "imu_math.h"
 
 void mahony_filter_init(mahony_filter_state *state, float Kp, float Ki,
     float gyro_factor, float dt)

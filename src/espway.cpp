@@ -26,7 +26,7 @@ extern "C" {
 
 #include "i2c/i2c.h"
 #include "lib/mpu6050.h"
-#include "lib/imu.h"
+#include "lib/imu_math.h"
 #include "lib/eyes.h"
 #include "lib/motors.h"
 }
