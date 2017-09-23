@@ -19,6 +19,7 @@
 #include "motors.h"
 #include "pwm.h"
 #include "esp/gpio.h"
+#include "config.h"
 
 void set_motor_speed(int channel, int dir_pin, q16 speed, bool reverse)
 {
@@ -34,6 +35,7 @@ void set_motor_speed(int channel, int dir_pin, q16 speed, bool reverse)
     speed = -period;
   }
 
+#if MOTOR_DRIVER == MOTOR_DRIVER_L293D
   if (reverse)
   {
     speed = -speed;
@@ -49,6 +51,10 @@ void set_motor_speed(int channel, int dir_pin, q16 speed, bool reverse)
     gpio_write(dir_pin, 0);
     pwm_set_duty(speed, channel);
   }
+#elif MOTOR_DRIVER == MOTOR_DRIVER_DRV8835
+  gpio_write(dir_pin, speed < 0);
+  pwm_set_duty(speed, channel);
+#endif
 }
 
 void set_motors(q16 left_speed, q16 right_speed)

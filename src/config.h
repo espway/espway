@@ -1,3 +1,17 @@
+// Hardware config
+
+// Motor driver selection
+#define MOTOR_DRIVER_L293D   0
+#define MOTOR_DRIVER_DRV8835 1
+
+#define MOTOR_DRIVER MOTOR_DRIVER_DRV8835
+
+// IMU selection
+#define IMU_MPU6050 0
+#define IMU_LSM6DS3 1
+
+#define IMU IMU_LSM6DS3
+
 // Angle PID == the PID controller which regulates motor output signal to reach
 // the target angle
 #define ANGLE_KP 5.0
