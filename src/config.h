@@ -3,9 +3,6 @@
 #define ANGLE_KP 5.0
 #define ANGLE_KI 10.0
 #define ANGLE_KD 0.1
-#define ANGLE_HIGH_KP 20.0
-#define ANGLE_HIGH_KI ANGLE_KI
-#define ANGLE_HIGH_KD ANGLE_KD
 // Velocity PID == the PID controller which regulates target angle to reach
 // the target velocity
 #define VEL_KP 2.0
