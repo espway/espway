@@ -18,7 +18,70 @@
  */
 
 #include "i2c/i2c.h"
-#include "mpu6050.h"
+#include "imu_hal.h"
+
+#if IMU == IMU_MPU6050
+
+// Register addresses and bits as per the MPU-6050 datasheet
+// http://43zrtwysvxb2gf29r5o0athu.wpengine.netdna-cdn.com/wp-content/uploads/2015/02/MPU-6000-Register-Map1.pdf
+
+#define MPU_PWR_MGMT_1 0x6B
+#define MPU_TEMP_DIS (1 << 3)
+#define MPU_CLK_PLL_ZGYRO 3
+
+#define MPU_CONFIG 0x1A
+#define MPU_SMPRT_DIV 0x19
+
+#define MPU_GYRO_CONFIG 0x1B
+#define MPU_ACCEL_CONFIG 0x1C
+
+#define MPU_INT_PIN_CFG 0x37
+#define MPU_INT_LEVEL (1 << 7)
+#define MPU_INT_OPEN (1 << 6)
+#define MPU_INT_RD_CLEAR (1 << 4)
+
+#define MPU_INT_ENABLE 0x38
+#define MPU_DATA_RDY_EN 1
+#define MPU_MOT_EN (1 << 6)
+
+#define MPU_INT_STATUS 0x3A
+#define MPU_DATA_RDY_INT 1
+
+#define MPU_ACCEL_XOUT_H 0x3B
+#define MPU_ACCEL_XOUT_L 0x3C
+#define MPU_ACCEL_YOUT_H 0x3D
+#define MPU_ACCEL_YOUT_L 0x3E
+#define MPU_ACCEL_ZOUT_H 0x3F
+#define MPU_ACCEL_ZOUT_L 0x40
+
+#define MPU_TEMP_OUT_H 0x41
+#define MPU_TEMP_OUT_L 0x42
+
+#define MPU_GYRO_XOUT_H 0x43
+#define MPU_GYRO_XOUT_L 0x44
+#define MPU_GYRO_YOUT_H 0x45
+#define MPU_GYRO_YOUT_L 0x46
+#define MPU_GYRO_ZOUT_H 0x47
+#define MPU_GYRO_ZOUT_L 0x48
+
+#define MPU_WHO_AM_I 0x75
+
+static const i2c_register_value_t MPU_CONFIG[] = {
+  // Wake up
+  {MPU_PWR_MGMT_1, MPU_CLK_PLL_ZGYRO | MPU_TEMP_DIS},
+  // 1000 Hz sample rate
+  {MPU_SMPRT_DIV, 0},
+  // 188 Hz LPF
+  {MPU_CONFIG, 1},
+  // Gyroscope min sensitivity
+  {MPU_GYRO_CONFIG, 3 << 3},
+  // Accel max sensitivity
+  {MPU_ACCEL_CONFIG, 0},
+  // Data ready interrupt on
+  {MPU_INT_PIN_CFG, 0x10},
+  // Enable interrupts
+  {MPU_INT_ENABLE, 1}
+};
 
 static void mpu_write_register(const uint8_t addr,
     const uint8_t reg, const uint8_t value, bool stop)
@@ -60,42 +123,18 @@ int mpu_read_raw_data(const uint8_t addr,
   return ret;
 }
 
-bool mpu_init(void)
+int imu_init(void)
 {
-  // Wake up
-  mpu_write_register(MPU_ADDR, MPU_PWR_MGMT_1,
-      MPU_CLK_PLL_ZGYRO | MPU_TEMP_DIS, false);
-  // 1000 Hz sampling
-  mpu_write_register(MPU_ADDR, MPU_SMPRT_DIV, MPU_RATE, false);
-  // 188 Hz LPF
-  mpu_write_register(MPU_ADDR, MPU_CONFIG, 1, false);
-  // Gyroscope min sensitivity
-  mpu_write_register(MPU_ADDR, MPU_GYRO_CONFIG, 3 << 3, false);
-  // Accel max sensitivity
-  mpu_write_register(MPU_ADDR, MPU_ACCEL_CONFIG, 0, false);
-  // Data ready interrupt on
-  mpu_write_register(MPU_ADDR, MPU_INT_PIN_CFG, 0x10, false);
-  // Data ready interrupt on
-  mpu_write_register(MPU_ADDR, MPU_INT_ENABLE, 1, false);
-  // Check if the MPU still responds with its own address
+  if (imu_send_config(MPU_ADDR, MPU_CONFIG,
+                      sizeof(MPU_CONFIG) / sizeof(MPU_CONFIG[0])))
+  {
+    return -1;
+  }
+
   uint8_t addr = 0;
-  int ret = mpu_read_registers(MPU_ADDR, MPU_WHO_AM_I, 1, &addr);
+  // int ret = i2c_slave_read(MPU_ADDR, MPU_WHO_AM_I, 1, &addr);
   return ret == 0 && addr == MPU_ADDR;
 }
 
-bool mpu_set_gyro_offsets(int16_t *offsets)
-{
-  uint8_t data[] = {
-    offsets[0] >> 8, offsets[0] & 0xff,
-    offsets[1] >> 8, offsets[1] & 0xff,
-    offsets[2] >> 8, offsets[2] & 0xff
-  };
-  uint8_t reg_addr = MPU_XG_OFFS_USRH;
-  return i2c_slave_write(MPU_ADDR, &reg_addr, data, 6) == 0;
-}
-
-void mpu_go_to_sleep(void)
-{
-  mpu_write_register(MPU_ADDR, MPU_PWR_MGMT_1, 1 << 6, true);
-}
+#endif
 

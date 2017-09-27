@@ -27,6 +27,7 @@ extern "C" {
 #include "i2c/i2c.h"
 #include "lib/mpu6050.h"
 #include "lib/imu_math.h"
+#include "lib/imu_hal.h"
 #include "lib/eyes.h"
 #include "lib/motors.h"
 }
@@ -80,7 +81,7 @@ pidsettings pid_settings_arr[2];
 q16 target_speed = 0;
 q16 steering_bias = 0;
 
-bool mpu_online = false;
+bool imu_online = false;
 
 SemaphoreHandle_t orientation_mutex;
 vector3d_fix gravity = { 0, 0, -Q16_ONE };
@@ -88,7 +89,6 @@ vector3d_fix gravity = { 0, 0, -Q16_ONE };
 void battery_cutoff()
 {
   set_both_eyes(BLACK);
-  mpu_go_to_sleep();
   set_motors(0, 0);
   sdk_system_deep_sleep(UINT32_MAX);
 }
@@ -108,7 +108,7 @@ static void main_loop(void *pvParameters)
   for (;;)
   {
     xTaskNotifyWait(0, 0, NULL, 1);
-    mpu_read_raw_data(MPU_ADDR, raw_data);
+    imu_read_raw_data(MPU_ADDR, raw_data);
 
     // Update orientation estimate
     xSemaphoreTake(orientation_mutex, portMAX_DELAY);
@@ -238,7 +238,7 @@ static void main_loop(void *pvParameters)
   }
 }
 
-static void mpu_interrupt_handler(uint8_t gpio_num)
+static void imu_interrupt_handler(uint8_t gpio_num)
 {
   BaseType_t xHigherPriorityTaskHasWoken = pdFALSE;
   xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
@@ -308,7 +308,7 @@ extern "C" void user_init()
 
   uart_set_baud(0, 115200);
   i2c_init(5, 0);
-  mpu_online = mpu_init();
+  imu_online = imu_init();
   eyes_init();
 
   pid_mutex = xSemaphoreCreateMutex();
@@ -325,7 +325,7 @@ extern "C" void user_init()
   pid_reset(0, 0, &pid_settings_arr[VEL], &vel_pid_state);
   mahony_filter_init(&imuparams, 10.0f * MAHONY_FILTER_KP, MAHONY_FILTER_KI, 2.0f * 2000.0f * M_PI / 180.0f, 0.001f);
 
-  set_both_eyes(mpu_online ? YELLOW : RED);
+  set_both_eyes(imu_online ? YELLOW : RED);
 
   wifi_setup();
 
@@ -337,5 +337,5 @@ extern "C" void user_init()
   xTaskCreate(&imu_watcher, "IMU watcher", 128, NULL, PRIO_MAIN_LOOP + 2, &xIMUWatcher);
 
   gpio_enable(4, GPIO_INPUT);
-  gpio_set_interrupt(4, GPIO_INTTYPE_EDGE_POS, mpu_interrupt_handler);
+  gpio_set_interrupt(4, GPIO_INTTYPE_EDGE_POS, imu_interrupt_handler);
 }
