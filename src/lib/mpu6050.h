@@ -19,5 +19,6 @@
 
 #pragma once
 
-
+#define IMU_SAMPLE_TIME 0.001f
+#define MPU_ADDR 0x68
 

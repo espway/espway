@@ -18,15 +18,20 @@
 
 #pragma once
 
+#include <stdint.h>
+#include "i2c/i2c.h"
+
 typedef struct {
   uint8_t address;
   uint8_t value;
 } imu_register_value_t;
 
+void imu_i2c_init(i2c_freq_t freq);
 int imu_send_config(uint8_t i2c_address, const imu_register_value_t *config,
                     size_t n_register_values);
-void imu_write_register(const uint8_t addr, const uint8_t reg,
-                        const uint8_t *data, const uint8_t len);
-int imu_read_registers(const uint8_t addr, uint8_t first_reg,
-                       const uint8_t len, uint8_t * const data);
+int imu_write_registers(uint8_t addr, uint8_t reg, const uint8_t *data,
+                        uint8_t len);
+int imu_read_registers(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len);
+int imu_write_register(uint8_t addr, uint8_t reg, uint8_t value);
+int imu_read_register(uint8_t addr, uint8_t reg, uint8_t *value);
 

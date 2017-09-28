@@ -81,8 +81,6 @@ pidsettings pid_settings_arr[2];
 q16 target_speed = 0;
 q16 steering_bias = 0;
 
-bool imu_online = false;
-
 SemaphoreHandle_t orientation_mutex;
 vector3d_fix gravity = { 0, 0, -Q16_ONE };
 
@@ -108,7 +106,7 @@ static void main_loop(void *pvParameters)
   for (;;)
   {
     xTaskNotifyWait(0, 0, NULL, 1);
-    imu_read_raw_data(MPU_ADDR, raw_data);
+    imu_read_raw_data(raw_data);
 
     // Update orientation estimate
     xSemaphoreTake(orientation_mutex, portMAX_DELAY);
@@ -307,9 +305,14 @@ extern "C" void user_init()
   set_user_exception_handler(espway_exception_handler);
 
   uart_set_baud(0, 115200);
-  i2c_init(5, 0);
-  imu_online = imu_init();
+  imu_i2c_configure(IMU_I2C_BUS, IMU_SCL_PIN, IMU_SDA_PIN);
+  int ret = imu_init();
+  if (ret != 0)
+  {
+    printf("IMU init failed with code %d\n", ret);
+  }
   eyes_init();
+  set_both_eyes(ret == 0 ? YELLOW : RED);
 
   pid_mutex = xSemaphoreCreateMutex();
   orientation_mutex = xSemaphoreCreateMutex();
@@ -323,9 +326,9 @@ extern "C" void user_init()
   // Parameter calculation & initialization
   pid_reset(0, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
   pid_reset(0, 0, &pid_settings_arr[VEL], &vel_pid_state);
-  mahony_filter_init(&imuparams, 10.0f * MAHONY_FILTER_KP, MAHONY_FILTER_KI, 2.0f * 2000.0f * M_PI / 180.0f, 0.001f);
+  mahony_filter_init(&imuparams, 10.0f * MAHONY_FILTER_KP, MAHONY_FILTER_KI,
+      2.0f * 2000.0f * M_PI / 180.0f, 0.001f);
 
-  set_both_eyes(imu_online ? YELLOW : RED);
 
   wifi_setup();
 

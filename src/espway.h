@@ -7,13 +7,13 @@ extern "C" {
 #include <httpd/httpd.h>
 
 #include "lib/pid.h"
-#include "lib/mpu6050.h"
+#include "lib/imu_hal.h"
 #include "lib/vector3d.h"
 }
 
 #include "config.h"
 
-#define SAMPLE_TIME ((1.0f + MPU_RATE) / 1000.0f)
+#define SAMPLE_TIME IMU_SAMPLE_TIME
 
 #define FALL_LOWER_BOUND FLT_TO_Q16(STABLE_ANGLE - FALL_LIMIT)
 #define FALL_UPPER_BOUND FLT_TO_Q16(STABLE_ANGLE + FALL_LIMIT)

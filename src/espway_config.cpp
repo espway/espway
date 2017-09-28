@@ -88,8 +88,6 @@ void apply_config_params()
       FLT_TO_Q16(SAMPLE_TIME), FALL_LOWER_BOUND, FALL_UPPER_BOUND, true,
       &pid_settings_arr[VEL]);
   xSemaphoreGive(pid_mutex);
-
-  mpu_set_gyro_offsets(my_config.gyro_offsets);
 }
 
 bool save_flash_config()

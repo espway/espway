@@ -1,3 +1,5 @@
+#pragma once
+
 // Hardware config
 
 // Motor driver selection
@@ -10,7 +12,11 @@
 #define IMU_MPU6050 0
 #define IMU_LSM6DS3 1
 
-#define IMU IMU_LSM6DS3
+#define IMU IMU_MPU6050
+
+#define IMU_SDA_PIN 0
+#define IMU_SCL_PIN 5
+#define IMU_I2C_BUS 0
 
 // Angle PID == the PID controller which regulates motor output signal to reach
 // the target angle

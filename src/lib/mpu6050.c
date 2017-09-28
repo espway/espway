@@ -19,6 +19,7 @@
 
 #include "i2c/i2c.h"
 #include "imu_hal.h"
+#include "imu_i2c_helper.h"
 
 #if IMU == IMU_MPU6050
 
@@ -66,7 +67,7 @@
 
 #define MPU_WHO_AM_I 0x75
 
-static const i2c_register_value_t MPU_CONFIG[] = {
+static const imu_register_value_t MPU_CONFIG_VALUES[] = {
   // Wake up
   {MPU_PWR_MGMT_1, MPU_CLK_PLL_ZGYRO | MPU_TEMP_DIS},
   // 1000 Hz sample rate
@@ -83,31 +84,11 @@ static const i2c_register_value_t MPU_CONFIG[] = {
   {MPU_INT_ENABLE, 1}
 };
 
-static void mpu_write_register(const uint8_t addr,
-    const uint8_t reg, const uint8_t value, bool stop)
-{
-  i2c_slave_write(MPU_ADDR, &reg, &value, 1);
-}
-
-int mpu_read_registers(const uint8_t addr,
-    uint8_t first_reg, const uint8_t len, uint8_t * const data)
-{
-  return i2c_slave_read(MPU_ADDR, &first_reg, data, len);
-}
-
-int mpu_read_int_status(const uint8_t addr)
-{
-  uint8_t tmp = 0;
-  mpu_read_registers(addr, MPU_INT_STATUS, 1, &tmp);
-  return tmp;
-}
-
-int mpu_read_raw_data(const uint8_t addr,
-    int16_t * const data)
+int imu_read_raw_data(int16_t * const data)
 {
   uint8_t *my_data = (uint8_t *)data;
   uint8_t buf[14];
-  int ret = mpu_read_registers(MPU_ADDR, MPU_ACCEL_XOUT_H, 14, buf);
+  int ret = imu_read_registers(MPU_ADDR, MPU_ACCEL_XOUT_H, buf, 14);
   if (ret != 0)
   {
     return ret;
@@ -125,15 +106,27 @@ int mpu_read_raw_data(const uint8_t addr,
 
 int imu_init(void)
 {
-  if (imu_send_config(MPU_ADDR, MPU_CONFIG,
-                      sizeof(MPU_CONFIG) / sizeof(MPU_CONFIG[0])))
+  imu_i2c_init(I2C_FREQ_400K);
+
+  int ret = imu_send_config(MPU_ADDR, MPU_CONFIG_VALUES,
+                            sizeof(MPU_CONFIG_VALUES) / sizeof(MPU_CONFIG_VALUES[0]));
+  if (ret != 0)
+  {
+    return ret;
+  }
+
+  uint8_t addr = 0;
+  ret = imu_read_register(MPU_ADDR, MPU_WHO_AM_I, &addr);
+  if (ret != 0)
+  {
+    return ret;
+  }
+  if (addr != MPU_ADDR)
   {
     return -1;
   }
 
-  uint8_t addr = 0;
-  // int ret = i2c_slave_read(MPU_ADDR, MPU_WHO_AM_I, 1, &addr);
-  return ret == 0 && addr == MPU_ADDR;
+  return 0;
 }
 
 #endif

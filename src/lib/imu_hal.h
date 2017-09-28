@@ -19,10 +19,13 @@
 
 #pragma once
 
-int imu_read_raw_data(const uint8_t addr, int16_t * const data);
+void imu_i2c_configure(int bus, int scl, int sca);
+int imu_read_raw_data(int16_t * const data);
 int imu_init(void);
 
 #if IMU == IMU_MPU6050
 #include "mpu6050.h"
+#elif IMU == IMU_LSM6DS3
+//#include "lsm6ds3.h"
 #endif
 
