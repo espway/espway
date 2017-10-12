@@ -22,7 +22,7 @@
 
 #include "q16.h"
 
-#define REVERSE_RIGHT_MOTOR true
+#define REVERSE_RIGHT_MOTOR false
 #define REVERSE_LEFT_MOTOR true
 
 void set_motor_speed(int channel, int dir_pin, q16 speed, bool reverse);

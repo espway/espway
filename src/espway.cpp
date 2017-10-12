@@ -41,7 +41,7 @@ extern "C" {
 
 #define AP_SSID "ESPway"
 
-#define LOGMODE LOG_NONE
+#define LOGMODE LOG_PITCH
 
 #define FREQUENCY_SAMPLES 1024
 #define QUAT_DELAY 50
@@ -113,7 +113,7 @@ static void main_loop(void *pvParameters)
     mahony_filter_update(&imuparams, &raw_data[0], &raw_data[3], &gravity);
     // Calculate sine of pitch angle from quaternion
     q16 sin_pitch = -gravity.z;
-    q16 sin_roll = gravity.y;
+    q16 sin_roll = gravity.x;
     xSemaphoreGive(orientation_mutex);
 
     // Exponential smoothing of target speed
@@ -327,7 +327,7 @@ extern "C" void user_init()
   pid_reset(0, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
   pid_reset(0, 0, &pid_settings_arr[VEL], &vel_pid_state);
   mahony_filter_init(&imuparams, 10.0f * MAHONY_FILTER_KP, MAHONY_FILTER_KI,
-      2.0f * 2000.0f * M_PI / 180.0f, 0.001f);
+      2.0f * 2000.0f * M_PI / 180.0f, IMU_SAMPLE_TIME);
 
 
   wifi_setup();

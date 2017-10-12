@@ -12,7 +12,7 @@
 #define IMU_MPU6050 0
 #define IMU_LSM6DS3 1
 
-#define IMU IMU_MPU6050
+#define IMU IMU_LSM6DS3
 
 #define IMU_SDA_PIN 0
 #define IMU_SCL_PIN 5

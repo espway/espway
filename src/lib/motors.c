@@ -35,11 +35,12 @@ void set_motor_speed(int channel, int dir_pin, q16 speed, bool reverse)
     speed = -period;
   }
 
-#if MOTOR_DRIVER == MOTOR_DRIVER_L293D
   if (reverse)
   {
     speed = -speed;
   }
+
+#if MOTOR_DRIVER == MOTOR_DRIVER_L293D
 
   if (speed < 0)
   {
