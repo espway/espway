@@ -33,7 +33,7 @@ extern "C" {
 }
 
 #include "espway.h"
-#include "config.h"
+#include "espway_config.h"
 
 #ifndef M_PI
 #define M_PI (3.14159265358979323846)

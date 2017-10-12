@@ -11,7 +11,7 @@ extern "C" {
 #include "lib/vector3d.h"
 }
 
-#include "config.h"
+#include "espway_config.h"
 
 #define SAMPLE_TIME IMU_SAMPLE_TIME
 

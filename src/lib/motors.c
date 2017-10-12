@@ -19,7 +19,7 @@
 #include "motors.h"
 #include "pwm.h"
 #include "esp/gpio.h"
-#include "config.h"
+#include "espway_config.h"
 
 void set_motor_speed(int channel, int dir_pin, q16 speed, bool reverse)
 {

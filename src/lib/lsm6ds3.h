@@ -1,6 +1,6 @@
 /*
- * Hardware abstraction layer enabling use of several different I2C IMUs in the
- * ESPway robot.
+ * A lightweight library for reading and processing motion information
+ * from a LSM6DS3 sensor.
  * Copyright (C) 2017  Sakari Kapanen
  *
  * This program is free software: you can redistribute it and/or modify
@@ -10,24 +10,15 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. * See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
 
-#include "espway_config.h"
-
-void imu_i2c_configure(int bus, int scl, int sca);
-int imu_read_raw_data(int16_t * const data);
-int imu_init(void);
-
-#if IMU == IMU_MPU6050
-#include "mpu6050.h"
-#elif IMU == IMU_LSM6DS3
-#include "lsm6ds3.h"
-#endif
+#define IMU_SAMPLE_TIME (1.0f / 1600.0f)
+#define IMU_ADDR 0x6a
 

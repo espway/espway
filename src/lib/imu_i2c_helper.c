@@ -17,7 +17,7 @@
  */
 
 #include "imu_i2c_helper.h"
-#include "config.h"
+#include "espway_config.h"
 
 static int imu_i2c_bus = 0;
 static int imu_i2c_scl = 5;
