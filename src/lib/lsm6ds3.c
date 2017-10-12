@@ -26,46 +26,42 @@
 #define LSM6DS3_WHO_AM_I 0x0f
 #define LSM6DS3_WHO_AM_I_VALUE 0x69
 
+#define INT1_CTRL 0x0d
+#define INT1_DRDY_XL 0x01
+
+#define CTRL1_XL 0x10
+#define FS_XL_2G (0x00 << 2)
+#define BW_XL_200Hz 0x01
+#define ODR_XL_1K66 (0x08 << 4)
+
+#define CTRL2_G 0x11
+#define FS_G_2000_DPS (0x11 << 2)
+#define ODR_G_1K66 (0x08 << 4)
+
+#define OUTX_L_G 0x22
+#define OUTX_L_XL 0x28
+
+
 static const imu_register_value_t LSM6DS3_CONFIG_VALUES[] = {
-  /*
-  // Wake up
-  {MPU_PWR_MGMT_1, MPU_CLK_PLL_ZGYRO | MPU_TEMP_DIS},
-  // 1000 Hz sample rate
-  {MPU_SMPRT_DIV, 0},
-  // 188 Hz LPF
-  {MPU_CONFIG, 1},
-  // Gyroscope min sensitivity
-  {MPU_GYRO_CONFIG, 3 << 3},
-  // Accel max sensitivity
-  {MPU_ACCEL_CONFIG, 0},
-  // Data ready interrupt on
-  {MPU_INT_PIN_CFG, 0x10},
-  // Enable interrupts
-  {MPU_INT_ENABLE, 1}
-  */
+  {INT1_CTRL, INT1_DRDY_XL},
+  {CTRL1_XL, FS_XL_2G | BW_XL_200Hz | ODR_XL_1K66},
+  {CTRL2_G, FS_G_2000_DPS | ODR_G_1K66}
 };
 
 int imu_read_raw_data(int16_t * const data)
 {
-  return -1;
-  /*
   uint8_t *my_data = (uint8_t *)data;
-  uint8_t buf[14];
-  int ret = imu_read_registers(IMU_ADDR, MPU_ACCEL_XOUT_H, buf, 14);
+  uint8_t tmp[12];
+  int ret = imu_read_registers(IMU_ADDR, OUTX_L_G, tmp, 12);
   if (ret != 0)
   {
     return ret;
   }
 
-  my_data[0] = buf[1]; my_data[1] = buf[0];      // ACC_X
-  my_data[2] = buf[3]; my_data[3] = buf[2];      // ACC_Y
-  my_data[4] = buf[5]; my_data[5] = buf[4];      // ACC_Z
-  my_data[6] = buf[9]; my_data[7] = buf[8];      // GYRO_X
-  my_data[8] = buf[11]; my_data[9] = buf[10];    // GYRO_Y
-  my_data[10] = buf[13]; my_data[11] = buf[12];  // GYRO_Z
+  memcpy(&my_data[6], &tmp[0], 6);
+  memcpy(&my_data[0], &tmp[6], 6);
 
   return ret;
-  */
 }
 
 int imu_init(void)
@@ -74,22 +70,17 @@ int imu_init(void)
 
   imu_i2c_init(I2C_FREQ_400K);
 
-  /*
-  ret = imu_send_config(IMU_ADDR, MPU_CONFIG_VALUES,
-                            sizeof(MPU_CONFIG_VALUES) / sizeof(MPU_CONFIG_VALUES[0]));
+  ret = imu_send_config(IMU_ADDR, LSM6DS3_CONFIG_VALUES,
+                        sizeof(LSM6DS3_CONFIG_VALUES) / sizeof(LSM6DS3_CONFIG_VALUES[0]));
   if (ret != 0)
   {
     return ret;
   }
-  */
-
-  printf("IMU address: %x\n", IMU_ADDR);
 
   uint8_t whoami = 0;
   ret = imu_read_register(IMU_ADDR, LSM6DS3_WHO_AM_I, &whoami);
   if (ret != 0)
   {
-    printf("Error reading IMU register\n");
     return ret;
   }
   if (whoami != LSM6DS3_WHO_AM_I_VALUE)
