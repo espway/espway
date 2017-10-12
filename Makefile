@@ -2,6 +2,8 @@ PROGRAM = espway
 SRC_DIR = ./src
 PROGRAM_SRC_DIR = $(SRC_DIR) $(SRC_DIR)/lib
 PROGRAM_INC_DIR = $(SRC_DIR)
+BUILD_DIR = ./build/
+FIRMWARE_DIR = ./firmware/
 
 ESPBAUD ?= 460800
 FLASH_SPEED ?= 80
@@ -23,13 +25,13 @@ EXTRA_CXXFLAGS = -std=gnu++11
 
 all: fsdata
 
-clean: clean-fsdata
-
 fsdata: src/fsdata.c
 
 src/fsdata.c: frontend/src/*
 	cd frontend; npm run build
 	perl scripts/makefsdata
+
+clean: clean-fsdata
 
 clean-fsdata:
 	$(Q) rm -f src/fsdata.c
@@ -40,4 +42,5 @@ parallel:
 	$(MAKE) -j$(N_PROCESSES) all
 
 include esp-open-rtos/common.mk
+
 
