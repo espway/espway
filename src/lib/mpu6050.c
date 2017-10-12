@@ -88,7 +88,7 @@ int imu_read_raw_data(int16_t * const data)
 {
   uint8_t *my_data = (uint8_t *)data;
   uint8_t buf[14];
-  int ret = imu_read_registers(MPU_ADDR, MPU_ACCEL_XOUT_H, buf, 14);
+  int ret = imu_read_registers(IMU_ADDR, MPU_ACCEL_XOUT_H, buf, 14);
   if (ret != 0)
   {
     return ret;
@@ -108,7 +108,7 @@ int imu_init(void)
 {
   imu_i2c_init(I2C_FREQ_400K);
 
-  int ret = imu_send_config(MPU_ADDR, MPU_CONFIG_VALUES,
+  int ret = imu_send_config(IMU_ADDR, MPU_CONFIG_VALUES,
                             sizeof(MPU_CONFIG_VALUES) / sizeof(MPU_CONFIG_VALUES[0]));
   if (ret != 0)
   {
@@ -116,12 +116,12 @@ int imu_init(void)
   }
 
   uint8_t addr = 0;
-  ret = imu_read_register(MPU_ADDR, MPU_WHO_AM_I, &addr);
+  ret = imu_read_register(IMU_ADDR, MPU_WHO_AM_I, &addr);
   if (ret != 0)
   {
     return ret;
   }
-  if (addr != MPU_ADDR)
+  if (addr != IMU_ADDR)
   {
     return -1;
   }
