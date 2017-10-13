@@ -17,6 +17,7 @@
  * along with this program. * If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
 #include "i2c/i2c.h"
 #include "imu_hal.h"
 #include "imu_i2c_helper.h"
