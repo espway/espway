@@ -28,10 +28,9 @@
 #define LSM6DS3_WHO_AM_I_VALUE 0x69
 
 #define INT1_CTRL 0x0d
-#define INT1_DRDY_XL 0x01
+#define INT1_DRDY_G (0x01 << 1)
 
 #define CTRL1_XL 0x10
-#define FS_XL_2G (0x00 << 2)
 #define BW_XL_200Hz 0x01
 #define ODR_XL_1K66 (0x08 << 4)
 
@@ -44,8 +43,8 @@
 
 
 static const imu_register_value_t LSM6DS3_CONFIG_VALUES[] = {
-  {INT1_CTRL, INT1_DRDY_XL},
-  {CTRL1_XL, FS_XL_2G | BW_XL_200Hz | ODR_XL_1K66},
+  {INT1_CTRL, INT1_DRDY_G},
+  {CTRL1_XL, ODR_XL_1K66},
   {CTRL2_G, FS_G_2000_DPS | ODR_G_1K66}
 };
 
@@ -69,7 +68,7 @@ int imu_init(void)
 {
   int ret;
 
-  imu_i2c_init(I2C_FREQ_400K);
+  imu_i2c_init(I2C_FREQ_500K);
 
   ret = imu_send_config(IMU_ADDR, LSM6DS3_CONFIG_VALUES,
                         sizeof(LSM6DS3_CONFIG_VALUES) / sizeof(LSM6DS3_CONFIG_VALUES[0]));
