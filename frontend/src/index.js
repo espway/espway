@@ -6,7 +6,15 @@ window.addEventListener('load', () => {
     let byId = id => document.getElementById(id)
     let ws = new WebSocket('ws://' + window.location.host + '/ws')
     ws.binaryType = 'arraybuffer'
-    ws.addEventListener('open', requestGravity)
+    ws.addEventListener('open', () => {
+        window.setInterval(() => {
+            sendSteeringCommand(x, y)
+        }, 50)
+
+        window.setInterval(() => {
+            requestGravity()
+        }, 50)
+    })
 
     let tiltBtn = byId('tiltBtn')
     let battery = byId('battery')
@@ -50,9 +58,8 @@ window.addEventListener('load', () => {
             battery.innerText = batteryValue.toFixed(2)
         } else if (command === 2 && e.data.byteLength === 7) {
             hasGravityData = true
-            tiltX = -dview.getInt16(3, true) / 32768.0
+            tiltX = -dview.getInt16(1, true) / 32768.0
             tiltY = -dview.getInt16(5, true) / 32768.0
-            requestGravity()
         }
     })
 
@@ -151,19 +158,12 @@ window.addEventListener('load', () => {
     }
 
     function sendSteeringCommand(turning, speed) {
-        if (ws.readyState !== 1) {
-            return;
-        }
         let dview = new DataView(new ArrayBuffer(3))
         dview.setUint8(0, 0)
         dview.setInt8(1, turning * 127)
         dview.setInt8(2, speed * 127)
         ws.send(dview.buffer)
     }
-
-    window.setInterval(() => {
-        sendSteeringCommand(x, y)
-    }, 100)
 
     function draw() {
         updateXY()
