@@ -25,7 +25,6 @@ extern "C" {
 #include <esp/uart.h>
 
 #include "i2c/i2c.h"
-#include "lib/mpu6050.h"
 #include "lib/imu_math.h"
 #include "lib/imu_hal.h"
 #include "lib/eyes.h"
@@ -41,7 +40,7 @@ extern "C" {
 
 #define AP_SSID "ESPway"
 
-#define LOGMODE LOG_PITCH
+#define LOGMODE LOG_RAW
 
 #define FREQUENCY_SAMPLES 1024
 #define QUAT_DELAY 50
@@ -111,7 +110,7 @@ static void main_loop(void *pvParameters)
     // Update orientation estimate
     xSemaphoreTake(orientation_mutex, portMAX_DELAY);
     mahony_filter_update(&imuparams, &raw_data[0], &raw_data[3], &gravity);
-    // Calculate sine of pitch angle from quaternion
+    // Calculate sine of pitch angle from gravity vector
     q16 sin_pitch = -gravity.z;
     q16 sin_roll = gravity.x;
     xSemaphoreGive(orientation_mutex);
@@ -170,8 +169,8 @@ static void main_loop(void *pvParameters)
         }
         else
         {
-          set_motors(motor_speed + steering_bias,
-              motor_speed - steering_bias);
+          /*set_motors(motor_speed + steering_bias,
+              motor_speed - steering_bias);*/
         }
 
         if (motor_speed != Q16_ONE && motor_speed != -Q16_ONE)
@@ -229,7 +228,7 @@ static void main_loop(void *pvParameters)
     }
     else if (LOGMODE == LOG_PITCH)
     {
-      printf("%d\n", sin_pitch);
+      printf("%d, %d\n", sin_pitch, sin_roll);
     }
 
     xTaskNotify(xIMUWatcher, 0, eNoAction);
@@ -302,6 +301,7 @@ static void wifi_setup()
 
 extern "C" void user_init()
 {
+  sdk_system_update_cpu_freq(SYS_CPU_160MHZ);
   set_user_exception_handler(espway_exception_handler);
 
   uart_set_baud(0, 115200);
@@ -327,7 +327,7 @@ extern "C" void user_init()
   pid_reset(0, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
   pid_reset(0, 0, &pid_settings_arr[VEL], &vel_pid_state);
   mahony_filter_init(&imuparams, 10.0f * MAHONY_FILTER_KP, MAHONY_FILTER_KI,
-      2.0f * 2000.0f * M_PI / 180.0f, IMU_SAMPLE_TIME);
+      2000.0f * M_PI / 180.0f, IMU_SAMPLE_TIME);
 
 
   wifi_setup();

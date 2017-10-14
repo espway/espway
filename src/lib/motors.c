@@ -54,27 +54,27 @@ void set_motor_speed(int channel, int dir_pin, q16 speed, bool reverse)
   }
 #elif MOTOR_DRIVER == MOTOR_DRIVER_DRV8835
   gpio_write(dir_pin, speed < 0);
-  pwm_set_duty(speed, channel);
+  pwm_set_duty(speed < 0 ? -speed : speed, channel);
 #endif
 }
 
 void set_motors(q16 left_speed, q16 right_speed)
 {
-  set_motor_speed(1, 12, right_speed, REVERSE_RIGHT_MOTOR);
-  set_motor_speed(0, 15, left_speed, REVERSE_LEFT_MOTOR);
+  set_motor_speed(0, 14, right_speed, REVERSE_RIGHT_MOTOR);
+  set_motor_speed(1, 13, left_speed, REVERSE_LEFT_MOTOR);
   pwm_start();
 }
 
 void motors_init(int period)
 {
   // Motor direction pins
-  gpio_enable(12, GPIO_OUTPUT);
-  gpio_enable(15, GPIO_OUTPUT);
-  gpio_write(12, 0);
-  gpio_write(15, 0);
+  gpio_enable(13, GPIO_OUTPUT);
+  gpio_enable(14, GPIO_OUTPUT);
+  gpio_write(13, 0);
+  gpio_write(14, 0);
   // PWM init
   uint32_t duty[] = { 0, 0 };
-  uint8_t pins[] = { 13, 14 };
+  uint8_t pins[] = { 12, 15 };
   pwm_init(period, duty, 2, pins);
 }
 
