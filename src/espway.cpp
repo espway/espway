@@ -40,7 +40,7 @@ extern "C" {
 
 #define AP_SSID "ESPway"
 
-#define LOGMODE LOG_RAW
+#define LOGMODE LOG_NONE
 
 #define FREQUENCY_SAMPLES 1024
 #define QUAT_DELAY 50
@@ -81,7 +81,7 @@ q16 target_speed = 0;
 q16 steering_bias = 0;
 
 SemaphoreHandle_t orientation_mutex;
-vector3d_fix gravity = { 0, 0, -Q16_ONE };
+vector3d_fix gravity = { 0, 0, Q16_ONE };
 
 void battery_cutoff()
 {
@@ -112,7 +112,7 @@ static void main_loop(void *pvParameters)
     mahony_filter_update(&imuparams, &raw_data[0], &raw_data[3], &gravity);
     // Calculate sine of pitch angle from gravity vector
     q16 sin_pitch = -gravity.z;
-    q16 sin_roll = gravity.x;
+    q16 sin_roll = -gravity.x;
     xSemaphoreGive(orientation_mutex);
 
     // Exponential smoothing of target speed
@@ -169,8 +169,8 @@ static void main_loop(void *pvParameters)
         }
         else
         {
-          /*set_motors(motor_speed + steering_bias,
-              motor_speed - steering_bias);*/
+          set_motors(motor_speed + steering_bias,
+              motor_speed - steering_bias);
         }
 
         if (motor_speed != Q16_ONE && motor_speed != -Q16_ONE)
@@ -202,6 +202,7 @@ static void main_loop(void *pvParameters)
           sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND)
       {
         my_state = RUNNING;
+        last_wind_up = current_time;
         set_both_eyes(GREEN);
         pid_reset(sin_pitch, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
         pid_reset(0, FLT_TO_Q16(STABLE_ANGLE), &pid_settings_arr[VEL],
@@ -327,7 +328,7 @@ extern "C" void user_init()
   pid_reset(0, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
   pid_reset(0, 0, &pid_settings_arr[VEL], &vel_pid_state);
   mahony_filter_init(&imuparams, 10.0f * MAHONY_FILTER_KP, MAHONY_FILTER_KI,
-      2000.0f * M_PI / 180.0f, IMU_SAMPLE_TIME);
+      2.0 * 2000.0f * M_PI / 180.0f, IMU_SAMPLE_TIME);
 
 
   wifi_setup();
