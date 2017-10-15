@@ -547,7 +547,7 @@ Connection ~ 7900 6400
 Wire Wire Line
 	9500 5550 9350 5550
 Wire Wire Line
-	5300 3800 7450 3800
+	5000 3800 7450 3800
 Wire Wire Line
 	6200 1300 6200 1200
 Wire Wire Line
@@ -754,4 +754,21 @@ Wire Wire Line
 	7400 2350 8050 2350
 Wire Wire Line
 	8050 2350 8050 2450
+$Comp
+L R R13
+U 1 1 59E13532
+P 5000 3450
+F 0 "R13" V 5080 3450 50  0000 C CNN
+F 1 "10k" V 5000 3450 50  0000 C CNN
+F 2 "Resistors_SMD:R_0603" V 4930 3450 50  0001 C CNN
+F 3 "" H 5000 3450 50  0001 C CNN
+	1    5000 3450
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5000 3300 5000 2850
+Connection ~ 5000 2850
+Wire Wire Line
+	5000 3600 5000 3800
+Connection ~ 5300 3800
 $EndSCHEMATC
