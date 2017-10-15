@@ -46,8 +46,8 @@
 
 static const imu_register_value_t LSM6DS3_CONFIG_VALUES[] = {
   {INT1_CTRL, INT1_DRDY_G},
-  {CTRL1_XL, ODR_XL_833},
-  {CTRL2_G, FS_G_2000_DPS | ODR_G_833}
+  {CTRL1_XL, ODR_XL_1K66},
+  {CTRL2_G, FS_G_2000_DPS | ODR_G_1K66}
 };
 
 int imu_read_raw_data(int16_t * const data)
