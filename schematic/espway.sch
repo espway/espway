@@ -468,7 +468,7 @@ U 1 1 59BA67C3
 P 5000 1400
 F 0 "BT1" H 5100 1500 50  0000 L CNN
 F 1 "4.8V (4*AAA NiMH)" H 5100 1400 50  0000 L CNN
-F 2 "Wire_Connections_Bridges:WireConnection_1.00mmDrill" V 5000 1460 50  0001 C CNN
+F 2 "Wire_Connections_Bridges:WireConnection_1.20mmDrill" V 5000 1460 50  0001 C CNN
 F 3 "" V 5000 1460 50  0001 C CNN
 	1    5000 1400
 	1    0    0    -1  
