@@ -7,4 +7,4 @@ firmware
 tags
 tmp
 *.kicad_pcb-bak
-
+.DS_Store
