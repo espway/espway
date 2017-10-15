@@ -33,10 +33,12 @@
 #define CTRL1_XL 0x10
 #define BW_XL_200Hz 0x01
 #define ODR_XL_1K66 (0x08 << 4)
+#define ODR_XL_833 (0x07 << 4)
 
 #define CTRL2_G 0x11
-#define FS_G_2000_DPS (0x11 << 2)
+#define FS_G_2000_DPS (0x3 << 2)
 #define ODR_G_1K66 (0x08 << 4)
+#define ODR_G_833 (0x07 << 4)
 
 #define OUTX_L_G 0x22
 #define OUTX_L_XL 0x28
@@ -44,8 +46,8 @@
 
 static const imu_register_value_t LSM6DS3_CONFIG_VALUES[] = {
   {INT1_CTRL, INT1_DRDY_G},
-  {CTRL1_XL, ODR_XL_1K66},
-  {CTRL2_G, FS_G_2000_DPS | ODR_G_1K66}
+  {CTRL1_XL, ODR_XL_833},
+  {CTRL2_G, FS_G_2000_DPS | ODR_G_833}
 };
 
 int imu_read_raw_data(int16_t * const data)

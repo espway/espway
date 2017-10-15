@@ -302,7 +302,6 @@ static void wifi_setup()
 
 extern "C" void user_init()
 {
-  sdk_system_update_cpu_freq(SYS_CPU_160MHZ);
   set_user_exception_handler(espway_exception_handler);
 
   uart_set_baud(0, 115200);

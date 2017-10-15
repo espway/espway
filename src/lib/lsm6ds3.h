@@ -19,6 +19,6 @@
 
 #pragma once
 
-#define IMU_SAMPLE_TIME (1.0f / 1660.0f)
+#define IMU_SAMPLE_TIME (1.0f / 833.0f)
 #define IMU_ADDR 0x6a
 
