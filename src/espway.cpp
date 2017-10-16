@@ -92,7 +92,6 @@ void battery_cutoff()
 static void main_loop(void *pvParameters)
 {
   static int16_t raw_data[6];
-  int16_t raw_data_tmp[6];
   uint32_t time_old = 0;
   uint32_t current_time = 0;
   int n = 0;
@@ -105,14 +104,10 @@ static void main_loop(void *pvParameters)
   for (;;)
   {
     xTaskNotifyWait(0, 0, NULL, 1);
-    int ret = imu_read_raw_data(raw_data_tmp);
+    int ret = imu_read_raw_data(raw_data);
     if (ret != 0)
     {
       printf("Reading IMU failed with code %d\n", ret);
-    }
-    else
-    {
-      memcpy(raw_data, raw_data_tmp, 6 * sizeof(int16_t));
     }
 
     // Update orientation estimate
