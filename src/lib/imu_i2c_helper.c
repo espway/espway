@@ -35,6 +35,16 @@ int imu_send_config(uint8_t i2c_address, const imu_register_value_t *config,
   return 0;
 }
 
+int imu_write_register(uint8_t addr, uint8_t reg, uint8_t value)
+{
+  return imu_write_registers(addr, reg, &value, 1);
+}
+
+int imu_read_register(uint8_t addr, uint8_t reg, uint8_t *data)
+{
+  return imu_read_registers(addr, reg, data, 1);
+}
+
 int imu_write_registers(uint8_t addr, uint8_t reg,
                         const uint8_t *data, uint8_t len)
 {
@@ -45,16 +55,6 @@ int imu_read_registers(uint8_t addr, uint8_t first_reg,
                        uint8_t *data, uint8_t len)
 {
   return i2c_slave_read(imu_i2c_bus, addr, &first_reg, data, len);
-}
-
-int imu_write_register(uint8_t addr, uint8_t reg, uint8_t value)
-{
-  return imu_write_registers(addr, reg, &value, 1);
-}
-
-int imu_read_register(uint8_t addr, uint8_t reg, uint8_t *data)
-{
-  return imu_read_registers(addr, reg, data, 1);
 }
 
 void imu_i2c_init(i2c_freq_t freq)
