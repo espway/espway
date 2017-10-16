@@ -301,11 +301,10 @@ static void wifi_setup()
 
 extern "C" void user_init()
 {
-  sdk_system_update_cpu_freq(SYS_CPU_160MHZ);
   set_user_exception_handler(espway_exception_handler);
 
   uart_set_baud(0, 115200);
-  imu_i2c_configure(IMU_I2C_BUS, IMU_SCL_PIN, IMU_SDA_PIN);
+  imu_i2c_configure(IMU_SCL_PIN, IMU_SDA_PIN);
   int ret = imu_init();
   if (ret != 0)
   {
