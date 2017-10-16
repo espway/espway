@@ -24,7 +24,6 @@ extern "C" {
 #include <esp8266.h>
 #include <esp/uart.h>
 
-#include "i2c/i2c.h"
 #include "lib/imu_math.h"
 #include "lib/imu_hal.h"
 #include "lib/eyes.h"
