@@ -3,7 +3,7 @@
   (general
     (links 75)
     (no_connects 0)
-    (area 137.294857 73.360999 187.568429 122.193)
+    (area 143.180999 78.664999 180.415001 120.344001)
     (thickness 1.6)
     (drawings 11)
     (tracks 232)
@@ -37,7 +37,7 @@
   )
 
   (setup
-    (last_trace_width 0.5)
+    (last_trace_width 0.25)
     (user_trace_width 0.5)
     (trace_clearance 0.16)
     (zone_clearance 0.2)
@@ -63,6 +63,7 @@
     (pad_drill 0.2)
     (pad_to_mask_clearance 0.2)
     (aux_axis_origin 0 0)
+    (grid_origin 143.256 120.142)
     (visible_elements 7FFFFFFF)
     (pcbplotparams
       (layerselection 0x010f0_80000001)
@@ -88,7 +89,7 @@
       (mirror false)
       (drillshape 0)
       (scaleselection 1)
-      (outputdirectory ""))
+      (outputdirectory plot/))
   )
 
   (net 0 "")
@@ -1040,7 +1041,7 @@
     (fp_text reference R7 (at 2.54 0) (layer F.SilkS)
       (effects (font (size 1 1) (thickness 0.15)))
     )
-    (fp_text value 10k (at 0 1.5) (layer F.Fab)
+    (fp_text value 2k2 (at 0 1.5) (layer F.Fab)
       (effects (font (size 1 1) (thickness 0.15)))
     )
     (fp_text user %R (at 0 -1.45) (layer F.Fab)
@@ -1076,7 +1077,7 @@
     (fp_text reference R8 (at 2.54 0) (layer F.SilkS)
       (effects (font (size 1 1) (thickness 0.15)))
     )
-    (fp_text value 10k (at 0 1.5) (layer F.Fab)
+    (fp_text value 2k2 (at 0 1.5) (layer F.Fab)
       (effects (font (size 1 1) (thickness 0.15)))
     )
     (fp_text user %R (at 0 -1.45) (layer F.Fab)
