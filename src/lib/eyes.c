@@ -21,11 +21,11 @@
 void set_both_eyes(const color_t color)
 {
   color_t colors[2] = { color, color };
-  ws2812_i2s_update(colors);
+  ws2812_i2s_update(colors, PIXEL_RGB);
 }
 
 void eyes_init()
 {
-  ws2812_i2s_init(2);
+  ws2812_i2s_init(2, PIXEL_RGB);
 }
 
