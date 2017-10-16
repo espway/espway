@@ -60,21 +60,21 @@ void set_motor_speed(int channel, int dir_pin, q16 speed, bool reverse)
 
 void set_motors(q16 left_speed, q16 right_speed)
 {
-  set_motor_speed(0, 14, right_speed, REVERSE_RIGHT_MOTOR);
-  set_motor_speed(1, 13, left_speed, REVERSE_LEFT_MOTOR);
+  set_motor_speed(0, MOTOR_RIGHT_DIR_PIN, right_speed, REVERSE_RIGHT_MOTOR);
+  set_motor_speed(1, MOTOR_LEFT_DIR_PIN, left_speed, REVERSE_LEFT_MOTOR);
   pwm_start();
 }
 
 void motors_init(int period)
 {
   // Motor direction pins
-  gpio_enable(13, GPIO_OUTPUT);
-  gpio_enable(14, GPIO_OUTPUT);
-  gpio_write(13, 0);
-  gpio_write(14, 0);
+  gpio_enable(MOTOR_LEFT_DIR_PIN, GPIO_OUTPUT);
+  gpio_enable(MOTOR_RIGHT_DIR_PIN, GPIO_OUTPUT);
+  gpio_write(MOTOR_LEFT_DIR_PIN, 0);
+  gpio_write(MOTOR_RIGHT_DIR_PIN, 0);
   // PWM init
   uint32_t duty[] = { 0, 0 };
-  uint8_t pins[] = { 12, 15 };
+  uint8_t pins[] = { MOTOR_RIGHT_PWM_PIN, MOTOR_LEFT_PWM_PIN };
   pwm_init(period, duty, 2, pins);
 }
 
