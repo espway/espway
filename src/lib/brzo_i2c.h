@@ -26,10 +26,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Setting this variable to 1 DISABLES all interrupts during i2c reads and writes
 // Setting this variable to 0 ENABLES all interrupts during i2c reads and writes
-#define BRZO_I2C_DISABLE_INTERRUPTS 1
+#define BRZO_I2C_DISABLE_INTERRUPTS 0
 
-#ifdef ARDUINO
+#if defined(ARDUINO)
 #include "Arduino.h"
+#elif defined(ESP_OPEN_RTOS)
+#include <stdint.h>
 #else
 #include <c_types.h>
 
@@ -47,7 +49,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 extern "C" {
 #endif
 
-#ifdef ARDUINO
+#if defined(ARDUINO) || defined(ESP_OPEN_RTOS)
 void brzo_i2c_setup(uint8_t sda, uint8_t scl, uint32_t clock_stretch_time_out_usec);
 #else
 void brzo_i2c_setup(uint32_t clock_stretch_time_out_usec);

@@ -21,7 +21,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-#ifndef ARDUINO
+#if defined(ESP_OPEN_RTOS)
+#include <esp/gpio.h>
+#include <espressif/esp_common.h>
+
+#define system_get_cpu_freq sdk_system_get_cpu_freq
+#define ICACHE_RAM_ATTR IRAM
+#define ICACHE_FLASH_ATTR
+
+#elif !defined(ARDUINO)
 #include <eagle_soc.h>
 #include <ets_sys.h>
 #include <os_type.h>
@@ -1029,7 +1037,7 @@ uint8_t ICACHE_RAM_ATTR brzo_i2c_end_transaction()
 	return dummy;
 }
 
-#ifdef ARDUINO
+#if defined(ARDUINO) || defined(ESP_OPEN_RTOS)
 void ICACHE_FLASH_ATTR brzo_i2c_setup(uint8_t sda, uint8_t scl, uint32_t clock_stretch_time_out_usec)
 #else
 void ICACHE_FLASH_ATTR brzo_i2c_setup(uint32_t clock_stretch_time_out_usec)
@@ -1053,9 +1061,14 @@ void ICACHE_FLASH_ATTR brzo_i2c_setup(uint32_t clock_stretch_time_out_usec)
 		else iteration_scl_clock_stretch = 470 * clock_stretch_time_out_usec / 100;
 	}
 
-#ifdef ARDUINO
+#if defined(ARDUINO)
 	pinMode(sda, OUTPUT_OPEN_DRAIN);
 	pinMode(scl, OUTPUT_OPEN_DRAIN);
+	sda_bitmask = (uint16_t)(1 << sda);
+	scl_bitmask = (uint16_t)(1 << scl);
+#elif defined(ESP_OPEN_RTOS)
+	gpio_enable(sda, GPIO_OUT_OPEN_DRAIN);
+	gpio_enable(scl, GPIO_OUT_OPEN_DRAIN);
 	sda_bitmask = (uint16_t)(1 << sda);
 	scl_bitmask = (uint16_t)(1 << scl);
 #else
