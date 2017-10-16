@@ -70,7 +70,7 @@ int imu_init(void)
 {
   int ret;
 
-  imu_i2c_init(I2C_FREQ_500K);
+  imu_i2c_init(800);
 
   ret = imu_send_config(IMU_ADDR, LSM6DS3_CONFIG_VALUES,
                         sizeof(LSM6DS3_CONFIG_VALUES) / sizeof(LSM6DS3_CONFIG_VALUES[0]));

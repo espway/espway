@@ -21,7 +21,7 @@
 
 #include "espway_config.h"
 
-void imu_i2c_configure(int bus, int scl, int sca);
+void imu_i2c_configure(int scl, int sca);
 int imu_read_raw_data(int16_t * const data);
 int imu_init(void);
 

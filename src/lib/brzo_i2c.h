@@ -32,6 +32,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "Arduino.h"
 #elif defined(ESP_OPEN_RTOS)
 #include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
 #else
 #include <c_types.h>
 

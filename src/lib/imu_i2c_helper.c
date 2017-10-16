@@ -19,7 +19,7 @@
 #include "imu_i2c_helper.h"
 #include "espway_config.h"
 
-static int imu_i2c_bus = 0;
+static uint16_t imu_i2c_freq = 0;
 static int imu_i2c_scl = 5;
 static int imu_i2c_sda = 0;
 
@@ -37,7 +37,10 @@ int imu_send_config(uint8_t i2c_address, const imu_register_value_t *config,
 
 int imu_write_register(uint8_t addr, uint8_t reg, uint8_t value)
 {
-  return imu_write_registers(addr, reg, &value, 1);
+  uint8_t buf[] = { reg, value };
+  brzo_i2c_start_transaction(addr, imu_i2c_freq);
+  brzo_i2c_write(buf, 2, false);
+  return brzo_i2c_end_transaction();
 }
 
 int imu_read_register(uint8_t addr, uint8_t reg, uint8_t *data)
@@ -45,26 +48,22 @@ int imu_read_register(uint8_t addr, uint8_t reg, uint8_t *data)
   return imu_read_registers(addr, reg, data, 1);
 }
 
-int imu_write_registers(uint8_t addr, uint8_t reg,
-                        const uint8_t *data, uint8_t len)
+int imu_read_registers(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len)
 {
-  return i2c_slave_write(imu_i2c_bus, addr, &reg, data, len);
+  brzo_i2c_start_transaction(addr, imu_i2c_freq);
+  brzo_i2c_write(&reg, 1, true);
+  brzo_i2c_read(data, len, false);
+  return brzo_i2c_end_transaction();
 }
 
-int imu_read_registers(uint8_t addr, uint8_t first_reg,
-                       uint8_t *data, uint8_t len)
+void imu_i2c_init(uint16_t freq)
 {
-  return i2c_slave_read(imu_i2c_bus, addr, &first_reg, data, len);
+  imu_i2c_freq = freq;
+  brzo_i2c_setup(imu_i2c_sda, imu_i2c_scl, 2000);
 }
 
-void imu_i2c_init(i2c_freq_t freq)
+void imu_i2c_configure(int scl, int sda)
 {
-  i2c_init(imu_i2c_bus, imu_i2c_scl, imu_i2c_sda, freq);
-}
-
-void imu_i2c_configure(int bus, int scl, int sda)
-{
-  imu_i2c_bus = bus;
   imu_i2c_scl = scl;
   imu_i2c_sda = sda;
 }
