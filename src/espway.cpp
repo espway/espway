@@ -306,6 +306,7 @@ static void wifi_setup()
 extern "C" void user_init()
 {
   set_user_exception_handler(espway_exception_handler);
+  sdk_system_update_cpu_freq(SYS_CPU_160MHZ);
 
   uart_set_baud(0, 115200);
   imu_i2c_configure(IMU_SCL_PIN, IMU_SDA_PIN);
