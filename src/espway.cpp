@@ -333,10 +333,7 @@ extern "C" void user_init()
   mahony_filter_init(&imuparams, 10.0f * MAHONY_FILTER_KP, MAHONY_FILTER_KI,
       2.0 * 2000.0f * M_PI / 180.0f, IMU_SAMPLE_TIME);
 
-
   wifi_setup();
-
-  // TODO: OTA init
 
   xTaskCreate(&httpd_task, "HTTP Daemon", 128, NULL, PRIO_COMMUNICATION, NULL);
   xTaskCreate(&main_loop, "Main loop", 256, NULL, PRIO_MAIN_LOOP, &xCalculationTask);
