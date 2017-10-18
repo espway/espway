@@ -122,7 +122,6 @@ struct timer_regs {
 };
 static struct timer_regs* timer = (struct timer_regs*)(0x60000600);
 
-//static void __attribute__((optimize("O1"))) IRAM
 static void IRAM
 pwm_intr_handler(void)
 {
@@ -155,10 +154,10 @@ pwm_intr_handler(void)
 			ticks *= PWM_BUSY_WAIT_COEF;
 			asm
 			(
-			     "loop:\n"
-			     "addi %0, %0, -1\n"
-			     "bnez %0, loop"
-			     : : "r"(ticks)
+				"loop:\n"
+					"addi %0, %0, -1\n"
+					"bnez %0, loop"
+				: : "r"(ticks)
 			);
 		}
 
