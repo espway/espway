@@ -27,6 +27,16 @@
 #define PWM_DEBUG 0
 #define PWM_USE_NMI 0
 
+#define PWM_160MHZ 1
+
+#if PWM_160MHZ == 1
+#define PWM_INTR_OVERHEAD  6
+#define PWM_BUSY_WAIT_COEF 8
+#else
+#define PWM_INTR_OVERHEAD  12
+#define PWM_BUSY_WAIT_COEF 4
+#endif
+
 /* no user servicable parts beyond this point */
 
 #define PWM_MAX_TICKS 0x7fffff
@@ -112,6 +122,7 @@ struct timer_regs {
 };
 static struct timer_regs* timer = (struct timer_regs*)(0x60000600);
 
+//static void __attribute__((optimize("O1"))) IRAM
 static void IRAM
 pwm_intr_handler(void)
 {
@@ -135,18 +146,20 @@ pwm_intr_handler(void)
 		if (ticks) {
 			if (ticks >= 16) {
 				// constant interrupt overhead
-				ticks -= 9;
+				ticks -= PWM_INTR_OVERHEAD;
 				timer->frc1_int &= ~FRC1_INT_CLR_MASK;
 				timer->frc1_load = ticks;
 				return;
 			}
 
-			ticks *= 4;
-			do {
-				ticks -= 1;
-				// stop compiler from optimizing delay loop to noop
-				asm volatile ("" : : : "memory");
-			} while (ticks > 0);
+			ticks *= PWM_BUSY_WAIT_COEF;
+			asm
+			(
+			     "loop:\n"
+			     "addi %0, %0, -1\n"
+			     "bnez %0, loop"
+			     : : "r"(ticks)
+			);
 		}
 
 	} while (1);
