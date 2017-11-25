@@ -452,17 +452,6 @@ GPIO15
 Text GLabel 7550 2950 2    39   Output ~ 0
 GPIO15
 $Comp
-L GND #PWR012
-U 1 1 59BA5B49
-P 2750 3200
-F 0 "#PWR012" H 2750 2950 50  0001 C CNN
-F 1 "GND" H 2750 3050 50  0000 C CNN
-F 2 "" H 2750 3200 50  0001 C CNN
-F 3 "" H 2750 3200 50  0001 C CNN
-	1    2750 3200
-	1    0    0    -1  
-$EndComp
-$Comp
 L Battery BT1
 U 1 1 59BA67C3
 P 5000 1400
@@ -485,7 +474,7 @@ Wire Wire Line
 	5300 3600 5300 3800
 Connection ~ 7450 3800
 Wire Wire Line
-	7100 3050 7100 3800
+	7100 3800 7100 3050
 Wire Wire Line
 	5300 2350 5200 2350
 Wire Wire Line
@@ -526,7 +515,7 @@ Wire Wire Line
 Wire Wire Line
 	9000 6400 9000 6050
 Wire Wire Line
-	8250 6350 8250 6400
+	8250 6400 8250 6350
 Connection ~ 8250 6400
 Connection ~ 8250 6050
 Connection ~ 8250 5550
@@ -562,8 +551,6 @@ Wire Wire Line
 	4200 2150 4200 2500
 Connection ~ 4200 2350
 Connection ~ 7450 2950
-Wire Wire Line
-	2750 3200 2750 3100
 Connection ~ 5850 1600
 Wire Wire Line
 	2500 2150 2500 2350
@@ -771,4 +758,21 @@ Connection ~ 5000 2850
 Wire Wire Line
 	5000 3600 5000 3800
 Connection ~ 5300 3800
+Wire Wire Line
+	2750 3100 2750 3400
+Wire Wire Line
+	2750 3400 3350 3400
+$Comp
+L GND #PWR?
+U 1 1 5A19A5EC
+P 3350 3450
+F 0 "#PWR?" H 3350 3200 50  0001 C CNN
+F 1 "GND" H 3350 3300 50  0000 C CNN
+F 2 "" H 3350 3450 50  0001 C CNN
+F 3 "" H 3350 3450 50  0001 C CNN
+	1    3350 3450
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3350 3400 3350 3450
 $EndSCHEMATC
