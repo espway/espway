@@ -16,6 +16,11 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
+/*
+ * The code has been modified by Sakari Kapanen in 2017 to be used with the
+ * esp-open-rtos operating system.
+ */
+
 /* Set the following three defines to your needs */
 
 #ifndef SDK_PWM_PERIOD_COMPAT_MODE
