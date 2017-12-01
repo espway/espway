@@ -70,7 +70,14 @@ After you've cloned this repo, run `npm install` in the root folder to install t
 * `npm run serve` start a web server which serves the static HTML files in the `frontend/output` directory. It also watches for changes in the source files in `frontend/src` and automatically rebuilds and reloads them. Use this while hacking on the frontend. *TODO*: Currently this doesn't see changes to HTML files, though.
 * `npm run build` produces a production build of the frontend JS/CSS bundles. Use this before uploading your work to the ESP8266.
 
-## License
+## License and acknowledgements
 The project is licensed under GPLv3.
 
 The project uses `esp-open-rtos` which is licensed under the BSD 3-clause license. It also has some components which have different licenses. Read more about them in the [`esp-open-rtos` README](https://github.com/SuperHouse/esp-open-rtos/blob/master/README.md).
+
+The project also includes code from the following projects projects, modified by Sakari Kapanen to work with esp-open-rtos:
+
+* [`brzo-i2c`](https://github.com/pasko-zh/brzo_i2c) by Pascal Kurtansky, licensed under GPLv3
+* [`ESP8266_new_pwm`](https://github.com/StefanBruens/ESP8266_new_pwm) by Stefan Brüns, licensed under GPLv2
+
+The respective licenses are reproduced in the `src/lib` folder of this repository.
