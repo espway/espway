@@ -182,8 +182,8 @@ F 3 "" H 8850 3200 50  0001 C CNN
 $EndComp
 Text GLabel 8750 2750 0    60   Output ~ 0
 ADC
-Text GLabel 5300 2750 0    39   Input ~ 0
-INT
+Text GLabel 5300 2750 0    39   BiDi ~ 0
+SCL
 Text GLabel 5300 2850 0    39   BiDi ~ 0
 SDA
 $Comp
@@ -670,8 +670,8 @@ $EndComp
 Wire Wire Line
 	9700 3850 9700 4150
 Connection ~ 9700 3950
-Text GLabel 5300 2950 0    39   BiDi ~ 0
-SCL
+Text GLabel 5300 2950 0    39   Input ~ 0
+INT
 $Comp
 L +3V3 #PWR016
 U 1 1 5A1D9B05
