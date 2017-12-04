@@ -77,7 +77,6 @@ The project uses `esp-open-rtos` which is licensed under the BSD 3-clause licens
 
 The project also includes code from the following projects projects, modified by Sakari Kapanen to work with esp-open-rtos:
 
-* [`brzo-i2c`](https://github.com/pasko-zh/brzo_i2c) by Pascal Kurtansky, licensed under GPLv3
 * [`ESP8266_new_pwm`](https://github.com/StefanBruens/ESP8266_new_pwm) by Stefan Brüns, licensed under GPLv2
 
 The respective licenses are reproduced in the `src/lib` folder of this repository.

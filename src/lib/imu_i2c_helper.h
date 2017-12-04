@@ -19,14 +19,16 @@
 #pragma once
 
 #include <stdint.h>
-#include "brzo_i2c.h"
+#include <i2c/i2c.h>
+
+#define IMU_I2C_BUS 0
 
 typedef struct {
   uint8_t address;
   uint8_t value;
 } imu_register_value_t;
 
-void imu_i2c_init(uint16_t freq);
+void imu_i2c_init(uint8_t bus, i2c_freq_t freq);
 int imu_send_config(uint8_t i2c_address, const imu_register_value_t *config,
                     size_t n_register_values);
 int imu_read_registers(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len);
