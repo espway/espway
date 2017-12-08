@@ -106,7 +106,7 @@ int imu_read_raw_data(int16_t * const data)
 
 int imu_init(void)
 {
-  imu_i2c_init(0, I2C_FREQ_500K);
+  imu_i2c_init(0);
 
   int ret = imu_send_config(IMU_ADDR, MPU_CONFIG_VALUES,
                             sizeof(MPU_CONFIG_VALUES) / sizeof(MPU_CONFIG_VALUES[0]));

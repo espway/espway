@@ -20,6 +20,7 @@
 #include "espway_config.h"
 
 static uint8_t imu_i2c_bus = 0;
+static i2c_freq_t imu_i2c_freq = I2C_FREQ_100K;
 static int imu_i2c_scl = 5;
 static int imu_i2c_sda = 0;
 
@@ -50,14 +51,15 @@ int imu_read_registers(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len)
   return i2c_slave_read(imu_i2c_bus, addr, &reg, data, len);
 }
 
-void imu_i2c_init(uint8_t bus, i2c_freq_t freq)
+void imu_i2c_init(uint8_t bus)
 {
   imu_i2c_bus = bus;
-  i2c_init(bus, imu_i2c_scl, imu_i2c_sda, freq);
+  i2c_init(bus, imu_i2c_scl, imu_i2c_sda, imu_i2c_freq);
 }
 
-void imu_i2c_configure(int scl, int sda)
+void imu_i2c_configure(i2c_freq_t freq, int scl, int sda)
 {
+  imu_i2c_freq = freq;
   imu_i2c_scl = scl;
   imu_i2c_sda = sda;
 }

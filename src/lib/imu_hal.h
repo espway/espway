@@ -19,9 +19,10 @@
 
 #pragma once
 
+#include <i2c/i2c.h>
 #include "espway_config.h"
 
-void imu_i2c_configure(int scl, int sca);
+void imu_i2c_configure(i2c_freq_t freq, int scl, int sca);
 int imu_read_raw_data(int16_t * const data);
 int imu_init(void);
 
