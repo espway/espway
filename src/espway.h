@@ -1,6 +1,5 @@
 #pragma once
 
-extern "C" {
 #include <FreeRTOS.h>
 #include <semphr.h>
 #include <task.h>
@@ -9,8 +8,6 @@ extern "C" {
 #include "lib/pid.h"
 #include "lib/imu_hal.h"
 #include "lib/vector3d.h"
-}
-
 #include "espway_config.h"
 
 #define SAMPLE_TIME IMU_SAMPLE_TIME
@@ -22,7 +19,7 @@ extern "C" {
 #define ROLL_LOWER_BOUND FLT_TO_Q16(-ROLL_LIMIT)
 #define ROLL_UPPER_BOUND FLT_TO_Q16(ROLL_LIMIT)
 
-enum ws_msg_t {
+typedef enum {
   STEERING = 0,
 
   REQ_GRAVITY = 1,
@@ -53,17 +50,17 @@ enum ws_msg_t {
 
   REQ_ENABLE_MOTORS = 20,
   REQ_DISABLE_MOTORS = 21
-};
+} ws_msg_t;
 
-struct espway_config {
+typedef struct {
   pid_coeffs pid_coeffs_arr[2];
   int16_t gyro_offsets[3];
-};
+} espway_config;
 
-enum pid_controller_index {
+typedef enum {
   ANGLE = 0,
   VEL
-};
+} pid_controller_index;
 
 extern TaskHandle_t xSteeringWatcher;
 
@@ -78,14 +75,14 @@ extern vector3d_fix gravity;
 extern q16 target_speed;
 extern q16 steering_bias;
 
-void pretty_print_config();
-void apply_config_params();
-bool save_flash_config();
-bool clear_flash_config();
-void load_config();
-void load_hardcoded_config();
+void pretty_print_config(void);
+void apply_config_params(void);
+bool save_flash_config(void);
+bool clear_flash_config(void);
+void load_config(void);
+void load_hardcoded_config(void);
 void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d);
 
 void httpd_task(void *pvParameters);
 
-void battery_cutoff();
+void battery_cutoff(void);

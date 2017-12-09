@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-extern "C" {
 #include <string.h>
 #include <espressif/esp_common.h>
 #include <user_exception.h>
@@ -28,8 +27,6 @@ extern "C" {
 #include "lib/imu_hal.h"
 #include "lib/eyes.h"
 #include "lib/motors.h"
-}
-
 #include "espway.h"
 #include "espway_config.h"
 
@@ -55,15 +52,15 @@ extern "C" {
 #define PRIO_COMMUNICATION  2
 #define PRIO_MAIN_LOOP      (TCPIP_THREAD_PRIO + 1)
 
-const color_t RED = { 180, 0, 0 };
-const color_t YELLOW = { 180, 180, 0 };
-const color_t GREEN = { 0, 180, 0 };
-const color_t BLUE = { 0, 0, 180 };
-const color_t LILA = { 180, 0, 180 };
-const color_t BLACK = { 0, 0, 0 };
+const color_t RED    = { .color = 0xb40000 };
+const color_t YELLOW = { .color = 0xb4b400 };
+const color_t GREEN  = { .color = 0x00b400 };
+const color_t BLUE   = { .color = 0x0000b4 };
+const color_t LILA   = { .color = 0xb400b4 };
+const color_t BLACK  = { .color = 0x000000 };
 
-enum logmode { LOG_FREQ, LOG_RAW, LOG_PITCH, LOG_NONE };
-enum state { STABILIZING_ORIENTATION, RUNNING, FALLEN, WOUND_UP };
+typedef enum { LOG_FREQ, LOG_RAW, LOG_PITCH, LOG_NONE } logmode;
+typedef enum { STABILIZING_ORIENTATION, RUNNING, FALLEN, WOUND_UP } state;
 
 TaskHandle_t xCalculationTask;
 TaskHandle_t xSteeringWatcher;
@@ -82,7 +79,7 @@ q16 steering_bias = 0;
 SemaphoreHandle_t orientation_mutex;
 vector3d_fix gravity = { 0, 0, Q16_ONE };
 
-void battery_cutoff()
+void battery_cutoff(void)
 {
   set_both_eyes(BLACK);
   set_motors(0, 0);
@@ -246,7 +243,7 @@ static void imu_interrupt_handler(uint8_t gpio_num)
   portEND_SWITCHING_ISR(xHigherPriorityTaskHasWoken);
 }
 
-static void steering_watcher(void *)
+static void steering_watcher(void *arg)
 {
   for (;;)
   {
@@ -258,7 +255,7 @@ static void steering_watcher(void *)
   }
 }
 
-static void imu_watcher(void *)
+static void imu_watcher(void *arg)
 {
   for (;;)
   {
@@ -269,7 +266,7 @@ static void imu_watcher(void *)
   }
 }
 
-static void IRAM espway_exception_handler()
+static void IRAM espway_exception_handler(void)
 {
   _xt_isr_mask(1 << INUM_TIMER_FRC1);  // Shut down the timer driving the PWM
   // Make sure that the motor outputs are enabled as outputs and drive them low
@@ -280,7 +277,7 @@ static void IRAM espway_exception_handler()
   }
 }
 
-static void wifi_setup()
+static void wifi_setup(void)
 {
   sdk_wifi_set_opmode(SOFTAP_MODE);
   struct ip_info ap_ip;
@@ -303,7 +300,7 @@ static void wifi_setup()
   dhcpserver_start(&first_client_ip, 1);
 }
 
-extern "C" void user_init()
+void user_init(void)
 {
   set_user_exception_handler(espway_exception_handler);
   sdk_system_update_cpu_freq(SYS_CPU_160MHZ);

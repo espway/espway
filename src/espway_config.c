@@ -16,9 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-extern "C" {
 #include <sysparam.h>
-}
 
 #include "espway.h"
 
@@ -32,7 +30,7 @@ const static espway_config DEFAULT_CONFIG = {
   .gyro_offsets = { GYRO_X_OFFSET, GYRO_Y_OFFSET, GYRO_Z_OFFSET }
 };
 
-void pretty_print_config()
+void pretty_print_config(void)
 {
   xSemaphoreTake(pid_mutex, portMAX_DELAY);
   printf(
@@ -60,12 +58,12 @@ void pretty_print_config()
   xSemaphoreGive(pid_mutex);
 }
 
-void load_hardcoded_config()
+void load_hardcoded_config(void)
 {
   my_config = DEFAULT_CONFIG;
 }
 
-void load_config()
+void load_config(void)
 {
   xSemaphoreTake(pid_mutex, portMAX_DELAY);
   load_hardcoded_config();
@@ -78,7 +76,7 @@ void load_config()
   xSemaphoreGive(pid_mutex);
 }
 
-void apply_config_params()
+void apply_config_params(void)
 {
   xSemaphoreTake(pid_mutex, portMAX_DELAY);
   pid_initialize(&my_config.pid_coeffs_arr[ANGLE],
@@ -90,7 +88,7 @@ void apply_config_params()
   xSemaphoreGive(pid_mutex);
 }
 
-bool save_flash_config()
+bool save_flash_config(void)
 {
   bool success = true;
 
@@ -104,7 +102,7 @@ bool save_flash_config()
   return success;
 }
 
-bool clear_flash_config()
+bool clear_flash_config(void)
 {
   uint32_t base_addr, num_sectors;
   return sysparam_get_info(&base_addr, &num_sectors) == SYSPARAM_OK &&

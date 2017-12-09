@@ -201,13 +201,17 @@ static void websocket_open_cb(struct tcp_pcb *pcb, const char *uri)
   }
 }
 
+const char *pid_handler(int iIndex, int iNumParams, char* pvParams[], char* pvValues[])
+{
+  return "/pid.html";
+}
+
 void httpd_task(void *pvParameters)
 {
   xTaskCreate(&battery_task, "Battery task", 256, NULL, uxTaskPriorityGet(NULL), &xBatteryTask);
 
   tCGI pCGIs[] = {
-    {"/pid", (tCGIHandler)([](int, int, char *[], char *[])
-        { return "/pid.html"; })}
+    {"/pid", pid_handler }
   };
   http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
 
