@@ -37,7 +37,7 @@ q16 q16_rsqrt(q16 x);
 
 // Fixed point multiplication following
 // https://github.com/PetteriAimonen/libfixmath/blob/master/libfixmath/fix16.c
-inline q16 q16_mul(q16 x, q16 y)
+static inline q16 q16_mul(q16 x, q16 y)
 {
   int32_t xhi = x >> 16, yhi = y >> 16;
   uint32_t xlo = x & 0xffff, ylo = y & 0xffff;
@@ -52,7 +52,7 @@ inline q16 q16_mul(q16 x, q16 y)
   return (hi << 16) | (prod_lo >> 16);
 }
 
-inline q16 q16_exponential_smooth(q16 prevVal, q16 newVal, q16 alpha)
+static inline q16 q16_exponential_smooth(q16 prevVal, q16 newVal, q16 alpha)
 {
   return prevVal + q16_mul(alpha, newVal - prevVal);
 }

@@ -24,7 +24,7 @@ typedef struct {
   q16 x, y, z;
 } vector3d_fix;
 
-inline vector3d_fix v3d_add(const vector3d_fix *u, const vector3d_fix *v)
+static inline vector3d_fix v3d_add(const vector3d_fix *u, const vector3d_fix *v)
 {
   vector3d_fix result = {
     u->x + v->x,
@@ -34,7 +34,7 @@ inline vector3d_fix v3d_add(const vector3d_fix *u, const vector3d_fix *v)
   return result;
 }
 
-inline vector3d_fix v3d_sub(const vector3d_fix *u, const vector3d_fix *v)
+static inline vector3d_fix v3d_sub(const vector3d_fix *u, const vector3d_fix *v)
 {
   vector3d_fix result = {
     u->x - v->x,
@@ -44,7 +44,7 @@ inline vector3d_fix v3d_sub(const vector3d_fix *u, const vector3d_fix *v)
   return result;
 }
 
-inline vector3d_fix v3d_mul(q16 a, const vector3d_fix *v)
+static inline vector3d_fix v3d_mul(q16 a, const vector3d_fix *v)
 {
   vector3d_fix result = {
     q16_mul(a, v->x),
@@ -54,7 +54,7 @@ inline vector3d_fix v3d_mul(q16 a, const vector3d_fix *v)
   return result;
 }
 
-inline vector3d_fix v3d_cross(const vector3d_fix *u, const vector3d_fix *v)
+static inline vector3d_fix v3d_cross(const vector3d_fix *u, const vector3d_fix *v)
 {
   vector3d_fix result =  {
     q16_mul(u->y, v->z) - q16_mul(u->z, v->y),
@@ -64,7 +64,7 @@ inline vector3d_fix v3d_cross(const vector3d_fix *u, const vector3d_fix *v)
   return result;
 }
 
-inline vector3d_fix v3d_normalize(const vector3d_fix *u)
+static inline vector3d_fix v3d_normalize(const vector3d_fix *u)
 {
   q16 rnorm = q16_mul(u->x, u->x);
   rnorm += q16_mul(u->y, u->y);
