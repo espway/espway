@@ -3,7 +3,6 @@
 #include <FreeRTOS.h>
 #include <semphr.h>
 #include <task.h>
-#include <httpd/httpd.h>
 
 #include "lib/pid.h"
 #include "lib/imu_hal.h"
