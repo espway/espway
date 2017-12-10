@@ -17,6 +17,7 @@
  */
 
 #include <sysparam.h>
+#include <stdio.h>
 
 #include "espway.h"
 
