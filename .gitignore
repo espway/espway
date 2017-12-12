@@ -9,3 +9,4 @@ tmp
 *.kicad_pcb-bak
 .DS_Store
 schematic/plot*
+.vscode
