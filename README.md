@@ -74,9 +74,3 @@ After you've cloned this repo, run `npm install` in the root folder to install t
 The project is licensed under GPLv3.
 
 The project uses `esp-open-rtos` which is licensed under the BSD 3-clause license. It also has some components which have different licenses. Read more about them in the [`esp-open-rtos` README](https://github.com/SuperHouse/esp-open-rtos/blob/master/README.md).
-
-The project also includes code from the following projects projects, modified by Sakari Kapanen to work with esp-open-rtos:
-
-* [`ESP8266_new_pwm`](https://github.com/StefanBruens/ESP8266_new_pwm) by Stefan Brüns, licensed under GPLv2
-
-The respective licenses are reproduced in the `src/lib` folder of this repository.

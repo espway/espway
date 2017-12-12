@@ -27,6 +27,7 @@
 #include "lib/imu_hal.h"
 #include "lib/eyes.h"
 #include "lib/motors.h"
+#include "lib/delta_sigma.h"
 #include "espway.h"
 #include "espway_config.h"
 
@@ -268,7 +269,7 @@ static void imu_watcher(void *arg)
 
 static void IRAM espway_exception_handler(void)
 {
-  _xt_isr_mask(1 << INUM_TIMER_FRC1);  // Shut down the timer driving the PWM
+  _xt_isr_mask(BIT(INUM_TIMER_FRC1));  // Shut down the timer driving the motors
   // Make sure that the motor outputs are enabled as outputs and drive them low
   for (uint8_t i = 12; i <= 15; ++i)
   {
