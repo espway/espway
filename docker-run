@@ -1,0 +1,4 @@
+#! /bin/sh
+
+exec docker run --rm -ti -v $(pwd):/espway:z -w /espway \
+  ${IMAGE:-flannelhead/espway-toolchain} $@
