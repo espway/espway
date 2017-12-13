@@ -3,16 +3,16 @@
  * Copyright (C) 2017  Sakari Kapanen
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -31,7 +31,7 @@ typedef struct {
 
 static pin_state_t g_pins[DELTA_SIGMA_MAX_PINS];
 static uint8_t g_n_pins;
-uint32_t g_range;
+static uint32_t g_range;
 
 static void IRAM timer_isr(void* arg)
 {
@@ -51,7 +51,6 @@ static void IRAM timer_isr(void* arg)
       clear_mask |= pin->gpio_mask;
     }
   }
-
   GPIO.OUT_SET = set_mask;
   GPIO.OUT_CLEAR = clear_mask;
 }

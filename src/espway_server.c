@@ -3,28 +3,30 @@
  * Copyright (C) 2017  Sakari Kapanen
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <string.h>
 #include <espressif/esp_common.h>
+#include <lwip/altcp.h>
 #include <lwip/tcpip.h>
+#include <lwip/apps/httpd.h>
 
 #include "espway.h"
 
 #define BATTERY_COEFFICIENT FLT_TO_Q16(100.0f / BATTERY_CALIBRATION_FACTOR)
 
-static void websocket_save_config(struct tcp_pcb *pcb)
+static void httpd_websocket_save_config(struct altcp_pcb *pcb)
 {
   uint8_t response;
   if (save_flash_config())
@@ -35,10 +37,10 @@ static void websocket_save_config(struct tcp_pcb *pcb)
   {
     response = RES_SAVE_CONFIG_FAILURE;
   }
-  websocket_write(pcb, &response, 1, WS_BIN_MODE);
+  httpd_websocket_write(pcb, &response, 1, WS_BIN_MODE);
 }
 
-static bool websocket_clear_config(struct tcp_pcb *pcb)
+static bool httpd_websocket_clear_config(struct altcp_pcb *pcb)
 {
   uint8_t response;
   // Clear the configuration by writing config version zero
@@ -52,11 +54,11 @@ static bool websocket_clear_config(struct tcp_pcb *pcb)
   {
     response = RES_CLEAR_CONFIG_FAILURE;
   }
-  websocket_write(pcb, &response, 1, WS_BIN_MODE);
+  httpd_websocket_write(pcb, &response, 1, WS_BIN_MODE);
   return success;
 }
 
-static void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx)
+static void send_pid_params(struct altcp_pcb *pcb, pid_controller_index idx)
 {
   uint8_t buf[14];
   buf[0] = RES_PID_PARAMS;
@@ -67,10 +69,10 @@ static void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx)
   params[1] = my_config.pid_coeffs_arr[idx].i;
   params[2] = my_config.pid_coeffs_arr[idx].d;
   xSemaphoreGive(pid_mutex);
-  websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
+  httpd_websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-static void send_gravity(struct tcp_pcb *pcb, const vector3d_fix * const grav)
+static void send_gravity(struct altcp_pcb *pcb, const vector3d_fix * const grav)
 {
   uint8_t buf[7];
   buf[0] = RES_GRAVITY;
@@ -80,10 +82,11 @@ static void send_gravity(struct tcp_pcb *pcb, const vector3d_fix * const grav)
   qdata[1] = grav->y / 2;
   qdata[2] = grav->z / 2;
   xSemaphoreGive(orientation_mutex);
-  websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
+  httpd_websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-static void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, uint16_t data_len, uint8_t mode)
+static void httpd_websocket_cb(struct altcp_pcb *pcb, uint8_t *data,
+                         uint16_t data_len, uint8_t mode)
 {
   if (data_len == 0 || mode != WS_BIN_MODE) return;
 
@@ -122,7 +125,7 @@ static void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, uint16_t data_len, 
         update_pid_controller(pid_index, i32_data[0], i32_data[1],
             i32_data[2]);
         res = RES_SET_PID_PARAMS_ACK;
-        websocket_write(pcb, &res, 1, WS_BIN_MODE);
+        httpd_websocket_write(pcb, &res, 1, WS_BIN_MODE);
       }
 
       break;
@@ -139,17 +142,17 @@ static void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, uint16_t data_len, 
       if (data_len != 0) break;
       load_config();
       res = RES_LOAD_FLASH_CONFIG_DONE;
-      websocket_write(pcb, &res, 1, WS_BIN_MODE);
+      httpd_websocket_write(pcb, &res, 1, WS_BIN_MODE);
       break;
 
     case REQ_SAVE_CONFIG:
       if (data_len != 0) break;
-      websocket_save_config(pcb);
+      httpd_websocket_save_config(pcb);
       break;
 
     case REQ_CLEAR_CONFIG:
       if (data_len != 0) break;
-      websocket_clear_config(pcb);
+      httpd_websocket_clear_config(pcb);
       break;
   }
 }
@@ -157,7 +160,7 @@ static void websocket_cb(struct tcp_pcb *pcb, uint8_t *data, uint16_t data_len, 
 TaskHandle_t xBatteryTask;
 static void battery_task(void *pvParameter)
 {
-  struct tcp_pcb *pcb = NULL;
+  struct altcp_pcb *pcb = NULL;
   q16 battery_value = 0;
   for (;;)
   {
@@ -185,7 +188,7 @@ static void battery_task(void *pvParameter)
       buf[0] = BATTERY;
       uint16_t *payload = (uint16_t *)&buf[1];
       payload[0] = q16_mul(battery_value, BATTERY_COEFFICIENT);
-      websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
+      httpd_websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
     }
     UNLOCK_TCPIP_CORE();
   }
@@ -193,7 +196,7 @@ static void battery_task(void *pvParameter)
   vTaskDelete(NULL);
 }
 
-static void websocket_open_cb(struct tcp_pcb *pcb, const char *uri)
+static void httpd_websocket_open_cb(struct altcp_pcb *pcb, const char *uri)
 {
   if (strcmp(uri, "/ws") == 0)
   {
@@ -215,8 +218,8 @@ void httpd_task(void *pvParameters)
   };
   http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
 
-  websocket_register_callbacks((tWsOpenHandler) websocket_open_cb,
-      (tWsHandler) websocket_cb);
+  httpd_websocket_register_callbacks((tWsOpenHandler) httpd_websocket_open_cb,
+      (tWsHandler) httpd_websocket_cb);
   httpd_init();
 
   for (;;);

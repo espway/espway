@@ -71,6 +71,6 @@ After you've cloned this repo, run `npm install` in the root folder to install t
 * `npm run build` produces a production build of the frontend JS/CSS bundles. Use this before uploading your work to the ESP8266.
 
 ## License and acknowledgements
-The project is licensed under GPLv3.
+The project is licensed under LGPLv3.
 
 The project uses `esp-open-rtos` which is licensed under the BSD 3-clause license. It also has some components which have different licenses. Read more about them in the [`esp-open-rtos` README](https://github.com/SuperHouse/esp-open-rtos/blob/master/README.md).
