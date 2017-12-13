@@ -32,12 +32,12 @@ FSDATA = $(SRC_DIR)/fsdata_custom.c
 
 all: $(FSDATA)
 
-$(MAKEFSDATA): $(HTTPD_DIR)makefsdata/makefsdata.c $(HTTPD_DIR)makefsdata/tinydir.h $(BUILD_DIR)
+$(MAKEFSDATA): $(HTTPD_DIR)makefsdata/makefsdata.c $(HTTPD_DIR)makefsdata/tinydir.h | $(BUILD_DIR)
 	gcc -o $@ $< -I$(lwip_ROOT)include -I$(LWIP_DIR)include -Iesp-open-rtos/core/include -Wno-format -Wno-cpp
 
 $(FSDATA): frontend/src/* $(MAKEFSDATA)
 	cd frontend; npm run build
-	$(MAKEFSDATA) frontend/output -f:src/fsdata_custom.c
+	$(MAKEFSDATA) frontend/output -f:$@
 
 clean: clean-fsdata
 
