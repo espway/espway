@@ -57,6 +57,7 @@ static void IRAM timer_isr(void* arg)
 
 void delta_sigma_set_duty(uint8_t channel, uint32_t duty)
 {
+  if (duty > g_range) duty = g_range;
   g_pins[channel].duty = duty;
 }
 
@@ -76,6 +77,11 @@ void delta_sigma_start(uint32_t period, uint32_t range, uint8_t pins[],
   timer_set_interrupts(FRC1, false);
   timer_set_run(FRC1, false);
   timer_set_divider(FRC1, TIMER_CLKDIV_256);
+  if (period > TIMER_FRC1_MAX_LOAD)
+  {
+    printf("delta_sigma: period %u too large\n", period);
+    period = TIMER_FRC1_MAX_LOAD;
+  }
   timer_set_load(FRC1, period);
   timer_set_reload(FRC1, true);
   _xt_isr_attach(INUM_TIMER_FRC1, timer_isr, NULL);
