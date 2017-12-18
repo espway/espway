@@ -4,7 +4,6 @@ PROGRAM_SRC_DIR = $(SRC_DIR) $(SRC_DIR)/lib
 PROGRAM_INC_DIR = $(SRC_DIR)
 BUILD_DIR = ./build/
 FIRMWARE_DIR = ./firmware/
-ENABLE_CXX = 0
 
 ESPBAUD ?= 460800
 FLASH_SPEED ?= 80
@@ -26,7 +25,6 @@ EXTRA_CXXFLAGS = -std=gnu++11
 
 include esp-open-rtos/common.mk
 
-MAKEFSDATA = $(BUILD_DIR)makefsdata
 HTTPD_DIR = $(LWIP_DIR)apps/httpd/
 FSDATA = $(SRC_DIR)/fsdata_custom.c
 
