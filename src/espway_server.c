@@ -166,13 +166,12 @@ static void battery_task(void *pvParameter)
     battery_value = q16_exponential_smooth(battery_value, sdk_system_adc_read(),
         FLT_TO_Q16(0.25f));
 
-    if (ENABLE_BATTERY_CUTOFF && battery_value < (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR))
+    if (ENABLE_BATTERY_CUTOFF &&
+        battery_value < (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR))
     {
       battery_cutoff();
       break;
     }
-
-    vTaskDelay(BATTERY_CHECK_INTERVAL / portTICK_PERIOD_MS);
 
     {
       LOCK_TCPIP_CORE();
@@ -183,6 +182,8 @@ static void battery_task(void *pvParameter)
       httpd_websocket_broadcast(buf, sizeof(buf), WS_BIN_MODE);
       UNLOCK_TCPIP_CORE();
     }
+
+    vTaskDelay(BATTERY_CHECK_INTERVAL / portTICK_PERIOD_MS);
   }
 
   vTaskDelete(NULL);
