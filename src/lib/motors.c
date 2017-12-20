@@ -21,7 +21,7 @@
 #include "esp/gpio.h"
 #include "espway_config.h"
 
-#define DS_PERIOD 256
+#define DS_PERIOD 64
 #define DS_RANGE  32
 
 void set_motor_speed(int channel, int dir_pin, q16 speed, bool reverse)
