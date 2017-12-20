@@ -160,7 +160,6 @@ static void httpd_websocket_cb(struct altcp_pcb *pcb, uint8_t *data,
 TaskHandle_t xBatteryTask;
 static void battery_task(void *pvParameter)
 {
-  struct altcp_pcb *pcb = NULL;
   q16 battery_value = 0;
   for (;;)
   {
@@ -175,22 +174,15 @@ static void battery_task(void *pvParameter)
 
     vTaskDelay(BATTERY_CHECK_INTERVAL / portTICK_PERIOD_MS);
 
-    uint32_t notification_value = 0;
-    if (xTaskNotifyWait(0, 0, &notification_value, 0))
     {
-      pcb = (struct tcp_pcb *)notification_value;
-    }
-
-    LOCK_TCPIP_CORE();
-    if (pcb != NULL && pcb->state == ESTABLISHED)
-    {
+      LOCK_TCPIP_CORE();
       uint8_t buf[3];
       buf[0] = BATTERY;
       uint16_t *payload = (uint16_t *)&buf[1];
       payload[0] = q16_mul(battery_value, BATTERY_COEFFICIENT);
-      httpd_websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
+      httpd_websocket_broadcast(buf, sizeof(buf), WS_BIN_MODE);
+      UNLOCK_TCPIP_CORE();
     }
-    UNLOCK_TCPIP_CORE();
   }
 
   vTaskDelete(NULL);
