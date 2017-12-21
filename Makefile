@@ -18,7 +18,7 @@ N_PROCESSES = 5
 EXTRA_COMPONENTS = extras/dhcpserver extras/i2c extras/i2s_dma extras/ws2812_i2s
 
 EXTRA_C_CXX_FLAGS = -DLWIP_HTTPD_CGI=1 -DHTTPD_FSDATA_FILE="\"fsdata_custom.c\"" \
-	-Isrc -DESP_OPEN_RTOS
+	-Isrc -DESP_OPEN_RTOS -DLWIP_HTTPD_SUPPORT_WEBSOCKET=1
 EXTRA_CXXFLAGS = -std=gnu++11
 
 # FLAVOR = debug

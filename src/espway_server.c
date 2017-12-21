@@ -157,7 +157,6 @@ static void httpd_websocket_cb(struct altcp_pcb *pcb, uint8_t *data,
   }
 }
 
-TaskHandle_t xBatteryTask;
 static void battery_task(void *pvParameter)
 {
   q16 battery_value = 0;
@@ -189,14 +188,6 @@ static void battery_task(void *pvParameter)
   vTaskDelete(NULL);
 }
 
-static void httpd_websocket_open_cb(struct altcp_pcb *pcb, const char *uri)
-{
-  if (strcmp(uri, "/ws") == 0)
-  {
-    xTaskNotify(xBatteryTask, (uint32_t)pcb, eSetValueWithOverwrite);
-  }
-}
-
 const char *pid_handler(int iIndex, int iNumParams, char* pvParams[], char* pvValues[])
 {
   return "/pid.html";
@@ -204,15 +195,14 @@ const char *pid_handler(int iIndex, int iNumParams, char* pvParams[], char* pvVa
 
 void httpd_task(void *pvParameters)
 {
-  xTaskCreate(&battery_task, "Battery task", 256, NULL, uxTaskPriorityGet(NULL), &xBatteryTask);
+  xTaskCreate(battery_task, "Battery task", 256, NULL, uxTaskPriorityGet(NULL), NULL);
 
   tCGI pCGIs[] = {
     {"/pid", pid_handler }
   };
   http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
 
-  httpd_websocket_register_callbacks((tWsOpenHandler) httpd_websocket_open_cb,
-      (tWsHandler) httpd_websocket_cb);
+  httpd_websocket_register_callbacks(NULL, (tWsHandler) httpd_websocket_cb);
   httpd_init();
 
   for (;;);
