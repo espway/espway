@@ -5,9 +5,10 @@ PROGRAM_INC_DIR = $(SRC_DIR)
 BUILD_DIR = ./build/
 FIRMWARE_DIR = ./firmware/
 
-ESPBAUD ?= 460800
-FLASH_SPEED ?= 80
-FLASH_SIZE ?= 16
+ESPBAUD ?= 230400
+FLASH_SIZE ?= 2MB
+FLASH_MODE ?= qio
+FLASH_FREQ ?= 80m
 PRINTF_SCANF_FLOAT_SUPPORT ?= 0
 SPLIT_SECTIONS ?= 0
 WARNINGS_AS_ERRORS ?= 0
@@ -24,6 +25,8 @@ EXTRA_CXXFLAGS = -std=gnu++11
 # EXTRA_C_CXX_FLAGS += -DLWIP_DEBUG=1 -DHTTPD_DEBUG=LWIP_DBG_ON
 
 include esp-open-rtos/common.mk
+
+ESPTOOL_ARGS = --flash_freq $(FLASH_FREQ) --flash_mode $(FLASH_MODE) --flash_size $(FLASH_SIZE)
 
 HTTPD_DIR = $(LWIP_DIR)apps/httpd/
 FSDATA = $(SRC_DIR)/fsdata_custom.c
