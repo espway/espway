@@ -728,7 +728,6 @@ Wire Wire Line
 	9800 3950 9700 3950
 Wire Wire Line
 	10200 4650 10050 4650
-Connection ~ 8850 3150
 $Comp
 L R R9
 U 1 1 5A1DE4F7
