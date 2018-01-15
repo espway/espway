@@ -2,29 +2,33 @@
 
 // Hardware config
 
-// Motor driver selection
-#define MOTOR_DRIVER_L293D   0
-#define MOTOR_DRIVER_DRV8835 1
+// Definitions of motor driver types as numeric constants
+#define MOTOR_DRIVER_L293D   1
+#define MOTOR_DRIVER_DRV8835 2
 
+// Motor driver selection
 #define MOTOR_DRIVER MOTOR_DRIVER_DRV8835
 
+// Motor speed control is not available on pin 16.
+// Thus, please use pins 0-15 for the motor PWM pins.
 #if MOTOR_DRIVER == MOTOR_DRIVER_DRV8835
 #define MOTOR_LEFT_DIR_PIN  13
 #define MOTOR_LEFT_PWM_PIN  15
 #define MOTOR_RIGHT_DIR_PIN 14
 #define MOTOR_RIGHT_PWM_PIN 12
 #else
+// L293D
 #define MOTOR_LEFT_DIR_PIN  13
 #define MOTOR_LEFT_PWM_PIN  15
 #define MOTOR_RIGHT_DIR_PIN 12
 #define MOTOR_RIGHT_PWM_PIN 14
-
 #endif
 
-// IMU selection
-#define IMU_MPU6050 0
-#define IMU_LSM6DS3 1
+// Definitions of IMU types as numeric constants
+#define IMU_MPU6050 1
+#define IMU_LSM6DS3 2
 
+// IMU selection
 #define IMU IMU_LSM6DS3
 
 #define IMU_SDA_PIN 0
@@ -77,5 +81,3 @@
 
 #define WIFI_SSID "ESPway"
 #define WIFI_CHANNEL 1
-
-#define PWM_PERIOD 256
