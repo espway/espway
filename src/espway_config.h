@@ -7,7 +7,7 @@
 #define MOTOR_DRIVER_DRV8835 2
 
 // Motor driver selection
-#define MOTOR_DRIVER MOTOR_DRIVER_DRV8835
+#define MOTOR_DRIVER MOTOR_DRIVER_L293D
 
 // Motor speed control is not available on pin 16.
 // Thus, please use pins 0-15 for the motor PWM pins.
@@ -29,7 +29,7 @@
 #define IMU_LSM6DS3 2
 
 // IMU selection
-#define IMU IMU_LSM6DS3
+#define IMU IMU_MPU6050
 
 #define IMU_SDA_PIN       0
 #define IMU_SCL_PIN       5

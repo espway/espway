@@ -1,4 +1,5 @@
 EESchema Schematic File Version 2
+LIBS:espway-rescue
 LIBS:power
 LIBS:device
 LIBS:transistors
@@ -70,7 +71,7 @@ F 3 "" H 1100 1200 50  0000 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L LM1117-5.0 U2
+L LM1117-5.0-RESCUE-espway U2
 U 1 1 58963CBC
 P 2000 1350
 F 0 "U2" H 2100 1100 50  0000 C CNN
@@ -127,13 +128,13 @@ $EndComp
 $Comp
 L GND #PWR4
 U 1 1 58964410
-P 2800 3700
-F 0 "#PWR4" H 2800 3450 50  0001 C CNN
-F 1 "GND" H 2800 3550 50  0000 C CNN
-F 2 "" H 2800 3700 50  0000 C CNN
-F 3 "" H 2800 3700 50  0000 C CNN
-	1    2800 3700
-	1    0    0    -1  
+P 2650 3400
+F 0 "#PWR4" H 2650 3150 50  0001 C CNN
+F 1 "GND" H 2650 3250 50  0000 C CNN
+F 2 "" H 2650 3400 50  0000 C CNN
+F 3 "" H 2650 3400 50  0000 C CNN
+	1    2650 3400
+	0    -1   -1   0   
 $EndComp
 $Comp
 L CP C2
@@ -223,7 +224,6 @@ F 3 "" H 3350 1200 50  0000 C CNN
 	1    3350 1200
 	1    0    0    -1  
 $EndComp
-NoConn ~ 2800 2950
 $Comp
 L R R2
 U 1 1 5896681C
@@ -394,9 +394,7 @@ Wire Wire Line
 Wire Wire Line
 	6200 2200 7450 2200
 Wire Wire Line
-	2300 1350 2800 1350
-Wire Wire Line
-	2450 1350 3350 1350
+	2300 1350 3350 1350
 Wire Wire Line
 	1100 1800 2800 1800
 Connection ~ 5700 2800
@@ -445,9 +443,9 @@ Wire Wire Line
 Wire Wire Line
 	7900 2600 7900 2800
 Wire Wire Line
-	8650 2600 7900 2600
+	7900 2600 8650 2600
 Wire Wire Line
-	8650 2700 8650 2600
+	8650 2600 8650 2700
 Wire Wire Line
 	7550 3100 7450 3100
 Wire Wire Line
@@ -472,18 +470,6 @@ Wire Wire Line
 	7450 2100 7450 2500
 Wire Wire Line
 	6200 2500 6200 2200
-Wire Wire Line
-	3350 2950 2650 2950
-Wire Wire Line
-	3350 3100 3350 2950
-Wire Wire Line
-	3500 3100 3350 3100
-Wire Wire Line
-	2800 3250 3500 3250
-Wire Wire Line
-	2800 2800 2800 3250
-Wire Wire Line
-	2650 2800 2800 2800
 Connection ~ 3350 1350
 Connection ~ 3350 2500
 Wire Wire Line
@@ -521,10 +507,6 @@ Connection ~ 1500 1350
 Wire Wire Line
 	1100 1350 1700 1350
 Wire Wire Line
-	2800 3400 2800 3700
-Wire Wire Line
-	2650 3400 2800 3400
-Wire Wire Line
 	3300 4400 3150 4400
 Wire Wire Line
 	3300 3850 3300 4400
@@ -555,4 +537,20 @@ Wire Wire Line
 	2800 1650 2800 2650
 Connection ~ 2800 2650
 Connection ~ 2800 1800
+Wire Wire Line
+	2650 2950 3500 2950
+Wire Wire Line
+	2900 3100 3500 3100
+Wire Wire Line
+	2650 2800 3000 2800
+Wire Wire Line
+	3000 2800 3000 3250
+Wire Wire Line
+	3000 3250 3500 3250
+NoConn ~ 3000 2950
+Wire Wire Line
+	2650 3550 2900 3550
+Wire Wire Line
+	2900 3550 2900 3100
+NoConn ~ 3000 3100
 $EndSCHEMATC

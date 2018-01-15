@@ -6,11 +6,17 @@ A segway-like balancing two-wheel robot built on ESP8266. It is controlled over 
 ## Getting started
 The firmware is built on the [esp-open-rtos](https://github.com/SuperHouse/esp-open-rtos) project which is included as a submodule in this repo.
 
-Building ESPway is easiest on a Unix-based operated system. To build the firmware binary, you'll need the following tools available in the path:
+For building the firmware, a Linux host is recommended. For other platforms, there is a [Docker image](https://hub.docker.com/r/flannelhead/espway-toolchain/) one can use. The `docker-run` script in this repository contains the command that's required to download the image and run commands in the container. It should work fine on macOS hosts. For Windows hosts, I still recommend installing Linux in a virtual machine and installing the tools there.
 
+### Installing the tools and building
+
+*NOTE*: if you intend to use Docker, you only have to install `esptool`, `git` and `make` on your host. Please see below for further Docker instructions.
+
+Install these packages with your distribution's package manager:
 * `git`
-* `esp-open-sdk`, see the [instructions](https://github.com/SuperHouse/esp-open-rtos/#quick-start) in the esp-open-rtos repo for the specific make command
-* `perl`, `nodejs` and `npm` if you wish to hack on the frontend HTML/JS code
+* `xtensa-lx106-elf` toolchain. You can use `esp-open-sdk` to build it, see the [instructions](https://github.com/SuperHouse/esp-open-rtos/#quick-start) in the esp-open-rtos repo
+* `esptool` (`pip install -U esptool`). Please do not use pulled by `esp-open-sdk`, it is outdated.
+* `tcc`, `nodejs` and `npm` are currently required due to the frontend code, although I'm investigating how to relax this dependency.
 
 Clone this repo (recursive cloning to get also `esp-open-rtos` and its submodules):
 ```
@@ -31,7 +37,21 @@ The default port is `/dev/ttyUSB0`. If you need to change this, use
 make flash ESPPORT=/dev/ttyUSBx
 ```
 
-Compared to Arduino, some might find it a bit cumbersome to get started due to the need to build an entire toolchain and operate in the command line. For the toolchain, I intend to provide a minimal Docker image if that doesn't turn out too cumbersome. Moreover, I think it would not be a bad idea to ship prebuilt binaries of the firmware and offer some kind of a simple flashing tool, essentially wrapping `esptool`.
+### Using the Docker image
+
+First, [install Docker](https://www.docker.com/community-edition).
+
+Building the firmware using the supplied Docker image is easy. Instead of running `make parallel`, just run `./docker-run make parallel` in the root folder of the repo. The command supplied to the script will be run in the Docker container, and the image will be automatically downloaded.
+
+Flashing the image differs, though, and for this you'll need `make` on your host. Instead of
+```
+make flash ESPPORT=/dev/ttyUSBx
+```
+(`/dev/ttyUSBx` being the ESP's serial port) run
+```
+make flash-only ESPPORT=/dev/ttyUSBx
+```
+in your host shell. The separate `flash-only` target is needed because the `flash` target would try to build the firmware. In the future, it is intended to provide a separate Python script for flashing, lifting the need for `make` on host.
 
 ## Supported browsers
 Please use the latest Firefox or Chrome if possible. The HTML/JS UI uses some
@@ -39,7 +59,7 @@ recent JavaScript features which might not be supported by older browsers. Howev
 
 ## Schematic & BOM
 
-A PCB design and a 3D printable body are planned, but nothing has been done yet. The intent is to have a leaner design, replacing the D1 Mini board with a smaller ESP-12S module and leaving out the USB port. Also MPU6050 will likely be replaced by LSM6DS3 due to better availability and cheaper price as discrete chips.
+A PCB design and a 3D printable body are planned. There is an initial design already in the `schematic` folder, but please don't use it quite yet - I'm still waiting for the (hopefully) final iteration of the board. There, MPU6050 will be replaced by LSM6DS3 and L293D for DRV8835 for better performance.
 
 Meanwhile, you can still build an ESPway using breakout boards available from the usual sources. A rough bill of materials for this is listed below:
 
