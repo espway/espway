@@ -1,4 +1,4 @@
-update=2017 October 17, Tuesday 01:25:24
+update=cccc 17. Tammikuu 2018 'klo' 20.35.56
 version=1
 last_client=kicad
 [pcbnew]
