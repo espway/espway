@@ -67,7 +67,7 @@ void set_motors(q16 left_speed, q16 right_speed)
   set_motor_speed(1, MOTOR_LEFT_DIR_PIN, left_speed, REVERSE_LEFT_MOTOR);
 }
 
-void motors_init(int period)
+void motors_init(void)
 {
   // Motor direction pins
   gpio_enable(MOTOR_LEFT_DIR_PIN, GPIO_OUTPUT);

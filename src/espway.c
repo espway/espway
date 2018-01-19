@@ -319,7 +319,7 @@ void user_init(void)
   pid_mutex = xSemaphoreCreateMutex();
   orientation_mutex = xSemaphoreCreateMutex();
 
-  motors_init(PWM_PERIOD);
+  motors_init();
 
   load_config();
   apply_config_params();
@@ -339,5 +339,5 @@ void user_init(void)
   xTaskCreate(&imu_watcher, "IMU watcher", 128, NULL, PRIO_MAIN_LOOP + 2, &xIMUWatcher);
 
   gpio_enable(IMU_INTERRUPT_PIN, GPIO_INPUT);
-  gpio_set_interrupt(IMU_INTERRUPT_PIN4, GPIO_INTTYPE_EDGE_POS, imu_interrupt_handler);
+  gpio_set_interrupt(IMU_INTERRUPT_PIN, GPIO_INTTYPE_EDGE_POS, imu_interrupt_handler);
 }
