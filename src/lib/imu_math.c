@@ -17,6 +17,7 @@
  */
 
 #include "imu_math.h"
+#include <memory.h>
 
 void mahony_filter_init(mahony_filter_state *state, float Kp, float Ki,
     float gyro_factor, float dt)
@@ -25,25 +26,22 @@ void mahony_filter_init(mahony_filter_state *state, float Kp, float Ki,
   state->Ki = FLT_TO_Q16(Ki);
   state->dt = FLT_TO_Q16(dt);
   state->gyro_conversion_factor = FLT_TO_Q16(gyro_factor);
-  state->integral.x = 0;
-  state->integral.y = 0;
-  state->integral.z = 0;
+  memset(state->integral.data, 0, sizeof(state->integral));
 }
 
 void mahony_filter_update(mahony_filter_state *state,
     const int16_t *raw_accel, const int16_t *raw_gyro, vector3d_fix *gravity)
 {
   vector3d_fix omega, accel, verror;
-  accel.x = raw_accel[0];
-  accel.y = raw_accel[1];
-  accel.z = raw_accel[2];
-  omega.x = raw_gyro[0];
-  omega.y = raw_gyro[1];
-  omega.z = raw_gyro[2];
+  for (size_t i = 0; i < 3; ++i)
+  {
+    accel.data[i] = raw_accel[i];
+    omega.data[i] = raw_gyro[i];
+  }
 
   omega = v3d_mul(state->gyro_conversion_factor, &omega);
 
-  if (accel.x != 0 || accel.y != 0 || accel.z != 0)
+  if (accel.components.x != 0 || accel.components.y != 0 || accel.components.z != 0)
   {
     accel = v3d_normalize(&accel);
     verror = v3d_cross(&accel, gravity);

@@ -78,7 +78,7 @@ q16 target_speed = 0;
 q16 steering_bias = 0;
 
 SemaphoreHandle_t orientation_mutex;
-vector3d_fix gravity = { 0, 0, Q16_ONE };
+vector3d_fix gravity = {{ 0, 0, Q16_ONE }};
 
 void battery_cutoff(void)
 {
@@ -112,8 +112,10 @@ static void main_loop(void *pvParameters)
     xSemaphoreTake(orientation_mutex, portMAX_DELAY);
     mahony_filter_update(&imuparams, &raw_data[0], &raw_data[3], &gravity);
     // Calculate sine of pitch angle from gravity vector
-    q16 sin_pitch = -gravity.z;
-    q16 sin_roll = -gravity.x;
+
+    q16 sin_pitch = -gravity.data[IMU_FORWARD_AXIS];
+    if (IMU_INVERT_FORWARD_AXIS) sin_pitch = -sin_pitch;
+    q16 sin_roll = -gravity.data[IMU_SIDE_AXIS];
     xSemaphoreGive(orientation_mutex);
 
     // Exponential smoothing of target speed

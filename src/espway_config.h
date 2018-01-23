@@ -7,15 +7,15 @@
 #define MOTOR_DRIVER_DRV8835 2
 
 // Motor driver selection
-#define MOTOR_DRIVER MOTOR_DRIVER_L293D
+#define MOTOR_DRIVER MOTOR_DRIVER_DRV8835
 
 // Motor speed control is not available on pin 16.
 // Thus, please use pins 0-15 for the motor PWM pins.
 #if MOTOR_DRIVER == MOTOR_DRIVER_DRV8835
-#define MOTOR_LEFT_DIR_PIN  13
-#define MOTOR_LEFT_PWM_PIN  15
-#define MOTOR_RIGHT_DIR_PIN 14
-#define MOTOR_RIGHT_PWM_PIN 12
+#define MOTOR_LEFT_DIR_PIN  0
+#define MOTOR_LEFT_PWM_PIN  4
+#define MOTOR_RIGHT_DIR_PIN 2
+#define MOTOR_RIGHT_PWM_PIN 15
 #else
 // L293D
 #define MOTOR_LEFT_DIR_PIN  13
@@ -29,14 +29,27 @@
 #define IMU_LSM6DS3 2
 
 // IMU selection
-#define IMU IMU_MPU6050
+#define IMU IMU_LSM6DS3
 
-#define IMU_SDA_PIN       0
-#define IMU_SCL_PIN       5
-#define IMU_INTERRUPT_PIN 4
+#define IMU_SDA_PIN       12
+#define IMU_SCL_PIN       14
+#define IMU_INTERRUPT_PIN 13
 
 // You shouldn't have to change this except if using bus id 0 already elsewhere
 #define IMU_I2C_BUS 0
+
+// Constant indices, don't change
+#define IMU_X_AXIS 0
+#define IMU_Y_AXIS 1
+#define IMU_Z_AXIS 2
+
+// Select these parameters to match the mounting orientation of the IMU
+// The IMU axis pointing to the forward direction of the robot
+#define IMU_FORWARD_AXIS        IMU_Z_AXIS
+// If the positive axis specified above points backward, set this to true
+#define IMU_INVERT_FORWARD_AXIS false
+// The IMU axis pointing horizontally to the "side" of the robot when it is standing
+#define IMU_SIDE_AXIS           IMU_Y_AXIS
 
 // PID tunings
 // -----------
