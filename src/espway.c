@@ -104,9 +104,7 @@ static void main_loop(void *pvParameters)
     xTaskNotifyWait(0, 0, NULL, 1);
     int ret = imu_read_raw_data(raw_data);
     if (ret != 0)
-    {
       printf("Reading IMU failed with code %d\n", ret);
-    }
 
     // Update orientation estimate
     xSemaphoreTake(orientation_mutex, portMAX_DELAY);
@@ -124,19 +122,17 @@ static void main_loop(void *pvParameters)
 
     current_time = sdk_system_get_time();
 
-    if (my_state == STABILIZING_ORIENTATION)
+    if (my_state == STABILIZING_ORIENTATION &&
+        current_time - stage_started > ORIENTATION_STABILIZE_DURATION_US)
     {
-      if (current_time - stage_started > ORIENTATION_STABILIZE_DURATION_US)
-      {
-        my_state = RUNNING;
-        stage_started = current_time;
-        imuparams.Kp = FLT_TO_Q16(MAHONY_FILTER_KP);
-      }
+      my_state = RUNNING;
+      stage_started = current_time;
+      imuparams.Kp = FLT_TO_Q16(MAHONY_FILTER_KP);
     }
     else if (my_state == RUNNING || my_state == WOUND_UP)
     {
-      if (sin_pitch < FALL_UPPER_BOUND && sin_pitch > FALL_LOWER_BOUND &&
-          sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND)
+      if (abs(sin_pitch - STABLE_ANGLE) < FALL_LIMIT &&
+          abs(sin_roll) < ROLL_LIMIT)
       {
         // Perform PID update
         xSemaphoreTake(pid_mutex, portMAX_DELAY);
@@ -146,40 +142,25 @@ static void main_loop(void *pvParameters)
         q16 motor_speed;
 
         if (sin_pitch < (target_angle - FLT_TO_Q16(HIGH_PID_LIMIT)))
-        {
           motor_speed = -Q16_ONE;
-        }
         else if (sin_pitch > target_angle + FLT_TO_Q16(HIGH_PID_LIMIT))
-        {
           motor_speed = Q16_ONE;
-        }
         else
-        {
           motor_speed = pid_compute(sin_pitch, target_angle,
               &pid_settings_arr[ANGLE], &angle_pid_state);
-        }
         xSemaphoreGive(pid_mutex);
 
-        if (motor_speed < FLT_TO_Q16(MOTOR_DEADBAND) &&
-            motor_speed > -FLT_TO_Q16(MOTOR_DEADBAND))
-        {
+        if (abs(motor_speed) < FLT_TO_Q16(MOTOR_DEADBAND))
           motor_speed = 0;
-        }
 
         if (my_state == WOUND_UP)
-        {
           set_motors(0, 0);
-        }
         else
-        {
           set_motors(motor_speed + steering_bias,
               motor_speed - steering_bias);
-        }
 
         if (motor_speed != Q16_ONE && motor_speed != -Q16_ONE)
-        {
           last_wind_up = current_time;
-        }
         else if (current_time - last_wind_up > WINDUP_TIMEOUT_US)
         {
           my_state = WOUND_UP;
@@ -198,19 +179,16 @@ static void main_loop(void *pvParameters)
         set_motors(0, 0);
       }
     }
-    else if (my_state == FALLEN)
+    else if (my_state == FALLEN &&
+      abs(sin_pitch - STABLE_ANGLE) < RECOVER_LIMIT &&
+      abs(sin_roll) < ROLL_LIMIT)
     {
-      if (sin_pitch < RECOVER_UPPER_BOUND &&
-          sin_pitch > RECOVER_LOWER_BOUND &&
-          sin_roll < ROLL_UPPER_BOUND && sin_roll > ROLL_LOWER_BOUND)
-      {
-        my_state = RUNNING;
-        last_wind_up = current_time;
-        set_both_eyes(GREEN);
-        pid_reset(sin_pitch, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
-        pid_reset(0, FLT_TO_Q16(STABLE_ANGLE), &pid_settings_arr[VEL],
-            &vel_pid_state);
-      }
+      my_state = RUNNING;
+      last_wind_up = current_time;
+      set_both_eyes(GREEN);
+      pid_reset(sin_pitch, 0, &pid_settings_arr[ANGLE], &angle_pid_state);
+      pid_reset(0, FLT_TO_Q16(STABLE_ANGLE), &pid_settings_arr[VEL],
+          &vel_pid_state);
     }
 
     if (LOGMODE == LOG_FREQ)
@@ -312,9 +290,7 @@ void user_init(void)
   imu_i2c_configure(I2C_FREQ_1300K, IMU_SCL_PIN, IMU_SDA_PIN);
   int ret = imu_init();
   if (ret != 0)
-  {
     printf("IMU init failed with code %d\n", ret);
-  }
   eyes_init();
   set_both_eyes(ret == 0 ? YELLOW : RED);
 

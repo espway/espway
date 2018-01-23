@@ -98,12 +98,12 @@
 #define ORIENTATION_STABILIZE_DURATION 2000
 
 // Angle limits - sin(alpha)
-#define FALL_LIMIT     0.75  // Robot considered fallen
-#define ROLL_LIMIT     0.75  // Robot considered fallen (roll direction)
-#define RECOVER_LIMIT  0.2   // Robot considered recovered
-#define HIGH_PID_LIMIT 0.2   // Limit to boost balance control
+#define FALL_LIMIT     FLT_TO_Q16(0.75)  // Robot considered fallen
+#define ROLL_LIMIT     FLT_TO_Q16(0.75)  // Robot considered fallen (roll direction)
+#define RECOVER_LIMIT  FLT_TO_Q16(0.2)   // Robot considered recovered
+#define HIGH_PID_LIMIT FLT_TO_Q16(0.2)   // Limit to boost balance control
 
-#define STABLE_ANGLE   0.0   // Default target angle -- won't matter much as it's adaptive
+#define STABLE_ANGLE   FLT_TO_Q16(0.0)   // Default target angle -- won't matter much as it's adaptive
 
 // Default (hardcoded) gyro calibration offsets
 #define GYRO_X_OFFSET -27

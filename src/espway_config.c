@@ -84,7 +84,8 @@ void apply_config_params(void)
       FLT_TO_Q16(SAMPLE_TIME),
       -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE]);
   pid_initialize(&my_config.pid_coeffs_arr[VEL],
-      FLT_TO_Q16(SAMPLE_TIME), FALL_LOWER_BOUND, FALL_UPPER_BOUND, true,
+      FLT_TO_Q16(SAMPLE_TIME),
+      STABLE_ANGLE - FALL_LIMIT, STABLE_ANGLE + FALL_LIMIT, true,
       &pid_settings_arr[VEL]);
   xSemaphoreGive(pid_mutex);
 }
