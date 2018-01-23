@@ -54,7 +54,7 @@ window.addEventListener('load', () => {
         let dview = new DataView(e.data)
         let command = dview.getUint8(0)
         if (command === 3 && e.data.byteLength === 3) {
-            let batteryValue = dview.getInt16(1, true) / 100
+            let batteryValue = dview.getInt16(1, true) / 1000
             battery.innerText = batteryValue.toFixed(2)
         } else if (command === 2 && e.data.byteLength === 7) {
             hasGravityData = true

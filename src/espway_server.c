@@ -24,8 +24,6 @@
 
 #include "espway.h"
 
-#define BATTERY_COEFFICIENT FLT_TO_Q16(100.0f / BATTERY_CALIBRATION_FACTOR)
-
 static void httpd_websocket_save_config(struct altcp_pcb *pcb)
 {
   uint8_t response;
@@ -159,14 +157,15 @@ static void httpd_websocket_cb(struct altcp_pcb *pcb, uint8_t *data,
 
 static void battery_task(void *pvParameter)
 {
-  q16 battery_value = 0;
+  uint32_t battery_value = 0;
   for (;;)
   {
     battery_value = q16_exponential_smooth(battery_value, sdk_system_adc_read(),
         FLT_TO_Q16(0.25f));
+    uint32_t battery_mv = (battery_value * BATTERY_FULL_SCALE_RANGE) / 1024;
 
     if (ENABLE_BATTERY_CUTOFF &&
-        battery_value < (unsigned int)(BATTERY_THRESHOLD * BATTERY_CALIBRATION_FACTOR))
+        battery_mv < BATTERY_THRESHOLD)
     {
       battery_cutoff();
       break;
@@ -177,7 +176,7 @@ static void battery_task(void *pvParameter)
       uint8_t buf[3];
       buf[0] = BATTERY;
       uint16_t *payload = (uint16_t *)&buf[1];
-      payload[0] = q16_mul(battery_value, BATTERY_COEFFICIENT);
+      payload[0] = battery_mv;
       httpd_websocket_broadcast(buf, sizeof(buf), WS_BIN_MODE);
       UNLOCK_TCPIP_CORE();
     }

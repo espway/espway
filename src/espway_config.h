@@ -115,8 +115,9 @@
 #define WINDUP_TIMEOUT 1000
 
 // Undervoltage cutoff check
-#define BATTERY_THRESHOLD 7.4
-#define BATTERY_CALIBRATION_FACTOR 102.4
+#define BATTERY_THRESHOLD 7400
+// The scaling of battery readings
+#define BATTERY_FULL_SCALE_RANGE 9200
 #define BATTERY_CHECK_INTERVAL 500
 #define ENABLE_BATTERY_CHECK true
 #define ENABLE_BATTERY_CUTOFF false
