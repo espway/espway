@@ -78,9 +78,9 @@ static void send_gravity(struct altcp_pcb *pcb, const vector3d_fix * const grav)
   buf[0] = RES_GRAVITY;
   int16_t *qdata = (int16_t *)&buf[1];
   xSemaphoreTake(orientation_mutex, portMAX_DELAY);
-  qdata[0] = grav->components.x / 2;
-  qdata[1] = grav->components.y / 2;
-  qdata[2] = grav->components.z / 2;
+  qdata[0] = grav->x / 2;
+  qdata[1] = grav->y / 2;
+  qdata[2] = grav->z / 2;
   xSemaphoreGive(orientation_mutex);
   httpd_websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }

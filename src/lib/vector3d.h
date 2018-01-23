@@ -23,16 +23,16 @@
 typedef union {
   struct {
     q16 x, y, z;
-  } components;
+  };
   q16 data[3];
 } vector3d_fix;
 
 static inline vector3d_fix v3d_add(const vector3d_fix *u, const vector3d_fix *v)
 {
   vector3d_fix result = {{
-    u->components.x + v->components.x,
-    u->components.y + v->components.y,
-    u->components.z + v->components.z
+    u->x + v->x,
+    u->y + v->y,
+    u->z + v->z
   }};
   return result;
 }
@@ -40,9 +40,9 @@ static inline vector3d_fix v3d_add(const vector3d_fix *u, const vector3d_fix *v)
 static inline vector3d_fix v3d_sub(const vector3d_fix *u, const vector3d_fix *v)
 {
   vector3d_fix result = {{
-    u->components.x - v->components.x,
-    u->components.y - v->components.y,
-    u->components.z - v->components.z
+    u->x - v->x,
+    u->y - v->y,
+    u->z - v->z
   }};
   return result;
 }
@@ -50,9 +50,9 @@ static inline vector3d_fix v3d_sub(const vector3d_fix *u, const vector3d_fix *v)
 static inline vector3d_fix v3d_mul(q16 a, const vector3d_fix *v)
 {
   vector3d_fix result = {{
-    q16_mul(a, v->components.x),
-    q16_mul(a, v->components.y),
-    q16_mul(a, v->components.z)
+    q16_mul(a, v->x),
+    q16_mul(a, v->y),
+    q16_mul(a, v->z)
   }};
   return result;
 }
@@ -60,18 +60,18 @@ static inline vector3d_fix v3d_mul(q16 a, const vector3d_fix *v)
 static inline vector3d_fix v3d_cross(const vector3d_fix *u, const vector3d_fix *v)
 {
   vector3d_fix result =  {{
-    q16_mul(u->components.y, v->components.z) - q16_mul(u->components.z, v->components.y),
-    q16_mul(u->components.z, v->components.x) - q16_mul(u->components.x, v->components.z),
-    q16_mul(u->components.x, v->components.y) - q16_mul(u->components.y, v->components.x)
+    q16_mul(u->y, v->z) - q16_mul(u->z, v->y),
+    q16_mul(u->z, v->x) - q16_mul(u->x, v->z),
+    q16_mul(u->x, v->y) - q16_mul(u->y, v->x)
   }};
   return result;
 }
 
 static inline vector3d_fix v3d_normalize(const vector3d_fix *u)
 {
-  q16 rnorm = q16_mul(u->components.x, u->components.x);
-  rnorm += q16_mul(u->components.y, u->components.y);
-  rnorm += q16_mul(u->components.z, u->components.z);
+  q16 rnorm = q16_mul(u->x, u->x);
+  rnorm += q16_mul(u->y, u->y);
+  rnorm += q16_mul(u->z, u->z);
   rnorm = q16_rsqrt(rnorm);
   return v3d_mul(rnorm, u);
 }

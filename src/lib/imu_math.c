@@ -41,7 +41,7 @@ void mahony_filter_update(mahony_filter_state *state,
 
   omega = v3d_mul(state->gyro_conversion_factor, &omega);
 
-  if (accel.components.x != 0 || accel.components.y != 0 || accel.components.z != 0)
+  if (accel.x != 0 || accel.y != 0 || accel.z != 0)
   {
     accel = v3d_normalize(&accel);
     verror = v3d_cross(&accel, gravity);
