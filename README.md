@@ -59,14 +59,14 @@ recent JavaScript features which might not be supported by older browsers. Howev
 
 ## Schematic & BOM
 
-A PCB design and a 3D printable body are planned. There is an initial design already in the `schematic` folder, but please don't use it quite yet - I'm still waiting for the (hopefully) final iteration of the board. There, MPU6050 will be replaced by LSM6DS3 and L293D for DRV8835 for better performance.
+There is a PCB design and schematic in the `schematic` folder which has been tested and is ready to use. There, MPU6050 has been replaced by LSM6DS3 and L293D by DRV8835 for better performance.
 
 Meanwhile, you can still build an ESPway using breakout boards available from the usual sources. A rough bill of materials for this is listed below:
 
 * (not including PCB, connectors, wire etc. materials)
 * WEMOS D1 Mini board
 * GY-521 (MPU6050 breakout board)
-* L293D motor driver IC. **N.B.** this is what I used so far, but I'm intending to change to DRV8833 for a smaller voltage drop across the H-bridge
+* L293D motor driver IC
 * 2x 6V 300rpm metal gear motor (search for "12ga 300rpm" or "n20 300rpm"), these should be $3-5 per piece
 * 2x WS2812B neopixels for eyes and showing current state
 * AMS1117 5V regulator
@@ -76,9 +76,11 @@ Meanwhile, you can still build an ESPway using breakout boards available from th
 * 10 kohm resistor
 * 680 kohm resistor
 
+To use the old hardware config and schematic, you'll have to edit `src/espway_config.h` before compilation. See that file for notes.
+
 See the `schematic-old` folder for the schematic. It is drawn with [KiCad](http://kicad-pcb.org/) and there's a [rendered PDF](https://github.com/flannelhead/espway/raw/master/schematic/espway.pdf) in the repo.
 
-There's a new schematic in the works in `schematic` folder. It uses components
+The new schematic in `schematic` folder uses components
 from [kicad-ESP8266](https://github.com/jdunmire/kicad-ESP8266) by J. Dunmire,
 licensed under CC-BY-SA 4.0. The schematic is also licensed under CC-BY-SA 4.0.
 

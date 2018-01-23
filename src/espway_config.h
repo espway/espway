@@ -7,17 +7,19 @@
 #define MOTOR_DRIVER_DRV8835 2
 
 // Motor driver selection
+// Change this to MOTOR_DRIVER_L293D to use the old schematic (folder schematic-old)
 #define MOTOR_DRIVER MOTOR_DRIVER_DRV8835
 
 // Motor speed control is not available on pin 16.
 // Thus, please use pins 0-15 for the motor PWM pins.
 #if MOTOR_DRIVER == MOTOR_DRIVER_DRV8835
+// DRV8835, new HW config
 #define MOTOR_LEFT_DIR_PIN  0
 #define MOTOR_LEFT_PWM_PIN  4
 #define MOTOR_RIGHT_DIR_PIN 2
 #define MOTOR_RIGHT_PWM_PIN 15
 #else
-// L293D
+// L293D, old HW config (schematic-old folder)
 #define MOTOR_LEFT_DIR_PIN  13
 #define MOTOR_LEFT_PWM_PIN  15
 #define MOTOR_RIGHT_DIR_PIN 12
@@ -29,11 +31,20 @@
 #define IMU_LSM6DS3 2
 
 // IMU selection
+// Change this to IMU_MPU6050 to use the old schematic (folder schematic-old)
 #define IMU IMU_LSM6DS3
 
+#if IMU == IMU_LSM6DS3
+// New HW config
 #define IMU_SDA_PIN       12
 #define IMU_SCL_PIN       14
 #define IMU_INTERRUPT_PIN 13
+#else
+// MPU6050 and old HW config (schematic-old folder)
+#define IMU_SDA_PIN       0
+#define IMU_SCL_PIN       5
+#define IMU_INTERRUPT_PIN 4
+#endif
 
 // You shouldn't have to change this except if using bus id 0 already elsewhere
 #define IMU_I2C_BUS 0
