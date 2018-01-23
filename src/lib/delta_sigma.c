@@ -21,6 +21,7 @@
 #include <esp/timer.h>
 #include <esp/interrupts.h>
 #include <esp/gpio.h>
+#include <FreeRTOS.h>
 #include "delta_sigma.h"
 
 typedef struct {
@@ -35,6 +36,7 @@ static uint32_t g_range;
 
 static void IRAM timer_isr(void* arg)
 {
+  vPortEnterCritical();
   uint32_t set_mask = 0;
   uint32_t clear_mask = 0;
   for (uint8_t i = 0; i < g_n_pins; ++i)
@@ -53,17 +55,23 @@ static void IRAM timer_isr(void* arg)
   }
   GPIO.OUT_SET = set_mask;
   GPIO.OUT_CLEAR = clear_mask;
+  vPortExitCritical();
 }
 
 void delta_sigma_set_duty(uint8_t channel, uint32_t duty)
 {
+  vPortEnterCritical();
   if (duty > g_range) duty = g_range;
   g_pins[channel].duty = duty;
+  vPortExitCritical();
 }
 
 void delta_sigma_start(uint32_t period, uint32_t range, uint8_t pins[],
                        uint8_t n_pins)
 {
+  // Stop the timer during configuration
+  timer_set_run(FRC1, false);
+
   g_n_pins = n_pins;
   for (uint8_t i = 0; i < n_pins; ++i)
   {
@@ -75,7 +83,6 @@ void delta_sigma_start(uint32_t period, uint32_t range, uint8_t pins[],
   g_range = range;
 
   timer_set_interrupts(FRC1, false);
-  timer_set_run(FRC1, false);
   timer_set_divider(FRC1, TIMER_CLKDIV_256);
   if (period > TIMER_FRC1_MAX_LOAD)
   {
