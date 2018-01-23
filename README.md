@@ -1,7 +1,7 @@
 # ESPway
 A segway-like balancing two-wheel robot built on ESP8266. It is controlled over WiFi via a HTML/JS GUI and a WebSocket. This is a work in progress. The firmware is meant to run on a WEMOS D1 mini or a similar board.
 
-**NOTE for existing users**: the [Arduino version](https://github.com/flannelhead/espway/tree/arduino) of this code is deprecated and will *not* receive the newest improvements from the main branch. However, the Arduino branch will remain in this repo. If you'd like to have something improved or fixed there, please open an issue or preferably a pull request.
+*NOTE for existing users*: the [Arduino version](https://github.com/flannelhead/espway/tree/arduino) of this code is deprecated and will *not* receive the newest improvements from the main branch. However, the Arduino branch will remain in this repo. If you'd like to have something improved or fixed there, please open an issue or preferably a pull request.
 
 ## Getting started
 The firmware is built on the [esp-open-rtos](https://github.com/SuperHouse/esp-open-rtos) project which is included as a submodule in this repo.
@@ -12,10 +12,10 @@ For building the firmware, a Linux host is recommended. For other platforms, the
 
 *NOTE*: if you intend to use Docker, you only have to install `esptool`, `git` and `make` on your host. Please see below for further Docker instructions.
 
-Install these packages with your distribution's package manager:
-* `git`
+Install these packages:
+* `git` (from your package manager)
 * `xtensa-lx106-elf` toolchain. You can use `esp-open-sdk` to build it, see the [instructions](https://github.com/SuperHouse/esp-open-rtos/#quick-start) in the esp-open-rtos repo
-* `esptool` (`pip install -U esptool`). Please do not use pulled by `esp-open-sdk`, it is outdated.
+* `esptool` (`pip install -U esptool`). Please do not use the outdated version pulled by `esp-open-sdk`.
 * `tcc`, `nodejs` and `npm` are currently required due to the frontend code, although I'm investigating how to relax this dependency.
 
 Clone this repo (recursive cloning to get also `esp-open-rtos` and its submodules):
