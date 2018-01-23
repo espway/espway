@@ -164,8 +164,7 @@ static void battery_task(void *pvParameter)
         FLT_TO_Q16(0.25f));
     uint32_t battery_mv = (battery_value * BATTERY_FULL_SCALE_RANGE) / 1024;
 
-    if (ENABLE_BATTERY_CUTOFF &&
-        battery_mv < BATTERY_THRESHOLD)
+    if (ENABLE_BATTERY_CUTOFF && battery_mv < BATTERY_THRESHOLD)
     {
       battery_cutoff();
       break;
