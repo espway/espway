@@ -22,6 +22,7 @@
 #include <esp/interrupts.h>
 #include <esp/gpio.h>
 #include <FreeRTOS.h>
+#include <task.h>
 #include "delta_sigma.h"
 
 typedef struct {
@@ -36,7 +37,7 @@ static uint32_t g_range;
 
 static void IRAM timer_isr(void* arg)
 {
-  vPortEnterCritical();
+  taskENTER_CRITICAL();
   uint32_t set_mask = 0;
   uint32_t clear_mask = 0;
   for (uint8_t i = 0; i < g_n_pins; ++i)
@@ -55,15 +56,15 @@ static void IRAM timer_isr(void* arg)
   }
   GPIO.OUT_SET = set_mask;
   GPIO.OUT_CLEAR = clear_mask;
-  vPortExitCritical();
+  taskEXIT_CRITICAL();
 }
 
 void delta_sigma_set_duty(uint8_t channel, uint32_t duty)
 {
-  vPortEnterCritical();
+  taskENTER_CRITICAL();
   if (duty > g_range) duty = g_range;
   g_pins[channel].duty = duty;
-  vPortExitCritical();
+  taskEXIT_CRITICAL();
 }
 
 void delta_sigma_start(uint32_t period, uint32_t range, uint8_t pins[],
