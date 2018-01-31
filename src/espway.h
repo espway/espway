@@ -78,3 +78,7 @@ void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d);
 void httpd_task(void *pvParameters);
 
 void battery_cutoff(void);
+
+typedef void (*gpio_intr_handler_t)(uint32_t, BaseType_t*);
+void add_gpio_interrupt_handler(gpio_intr_handler_t handler);
+void remove_gpio_interrupt_handler(gpio_intr_handler_t handler);

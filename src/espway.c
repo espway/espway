@@ -53,6 +53,8 @@
 #define PRIO_COMMUNICATION  2
 #define PRIO_MAIN_LOOP      (TCPIP_THREAD_PRIO + 1)
 
+#define NUM_GPIO_HANDLERS   2
+
 const color_t RED    = { .color = 0xb40000 };
 const color_t YELLOW = { .color = 0xb4b400 };
 const color_t GREEN  = { .color = 0x00b400 };
@@ -89,7 +91,7 @@ void battery_cutoff(void)
 
 static void main_loop(void *pvParameters)
 {
-  static int16_t raw_data[6];
+  int16_t raw_data[6];
   uint32_t time_old = 0;
   uint32_t current_time = 0;
   int n = 0;
@@ -217,10 +219,42 @@ static void main_loop(void *pvParameters)
   }
 }
 
-static void imu_interrupt_handler(uint8_t gpio_num)
+static gpio_intr_handler_t gpio_handlers[NUM_GPIO_HANDLERS] = {NULL};
+void add_gpio_interrupt_handler(gpio_intr_handler_t handler)
 {
+  for (uint8_t i = 0; i < NUM_GPIO_HANDLERS; ++i)
+  {
+    if (!gpio_handlers[i])
+    {
+      gpio_handlers[i] = handler;
+      break;
+    }
+  }
+}
+
+void remove_gpio_interrupt_handler(gpio_intr_handler_t handler)
+{
+  for (uint8_t i = 0; i < NUM_GPIO_HANDLERS; ++i)
+  {
+    if (!gpio_handlers[i])
+    {
+      gpio_handlers[i] = handler;
+      break;
+    }
+  }
+}
+
+static void gpio_interrupt_handler(uint8_t gpio_num)
+{
+  uint32_t gpio_state = GPIO.IN;
   BaseType_t xHigherPriorityTaskHasWoken = pdFALSE;
-  xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
+
+  if (gpio_state & BIT(IMU_INTERRUPT_PIN))
+    xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
+
+  for (uint8_t i = 0; i < NUM_GPIO_HANDLERS; ++i)
+    if (gpio_handlers[i]) gpio_handlers[i](gpio_state, &xHigherPriorityTaskHasWoken);
+
   portEND_SWITCHING_ISR(xHigherPriorityTaskHasWoken);
 }
 
@@ -238,13 +272,8 @@ static void steering_watcher(void *arg)
 
 static void imu_watcher(void *arg)
 {
-  for (;;)
-  {
-    if (!xTaskNotifyWait(0, 0, NULL, IMU_TIMEOUT_MS / portTICK_PERIOD_MS))
-    {
-      abort();
-    }
-  }
+  for (;;) if (!xTaskNotifyWait(0, 0, NULL, IMU_TIMEOUT_MS / portTICK_PERIOD_MS))
+    abort();
 }
 
 static void IRAM espway_exception_handler(void)
@@ -317,5 +346,5 @@ void user_init(void)
   xTaskCreate(&imu_watcher, "IMU watcher", 128, NULL, PRIO_MAIN_LOOP + 2, &xIMUWatcher);
 
   gpio_enable(IMU_INTERRUPT_PIN, GPIO_INPUT);
-  gpio_set_interrupt(IMU_INTERRUPT_PIN, GPIO_INTTYPE_EDGE_POS, imu_interrupt_handler);
+  gpio_set_interrupt(IMU_INTERRUPT_PIN, GPIO_INTTYPE_EDGE_POS, gpio_interrupt_handler);
 }
