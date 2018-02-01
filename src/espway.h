@@ -79,6 +79,4 @@ void httpd_task(void *pvParameters);
 
 void battery_cutoff(void);
 
-typedef void (*gpio_intr_handler_t)(uint32_t, BaseType_t*);
-void add_gpio_interrupt_handler(gpio_intr_handler_t handler);
-void remove_gpio_interrupt_handler(gpio_intr_handler_t handler);
+void maze_solver_task(void *pvParameters);

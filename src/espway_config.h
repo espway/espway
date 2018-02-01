@@ -124,3 +124,12 @@
 
 #define WIFI_SSID "ESPway"
 #define WIFI_CHANNEL 1
+
+// Maze solver config
+
+#define ULTRASONIC_SENSOR_SIDE_GPIO  5
+#define ULTRASONIC_SENSOR_FRONT_GPIO 1
+
+// Handedness of the solver and mounting side of the sensor
+// 0 is left, 1 is right
+#define MAZE_SOLVER_RIGHT_HANDED 1

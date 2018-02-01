@@ -53,8 +53,6 @@
 #define PRIO_COMMUNICATION  2
 #define PRIO_MAIN_LOOP      (TCPIP_THREAD_PRIO + 1)
 
-#define NUM_GPIO_HANDLERS   2
-
 const color_t RED    = { .color = 0xb40000 };
 const color_t YELLOW = { .color = 0xb4b400 };
 const color_t GREEN  = { .color = 0x00b400 };
@@ -219,42 +217,10 @@ static void main_loop(void *pvParameters)
   }
 }
 
-static gpio_intr_handler_t gpio_handlers[NUM_GPIO_HANDLERS] = {NULL};
-void add_gpio_interrupt_handler(gpio_intr_handler_t handler)
+static void imu_interrupt_handler(uint8_t gpio_num)
 {
-  for (uint8_t i = 0; i < NUM_GPIO_HANDLERS; ++i)
-  {
-    if (!gpio_handlers[i])
-    {
-      gpio_handlers[i] = handler;
-      break;
-    }
-  }
-}
-
-void remove_gpio_interrupt_handler(gpio_intr_handler_t handler)
-{
-  for (uint8_t i = 0; i < NUM_GPIO_HANDLERS; ++i)
-  {
-    if (!gpio_handlers[i])
-    {
-      gpio_handlers[i] = handler;
-      break;
-    }
-  }
-}
-
-static void gpio_interrupt_handler(uint8_t gpio_num)
-{
-  uint32_t gpio_state = GPIO.IN;
   BaseType_t xHigherPriorityTaskHasWoken = pdFALSE;
-
-  if (gpio_state & BIT(IMU_INTERRUPT_PIN))
-    xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
-
-  for (uint8_t i = 0; i < NUM_GPIO_HANDLERS; ++i)
-    if (gpio_handlers[i]) gpio_handlers[i](gpio_state, &xHigherPriorityTaskHasWoken);
-
+  xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
   portEND_SWITCHING_ISR(xHigherPriorityTaskHasWoken);
 }
 
@@ -344,7 +310,8 @@ void user_init(void)
   xTaskCreate(&main_loop, "Main loop", 256, NULL, PRIO_MAIN_LOOP, &xCalculationTask);
   xTaskCreate(&steering_watcher, "Steering watcher", 128, NULL, PRIO_MAIN_LOOP + 1, &xSteeringWatcher);
   xTaskCreate(&imu_watcher, "IMU watcher", 128, NULL, PRIO_MAIN_LOOP + 2, &xIMUWatcher);
+  // xTaskCreate(&maze_solver_task, "Maze solver", 256, NULL, PRIO_COMMUNICATION + 1, NULL);
 
   gpio_enable(IMU_INTERRUPT_PIN, GPIO_INPUT);
-  gpio_set_interrupt(IMU_INTERRUPT_PIN, GPIO_INTTYPE_EDGE_POS, gpio_interrupt_handler);
+  gpio_set_interrupt(IMU_INTERRUPT_PIN, GPIO_INTTYPE_EDGE_POS, imu_interrupt_handler);
 }
