@@ -78,15 +78,30 @@ static SemaphoreHandle_t steering_mutex;
 static q16 target_speed = 0;
 static q16 steering_bias = 0;
 
-SemaphoreHandle_t orientation_mutex;
-vector3d_fix gravity = {{ 0, 0, Q16_ONE }};
+static SemaphoreHandle_t orientation_mutex;
+static vector3d_fix gravity = {{ 0, 0, Q16_ONE }};
+static q16 sin_pitch, sin_roll;
+
+orientation get_orientation(void)
+{
+  orientation copy_orientation;
+  {
+    xSemaphoreTake(orientation_mutex, portMAX_DELAY);
+    copy_orientation.sin_pitch = sin_pitch;
+    copy_orientation.sin_roll = sin_roll;
+    xSemaphoreGive(orientation_mutex);
+  }
+  return copy_orientation;
+}
 
 void set_steering(q16 new_target_speed, q16 new_steering_bias)
 {
-  xSemaphoreTake(steering_mutex, portMAX_DELAY);
-  target_speed = new_target_speed;
-  steering_bias = new_steering_bias;
-  xSemaphoreGive(steering_mutex);
+  {
+    xSemaphoreTake(steering_mutex, portMAX_DELAY);
+    target_speed = new_target_speed;
+    steering_bias = new_steering_bias;
+    xSemaphoreGive(steering_mutex);
+  }
   xTaskNotify(xSteeringWatcher, 0, eNoAction);
 }
 
@@ -117,14 +132,16 @@ static void main_loop(void *pvParameters)
       printf("Reading IMU failed with code %d\n", ret);
 
     // Update orientation estimate
-    xSemaphoreTake(orientation_mutex, portMAX_DELAY);
-    mahony_filter_update(&imuparams, &raw_data[0], &raw_data[3], &gravity);
-    // Calculate sine of pitch angle from gravity vector
-
-    q16 sin_pitch = -gravity.data[IMU_FORWARD_AXIS];
-    if (IMU_INVERT_FORWARD_AXIS) sin_pitch = -sin_pitch;
-    q16 sin_roll = -gravity.data[IMU_SIDE_AXIS];
-    xSemaphoreGive(orientation_mutex);
+    {
+      xSemaphoreTake(orientation_mutex, portMAX_DELAY);
+      mahony_filter_update(&imuparams, &raw_data[0], &raw_data[3], &gravity);
+      // Calculate sine of pitch angle from gravity vector
+      sin_pitch = -gravity.data[IMU_FORWARD_AXIS];
+      if (IMU_INVERT_FORWARD_AXIS) sin_pitch = -sin_pitch;
+      sin_roll = -gravity.data[IMU_SIDE_AXIS];
+      if (IMU_INVERT_SIDE_AXIS) sin_roll = -sin_roll;
+      xSemaphoreGive(orientation_mutex);
+    }
 
     // Exponential smoothing of target speed
     q16 motor_bias;
@@ -243,13 +260,11 @@ static void imu_interrupt_handler(uint8_t gpio_num)
 static void steering_watcher(void *arg)
 {
   for (;;)
-  {
     if (!xTaskNotifyWait(0, 0, NULL, STEERING_TIMEOUT_MS / portTICK_PERIOD_MS))
     {
       steering_bias = 0;
       target_speed = 0;
     }
-  }
 }
 
 static void imu_watcher(void *arg)

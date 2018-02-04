@@ -70,16 +70,14 @@ static void send_pid_params(struct altcp_pcb *pcb, pid_controller_index idx)
   httpd_websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-static void send_gravity(struct altcp_pcb *pcb, const vector3d_fix * const grav)
+static void send_orientation(struct altcp_pcb *pcb)
 {
-  uint8_t buf[7];
-  buf[0] = RES_GRAVITY;
+  uint8_t buf[5];
+  buf[0] = RES_ORIENTATION;
   int16_t *qdata = (int16_t *)&buf[1];
-  xSemaphoreTake(orientation_mutex, portMAX_DELAY);
-  qdata[0] = grav->x / 2;
-  qdata[1] = grav->y / 2;
-  qdata[2] = grav->z / 2;
-  xSemaphoreGive(orientation_mutex);
+  orientation my_orientation = get_orientation();
+  qdata[0] = my_orientation.sin_pitch / 2;
+  qdata[1] = my_orientation.sin_roll / 2;
   httpd_websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
@@ -106,9 +104,9 @@ static void httpd_websocket_cb(struct altcp_pcb *pcb, uint8_t *data,
         (FLT_TO_Q16(STEERING_FACTOR) * signed_data[0]) / 128);
       break;
 
-    case REQ_GRAVITY:
+    case REQ_ORIENTATION:
       if (data_len != 0) break;
-      send_gravity(pcb, &gravity);
+      send_orientation(pcb);
       break;
 
     case REQ_SET_PID_PARAMS:

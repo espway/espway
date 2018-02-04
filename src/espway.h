@@ -14,8 +14,8 @@
 typedef enum {
   STEERING = 0,
 
-  REQ_GRAVITY = 1,
-  RES_GRAVITY = 2,
+  REQ_ORIENTATION = 1,
+  RES_ORIENTATION = 2,
 
   BATTERY = 3,
   BATTERY_CUTOFF = 4,
@@ -54,13 +54,15 @@ typedef enum {
   VEL
 } pid_controller_index;
 
+typedef struct {
+  q16 sin_pitch;
+  q16 sin_roll;
+} orientation;
+
 extern espway_config my_config;
 
 extern SemaphoreHandle_t pid_mutex;
 extern pidsettings pid_settings_arr[2];
-
-extern SemaphoreHandle_t orientation_mutex;
-extern vector3d_fix gravity;
 
 void pretty_print_config(void);
 void apply_config_params(void);
@@ -75,5 +77,7 @@ void httpd_task(void *pvParameters);
 void battery_cutoff(void);
 
 void set_steering(q16 new_target_speed, q16 new_turning_bias);
+orientation get_orientation(void);
 
 void maze_solver_task(void *pvParameters);
+

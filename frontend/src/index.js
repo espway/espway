@@ -56,10 +56,10 @@ window.addEventListener('load', () => {
         if (command === 3 && e.data.byteLength === 3) {
             let batteryValue = dview.getInt16(1, true) / 1000
             battery.innerText = batteryValue.toFixed(2)
-        } else if (command === 2 && e.data.byteLength === 7) {
+        } else if (command === 2 && e.data.byteLength === 5) {
             hasGravityData = true
-            tiltX = -dview.getInt16(1, true) / 32768.0
-            tiltY = -dview.getInt16(5, true) / 32768.0
+            tiltX = dview.getInt16(3, true) / 32768.0
+            tiltY = dview.getInt16(1, true) / 32768.0
         }
     })
 
