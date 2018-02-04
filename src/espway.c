@@ -63,22 +63,32 @@ const color_t BLACK  = { .color = 0x000000 };
 typedef enum { LOG_FREQ, LOG_RAW, LOG_PITCH, LOG_NONE } logmode;
 typedef enum { STABILIZING_ORIENTATION, RUNNING, FALLEN, WOUND_UP } state;
 
-TaskHandle_t xCalculationTask;
-TaskHandle_t xSteeringWatcher;
-TaskHandle_t xIMUWatcher;
+static TaskHandle_t xCalculationTask;
+static TaskHandle_t xSteeringWatcher;
+static TaskHandle_t xIMUWatcher;
 
-mahony_filter_state imuparams;
-pidstate vel_pid_state;
-pidstate angle_pid_state;
+static mahony_filter_state imuparams;
+static pidstate vel_pid_state;
+static pidstate angle_pid_state;
 
 SemaphoreHandle_t pid_mutex;
 pidsettings pid_settings_arr[2];
 
-q16 target_speed = 0;
-q16 steering_bias = 0;
+static SemaphoreHandle_t steering_mutex;
+static q16 target_speed = 0;
+static q16 steering_bias = 0;
 
 SemaphoreHandle_t orientation_mutex;
 vector3d_fix gravity = {{ 0, 0, Q16_ONE }};
+
+void set_steering(q16 new_target_speed, q16 new_steering_bias)
+{
+  xSemaphoreTake(steering_mutex, portMAX_DELAY);
+  target_speed = new_target_speed;
+  steering_bias = new_steering_bias;
+  xSemaphoreGive(steering_mutex);
+  xTaskNotify(xSteeringWatcher, 0, eNoAction);
+}
 
 void battery_cutoff(void)
 {
@@ -117,8 +127,14 @@ static void main_loop(void *pvParameters)
     xSemaphoreGive(orientation_mutex);
 
     // Exponential smoothing of target speed
-    smoothed_target_speed = q16_exponential_smooth(smoothed_target_speed,
-        target_speed, FLT_TO_Q16(TARGET_SPEED_SMOOTHING));
+    q16 motor_bias;
+    {
+      xSemaphoreTake(steering_mutex, portMAX_DELAY);
+      smoothed_target_speed = q16_exponential_smooth(smoothed_target_speed,
+          target_speed, FLT_TO_Q16(TARGET_SPEED_SMOOTHING));
+      motor_bias = steering_bias;
+      xSemaphoreGive(steering_mutex);
+    }
 
     current_time = sdk_system_get_time();
 
@@ -156,8 +172,8 @@ static void main_loop(void *pvParameters)
         if (my_state == WOUND_UP)
           set_motors(0, 0);
         else
-          set_motors(motor_speed + steering_bias,
-              motor_speed - steering_bias);
+          set_motors(motor_speed + motor_bias,
+              motor_speed - motor_bias);
 
         if (motor_speed != Q16_ONE && motor_speed != -Q16_ONE)
           last_wind_up = current_time;
@@ -291,6 +307,7 @@ void user_init(void)
 
   pid_mutex = xSemaphoreCreateMutex();
   orientation_mutex = xSemaphoreCreateMutex();
+  steering_mutex = xSemaphoreCreateMutex();
 
   motors_init();
 
@@ -310,7 +327,7 @@ void user_init(void)
   xTaskCreate(&main_loop, "Main loop", 256, NULL, PRIO_MAIN_LOOP, &xCalculationTask);
   xTaskCreate(&steering_watcher, "Steering watcher", 128, NULL, PRIO_MAIN_LOOP + 1, &xSteeringWatcher);
   xTaskCreate(&imu_watcher, "IMU watcher", 128, NULL, PRIO_MAIN_LOOP + 2, &xIMUWatcher);
-  // xTaskCreate(&maze_solver_task, "Maze solver", 256, NULL, PRIO_COMMUNICATION + 1, NULL);
+  xTaskCreate(&maze_solver_task, "Maze solver", 256, NULL, PRIO_COMMUNICATION + 1, NULL);
 
   gpio_enable(IMU_INTERRUPT_PIN, GPIO_INPUT);
   gpio_set_interrupt(IMU_INTERRUPT_PIN, GPIO_INTTYPE_EDGE_POS, imu_interrupt_handler);

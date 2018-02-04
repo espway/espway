@@ -102,9 +102,8 @@ static void httpd_websocket_cb(struct altcp_pcb *pcb, uint8_t *data,
       // Parameters: velocity (int8_t), turn rate (int8_t)
       if (data_len != 2) break;
       signed_data = (int8_t *)payload;
-      steering_bias = (FLT_TO_Q16(STEERING_FACTOR) * signed_data[0]) / 128;
-      target_speed = (FLT_TO_Q16(SPEED_CONTROL_FACTOR) * signed_data[1]) / 128;
-      xTaskNotify(xSteeringWatcher, 0, eNoAction);
+      set_steering((FLT_TO_Q16(SPEED_CONTROL_FACTOR) * signed_data[1]) / 128,
+        (FLT_TO_Q16(STEERING_FACTOR) * signed_data[0]) / 128);
       break;
 
     case REQ_GRAVITY:
