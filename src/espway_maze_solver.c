@@ -18,17 +18,26 @@
 
 #include "espway.h"
 #include "lib/ultrasonic.h"
+#include "lib/samplebuffer.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 void maze_solver_task(void *pvParameters)
 {
   uint8_t pins[] = {ULTRASONIC_SENSOR_SIDE_GPIO};
   ultrasonic_sensor_init(pins, sizeof(pins) / sizeof(pins[0]));
 
+  samplebuffer_t* buffer = samplebuffer_init(5);
+
   for (;;)
   {
     int value = ultrasonic_sensor_read(0);
-    printf("delay = %d\n", value);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    if (value > 0) samplebuffer_add_sample(buffer, value);
+
+    printf("value = %5d, delay = %5d\n", value, samplebuffer_median(buffer));
+    vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+
+  free(buffer);
 }
+
