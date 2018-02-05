@@ -37,7 +37,7 @@ static uint32_t g_range;
 
 static void IRAM timer_isr(void* arg)
 {
-  taskENTER_CRITICAL();
+  UBaseType_t flags = taskENTER_CRITICAL_FROM_ISR();
   uint32_t set_mask = 0;
   uint32_t clear_mask = 0;
   for (uint8_t i = 0; i < g_n_pins; ++i)
@@ -56,7 +56,7 @@ static void IRAM timer_isr(void* arg)
   }
   GPIO.OUT_SET = set_mask;
   GPIO.OUT_CLEAR = clear_mask;
-  taskEXIT_CRITICAL();
+  taskEXIT_CRITICAL_FROM_ISR(flags);
 }
 
 void delta_sigma_set_duty(uint8_t channel, uint32_t duty)
