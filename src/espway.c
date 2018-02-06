@@ -61,11 +61,10 @@ const color_t LILA   = { .color = 0xb400b4 };
 const color_t BLACK  = { .color = 0x000000 };
 
 typedef enum { LOG_FREQ, LOG_RAW, LOG_PITCH, LOG_NONE } logmode;
-typedef enum { STABILIZING_ORIENTATION, RUNNING, FALLEN, WOUND_UP } state;
 
-static TaskHandle_t xCalculationTask;
-static TaskHandle_t xSteeringWatcher;
-static TaskHandle_t xIMUWatcher;
+static TaskHandle_t xCalculationTask = NULL;
+static TaskHandle_t xSteeringWatcher = NULL;
+static TaskHandle_t xIMUWatcher = NULL;
 
 static mahony_filter_state imuparams;
 static pidstate vel_pid_state;
@@ -102,7 +101,8 @@ void set_steering(q16 new_target_speed, q16 new_steering_bias)
     steering_bias = new_steering_bias;
     xSemaphoreGive(steering_mutex);
   }
-  xTaskNotify(xSteeringWatcher, 0, eNoAction);
+
+  if (xSteeringWatcher) xTaskNotify(xSteeringWatcher, 0, eNoAction);
 }
 
 void battery_cutoff(void)
@@ -110,6 +110,12 @@ void battery_cutoff(void)
   set_both_eyes(BLACK);
   set_motors(0, 0);
   sdk_system_deep_sleep(UINT32_MAX);
+}
+
+static state my_state;
+state get_state(void)
+{
+  return my_state;
 }
 
 static void main_loop(void *pvParameters)
@@ -120,7 +126,7 @@ static void main_loop(void *pvParameters)
   int n = 0;
   q16 travel_speed = 0;
   q16 smoothed_target_speed = 0;
-  state my_state = STABILIZING_ORIENTATION;
+  my_state = STABILIZING_ORIENTATION;
   unsigned long stage_started = 0;
   unsigned long last_wind_up = 0;
 
@@ -253,7 +259,7 @@ static void main_loop(void *pvParameters)
 static void imu_interrupt_handler(uint8_t gpio_num)
 {
   BaseType_t xHigherPriorityTaskHasWoken = pdFALSE;
-  xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
+  if (xCalculationTask) xTaskNotifyFromISR(xCalculationTask, 0, eNoAction, &xHigherPriorityTaskHasWoken);
   portEND_SWITCHING_ISR(xHigherPriorityTaskHasWoken);
 }
 

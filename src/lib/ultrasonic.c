@@ -80,8 +80,8 @@ void ultrasonic_sensor_init(uint8_t pins[], uint8_t n_pins)
   {
     sensors[i].pin = pins[i];
     sensors[i].pin_mask = BIT(pins[i]);
-    gpio_enable(pins[i], GPIO_OUTPUT);
-    gpio_write(pins[i], false);
+    gpio_enable(pins[i], GPIO_INPUT);
+    gpio_set_pullup(pins[i], true, false);
     gpio_to_index[pins[i]] = i;
     sensors[i].sem = xSemaphoreCreateBinary();
     if (sensors[i].sem == NULL)

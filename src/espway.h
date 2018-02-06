@@ -59,6 +59,8 @@ typedef struct {
   q16 sin_roll;
 } orientation;
 
+typedef enum { STABILIZING_ORIENTATION, RUNNING, FALLEN, WOUND_UP } state;
+
 extern espway_config my_config;
 
 extern SemaphoreHandle_t pid_mutex;
@@ -76,6 +78,7 @@ void httpd_task(void *pvParameters);
 
 void battery_cutoff(void);
 
+state get_state(void);
 void set_steering(q16 new_target_speed, q16 new_turning_bias);
 orientation get_orientation(void);
 

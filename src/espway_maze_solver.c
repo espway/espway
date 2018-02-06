@@ -19,6 +19,8 @@
 #include "espway.h"
 #include "lib/ultrasonic.h"
 #include "lib/samplebuffer.h"
+#include "lib/pid.h"
+#include "lib/eyes.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -29,13 +31,48 @@ void maze_solver_task(void *pvParameters)
 
   samplebuffer_t* buffer = samplebuffer_init(5);
 
+  pidsettings pid;
+  pidstate pid_state;
+  pid_coeffs coeffs = { FLT_TO_Q16(0.0005f), 0, 0 };
+  pid_initialize(&coeffs, FLT_TO_Q16(0.01f), FLT_TO_Q16(-0.3f), FLT_TO_Q16(0.3f),
+    false, &pid);
+
+  q16 speed = FLT_TO_Q16(0.35f);
+  q16 ref_distance = 580 * Q16_ONE;
+
   for (;;)
   {
-    int value = ultrasonic_sensor_read(0);
-    if (value > 0) samplebuffer_add_sample(buffer, value);
+    pid_reset(ref_distance, 0, &pid, &pid_state);
+    q16 bias = 0;
 
-    printf("value = %5d, delay = %5d\n", value, samplebuffer_median(buffer));
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    while (get_state() == RUNNING)
+    {
+      int value = ultrasonic_sensor_read(0);
+
+      if (value > 0)
+      {
+        samplebuffer_add_sample(buffer, value);
+        int median = samplebuffer_median(buffer);
+
+        if (median > 1500) bias = 0;
+        else bias = pid_compute(median * Q16_ONE, ref_distance, &pid, &pid_state);
+
+
+        printf("median = %5d, bias = %5d\n", median, bias);
+      }
+
+      q16 color = 128 * bias / Q16_ONE;
+      color_t clr;
+      clr.red = color;
+      clr.green = 0;
+      clr.blue = 0;
+      set_both_eyes(clr);
+
+      set_steering(speed, bias);
+      vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+
+    vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 
   free(buffer);
