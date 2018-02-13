@@ -1,0 +1,6 @@
+-Isrc
+-Iesp-open-rtos/include
+-Iesp-open-rtos/core/include
+-Iesp-open-rtos/FreeRTOS/Source/include
+-Iesp-open-rtos/extras
+
