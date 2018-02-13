@@ -58,7 +58,7 @@ void maze_solver_task(void *pvParameters)
         else bias = pid_compute(median * Q16_ONE, ref_distance, &pid, &pid_state);
 
 
-        printf("median = %5d, bias = %5d\n", median, bias);
+        //printf("median = %5d, bias = %5d\n", median, bias);
       }
 
       q16 color = 128 * bias / Q16_ONE;

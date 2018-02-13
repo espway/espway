@@ -128,8 +128,8 @@
 
 // Maze solver config
 
-#define ULTRASONIC_SENSOR_SIDE_GPIO  5
-#define ULTRASONIC_SENSOR_FRONT_GPIO 1
+#define ULTRASONIC_SENSOR_SIDE_GPIO  1
+#define ULTRASONIC_SENSOR_FRONT_GPIO 5
 
 // Handedness of the solver and mounting side of the sensor
 // 0 is left, 1 is right
