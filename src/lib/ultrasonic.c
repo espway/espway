@@ -80,8 +80,8 @@ void ultrasonic_sensor_init(uint8_t pins[], uint8_t n_pins)
   {
     sensors[i].pin = pins[i];
     sensors[i].pin_mask = BIT(pins[i]);
-    gpio_enable(pins[i], GPIO_OUTPUT);
-    gpio_write(pins[i], false);
+    gpio_enable(pins[i], GPIO_INPUT);
+    gpio_set_pullup(pins[i], true, false);
     gpio_to_index[pins[i]] = i;
     sensors[i].sem = xSemaphoreCreateBinary();
     if (sensors[i].sem == NULL)
@@ -101,15 +101,18 @@ int ultrasonic_sensor_read(uint8_t sensor_index)
 
   ultrasonic_sensor_t* sensor = &sensors[sensor_index];
 
+  xSemaphoreTake(sensor->sem, 0);
+
   // Emit trigger pulse
   sensor->rising_edge = 0;
   sensor->falling_edge = 0;
   GPIO.OUT_SET = sensor->pin_mask;
-  sdk_os_delay_us(10);
+  sdk_os_delay_us(20);
+  GPIO.OUT_CLEAR = sensor->pin_mask;
+  sdk_os_delay_us(20);
 
   // Listen to rising edge interrupts on the pin
   taskENTER_CRITICAL();
-  GPIO.OUT_CLEAR = sensor->pin_mask;
   GPIO.ENABLE_OUT_CLEAR = sensor->pin_mask;
   GPIO.CONF[sensor->pin] = SET_FIELD(GPIO.CONF[sensor->pin], GPIO_CONF_INTTYPE,
     GPIO_INTTYPE_EDGE_POS);
@@ -119,6 +122,8 @@ int ultrasonic_sensor_read(uint8_t sensor_index)
   if (xSemaphoreTake(sensor->sem, ULTRASONIC_SENSOR_MAX_TIME_MS / portTICK_PERIOD_MS + 1))
     delta = sensor->falling_edge - sensor->rising_edge;
 
+  GPIO.CONF[sensor->pin] = SET_FIELD(GPIO.CONF[sensor->pin], GPIO_CONF_INTTYPE,
+    GPIO_INTTYPE_NONE);
   GPIO.ENABLE_OUT_SET = sensor->pin_mask;
 
   return delta;
