@@ -28,7 +28,7 @@ include esp-open-rtos/common.mk
 
 ESPTOOL_ARGS = --flash_freq $(FLASH_FREQ) --flash_mode $(FLASH_MODE) --flash_size $(FLASH_SIZE)
 
-HTTPD_DIR = $(LWIP_DIR)apps/httpd/
+HTTPD_DIR = $(LWIP_DIR)apps/http/
 FSDATA = $(SRC_DIR)/fsdata_custom.c
 
 all: $(FSDATA)
