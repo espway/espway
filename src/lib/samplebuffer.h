@@ -32,7 +32,8 @@ typedef struct {
 
 // Allocate and initialize ring buffer. Free it with free()
 samplebuffer_t* samplebuffer_init(size_t sample_count);
-void samplebuffer_add_sample(samplebuffer_t* buffer, int32_t);
+void samplebuffer_add_sample(samplebuffer_t* buffer, int32_t value);
+void samplebuffer_reset(samplebuffer_t* buffer, int32_t value);
 
 // Performs an insertion sort of the samples and calculates the median
 // from there.
