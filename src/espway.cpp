@@ -214,6 +214,7 @@ static void main_loop(void *pvParameters)
         my_state = FALLEN;
         set_both_eyes(BLUE);
         travel_speed = 0;
+        smoothed_target_speed = 0;
         set_motors(0, 0);
       }
     }

@@ -30,6 +30,8 @@
 #define ULTRASONIC_SENSOR_MAX_TIME_MS 20
 #endif
 
+#define CM_TO_US(cm) ((cm) * 58)
+
 // Add an ultrasonic sensor on the given pin
 void ultrasonic_sensor_init(uint8_t pins[], uint8_t n_pins);
 // Read the given ultrasonic sensor. Blocks execution

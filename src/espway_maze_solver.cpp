@@ -60,49 +60,71 @@ static bool probe_for_sensors(const std::vector<uint8_t>& sensors)
 
 void maze_solver_task(void *pvParameters)
 {
-  std::vector<uint8_t> pins {ULTRASONIC_SENSOR_SIDE_GPIO};
+  std::vector<uint8_t> pins {ULTRASONIC_SENSOR_SIDE_GPIO,
+    ULTRASONIC_SENSOR_FRONT_GPIO};
   ultrasonic_sensor_init(&pins[0], pins.size());
 
-  samplebuffer_t* buffer = samplebuffer_init(5);
+  samplebuffer_t* side_buffer = samplebuffer_init(5);
+  samplebuffer_t* front_buffer = samplebuffer_init(5);
 
   pidsettings pid;
   pidstate pid_state;
-  pid_coeffs coeffs = { FLT_TO_Q16(0.0005f), 0, FLT_TO_Q16(0.00002f) };
-  pid_initialize(&coeffs, FLT_TO_Q16(0.01f), FLT_TO_Q16(-0.3f), FLT_TO_Q16(0.3f),
+  pid_coeffs coeffs = { FLT_TO_Q16(0.0002f), 0, FLT_TO_Q16(0.00005f) };
+  pid_initialize(&coeffs, FLT_TO_Q16(0.05f), FLT_TO_Q16(-0.3f), FLT_TO_Q16(0.3f),
     false, &pid);
 
   q16 speed = FLT_TO_Q16(0.30f);
-  q16 ref_distance = 580 * Q16_ONE;
+  q16 ref_distance = CM_TO_US(10) * Q16_ONE;
 
   if (!probe_for_sensors({0})) goto exit;
 
   for (;;)
   {
     pid_reset(ref_distance, 0, &pid, &pid_state);
-    q16 bias = 0;
+    set_steering(0, 0);
 
     while (get_state() == RUNNING)
     {
-      int value = ultrasonic_sensor_read(0);
+      int side_value = ultrasonic_sensor_read(0);
+      int front_value = ultrasonic_sensor_read(1);
 
-      if (value > 0)
+      q16 bias = 0;
+
+      if (side_value > 0)
       {
-        samplebuffer_add_sample(buffer, value);
-        int median = samplebuffer_median(buffer);
+        samplebuffer_add_sample(side_buffer, side_value);
+        int side_median = samplebuffer_median(side_buffer);
 
-        if (median > 1500) bias = 0;
-        else bias = pid_compute(median * Q16_ONE, ref_distance, &pid, &pid_state);
+        if (side_median > CM_TO_US(20)) bias = 0;
+        else bias = pid_compute(side_median * Q16_ONE, ref_distance, &pid, &pid_state);
+      }
+      else if (front_value > 0)
+      {
+        samplebuffer_add_sample(front_buffer, front_value);
+        int front_median = samplebuffer_median(front_buffer);
+
+        const int WALL_AVOIDANCE = CM_TO_US(30);
+        if (front_median < WALL_AVOIDANCE)
+        {
+          /* if (front_median < CM_TO_US(7)) */
+          /*   bias = -FLT_TO_Q16(-0.3f); */
+          bias = q16_mul((front_median - WALL_AVOIDANCE) * Q16_ONE, FLT_TO_Q16(0.0001f));
+        }
       }
 
+      if (bias == 0)
+        bias = FLT_TO_Q16(0.07f);
+
       set_steering(speed, bias);
-      vTaskDelay(10 / portTICK_PERIOD_MS);
+      vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 
     vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 
 exit:
-  free(buffer);
+  free(front_buffer);
+  free(side_buffer);
   vTaskDelete(NULL);
 }
 
