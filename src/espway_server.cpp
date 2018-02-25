@@ -24,19 +24,16 @@ extern "C" {
 #include <lwip/tcpip.h>
 #include <lwip/apps/httpd.h>
 
+#include "lib/locks.h"
 #include "espway.h"
 
 static void httpd_websocket_save_config(struct altcp_pcb *pcb)
 {
   uint8_t response;
   if (save_flash_config())
-  {
     response = RES_SAVE_CONFIG_SUCCESS;
-  }
   else
-  {
     response = RES_SAVE_CONFIG_FAILURE;
-  }
   httpd_websocket_write(pcb, &response, 1, WS_BIN_MODE);
 }
 
@@ -64,11 +61,12 @@ static void send_pid_params(struct altcp_pcb *pcb, pid_controller_index idx)
   buf[0] = RES_PID_PARAMS;
   buf[1] = idx;
   int32_t *params = (int32_t *)(&buf[2]);
-  xSemaphoreTake(pid_mutex, portMAX_DELAY);
-  params[0] = my_config.pid_coeffs_arr[idx].p;
-  params[1] = my_config.pid_coeffs_arr[idx].i;
-  params[2] = my_config.pid_coeffs_arr[idx].d;
-  xSemaphoreGive(pid_mutex);
+  {
+    MutexLock lock(pid_mutex);
+    params[0] = my_config.pid_coeffs_arr[idx].p;
+    params[1] = my_config.pid_coeffs_arr[idx].i;
+    params[2] = my_config.pid_coeffs_arr[idx].d;
+  }
   httpd_websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
@@ -170,13 +168,12 @@ static void battery_task(void *pvParameter)
     }
 
     {
-      LOCK_TCPIP_CORE();
+      LwipCoreLock lock();
       uint8_t buf[3];
       buf[0] = BATTERY;
       uint16_t *payload = (uint16_t *)&buf[1];
       payload[0] = battery_mv;
       httpd_websocket_broadcast(buf, sizeof(buf), WS_BIN_MODE);
-      UNLOCK_TCPIP_CORE();
     }
 
     vTaskDelay(BATTERY_CHECK_INTERVAL / portTICK_PERIOD_MS);

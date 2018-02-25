@@ -21,6 +21,7 @@ extern "C" {
 #include <stdio.h>
 }
 
+#include "lib/locks.h"
 #include "espway.h"
 
 espway_config my_config;
@@ -35,7 +36,7 @@ const static espway_config DEFAULT_CONFIG = {
 
 void pretty_print_config()
 {
-  xSemaphoreTake(pid_mutex, portMAX_DELAY);
+  MutexLock lock(pid_mutex);
   printf(
       "\n\nESPway current config:\n\n"
       "#define ANGLE_KP %d\n"
@@ -58,7 +59,6 @@ void pretty_print_config()
       my_config.gyro_offsets[1],
       my_config.gyro_offsets[2]
   );
-  xSemaphoreGive(pid_mutex);
 }
 
 void load_hardcoded_config()
@@ -68,7 +68,7 @@ void load_hardcoded_config()
 
 void load_config()
 {
-  xSemaphoreTake(pid_mutex, portMAX_DELAY);
+  MutexLock lock(pid_mutex);
   load_hardcoded_config();
   sysparam_get_data_static("ANGLE_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE],
       sizeof(pid_coeffs), NULL, NULL);
@@ -76,12 +76,11 @@ void load_config()
       sizeof(pid_coeffs), NULL, NULL);
   sysparam_get_data_static("GYRO_OFFSETS", (uint8_t *)&my_config.gyro_offsets,
       3 * sizeof(int16_t), NULL, NULL);
-  xSemaphoreGive(pid_mutex);
 }
 
 void apply_config_params()
 {
-  xSemaphoreTake(pid_mutex, portMAX_DELAY);
+  MutexLock lock(pid_mutex);
   pid_initialize(&my_config.pid_coeffs_arr[ANGLE],
       FLT_TO_Q16(SAMPLE_TIME),
       -Q16_ONE, Q16_ONE, false, &pid_settings_arr[ANGLE]);
@@ -89,19 +88,19 @@ void apply_config_params()
       FLT_TO_Q16(SAMPLE_TIME),
       STABLE_ANGLE - FALL_LIMIT, STABLE_ANGLE + FALL_LIMIT, true,
       &pid_settings_arr[VEL]);
-  xSemaphoreGive(pid_mutex);
 }
 
 bool save_flash_config()
 {
   bool success = true;
 
-  xSemaphoreTake(pid_mutex, portMAX_DELAY);
-  success = sysparam_set_data("ANGLE_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE],
-      sizeof(pid_coeffs), true) == SYSPARAM_OK;
-  if (success) success = sysparam_set_data("VEL_PID", (uint8_t *)&my_config.pid_coeffs_arr[VEL], sizeof(pid_coeffs), true) == SYSPARAM_OK;
-  xSemaphoreGive(pid_mutex);
-  if (success) success = sysparam_set_data("GYRO_OFFSETS", (uint8_t *)&my_config.gyro_offsets, 3 * sizeof(int16_t), true) == SYSPARAM_OK;
+  {
+    MutexLock lock(pid_mutex);
+    success = sysparam_set_data("ANGLE_PID", (uint8_t *)&my_config.pid_coeffs_arr[ANGLE],
+        sizeof(pid_coeffs), true) == SYSPARAM_OK;
+    if (success) success = sysparam_set_data("VEL_PID", (uint8_t *)&my_config.pid_coeffs_arr[VEL], sizeof(pid_coeffs), true) == SYSPARAM_OK;
+    if (success) success = sysparam_set_data("GYRO_OFFSETS", (uint8_t *)&my_config.gyro_offsets, 3 * sizeof(int16_t), true) == SYSPARAM_OK;
+  }
 
   return success;
 }
@@ -117,12 +116,13 @@ bool clear_flash_config()
 void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d)
 {
   if (idx > 2) return;
-  xSemaphoreTake(pid_mutex, portMAX_DELAY);
-  pid_coeffs *p_coeffs = &my_config.pid_coeffs_arr[idx];
-  p_coeffs->p = p;
-  p_coeffs->i = i;
-  p_coeffs->d = d;
-  pid_update_params(p_coeffs, &pid_settings_arr[idx]);
 
-  xSemaphoreGive(pid_mutex);
+  {
+    MutexLock lock(pid_mutex);
+    pid_coeffs *p_coeffs = &my_config.pid_coeffs_arr[idx];
+    p_coeffs->p = p;
+    p_coeffs->i = i;
+    p_coeffs->d = d;
+    pid_update_params(p_coeffs, &pid_settings_arr[idx]);
+  }
 }

@@ -32,6 +32,7 @@ extern "C" {
 }
 #include "espway.h"
 #include "espway_config.h"
+#include "lib/locks.h"
 
 #ifndef M_PI
 #define M_PI (3.14159265358979323846)
@@ -87,10 +88,9 @@ orientation get_orientation()
 {
   orientation copy_orientation = {};
   {
-    xSemaphoreTake(orientation_mutex, portMAX_DELAY);
+    MutexLock lock(orientation_mutex);
     copy_orientation.sin_pitch = sin_pitch;
     copy_orientation.sin_roll = sin_roll;
-    xSemaphoreGive(orientation_mutex);
   }
   return copy_orientation;
 }
@@ -98,10 +98,9 @@ orientation get_orientation()
 void set_steering(q16 new_target_speed, q16 new_steering_bias)
 {
   {
-    xSemaphoreTake(steering_mutex, portMAX_DELAY);
+    MutexLock lock(steering_mutex);
     target_speed = new_target_speed;
     steering_bias = new_steering_bias;
-    xSemaphoreGive(steering_mutex);
   }
 
   if (xSteeringWatcher) xTaskNotify(xSteeringWatcher, 0, eNoAction);
@@ -141,24 +140,22 @@ static void main_loop(void *pvParameters)
 
     // Update orientation estimate
     {
-      xSemaphoreTake(orientation_mutex, portMAX_DELAY);
+      MutexLock lock(orientation_mutex);
       mahony_filter_update(&imuparams, &raw_data[0], &raw_data[3], &gravity);
       // Calculate sine of pitch angle from gravity vector
       sin_pitch = -gravity.data[IMU_FORWARD_AXIS];
       if (IMU_INVERT_FORWARD_AXIS) sin_pitch = -sin_pitch;
       sin_roll = -gravity.data[IMU_SIDE_AXIS];
       if (IMU_INVERT_SIDE_AXIS) sin_roll = -sin_roll;
-      xSemaphoreGive(orientation_mutex);
     }
 
     // Exponential smoothing of target speed
     q16 motor_bias;
     {
-      xSemaphoreTake(steering_mutex, portMAX_DELAY);
+      MutexLock lock(orientation_mutex);
       smoothed_target_speed = q16_exponential_smooth(smoothed_target_speed,
           target_speed, FLT_TO_Q16(TARGET_SPEED_SMOOTHING));
       motor_bias = steering_bias;
-      xSemaphoreGive(steering_mutex);
     }
 
     current_time = sdk_system_get_time();
@@ -176,20 +173,20 @@ static void main_loop(void *pvParameters)
           abs(sin_roll) < ROLL_LIMIT)
       {
         // Perform PID update
-        xSemaphoreTake(pid_mutex, portMAX_DELAY);
-        q16 target_angle = pid_compute(travel_speed, smoothed_target_speed,
-            &pid_settings_arr[VEL], &vel_pid_state);
+        q16 target_angle, motor_speed;
+        {
+          MutexLock lock(pid_mutex);
+          target_angle = pid_compute(travel_speed, smoothed_target_speed,
+              &pid_settings_arr[VEL], &vel_pid_state);
 
-        q16 motor_speed;
-
-        if (sin_pitch < (target_angle - FLT_TO_Q16(HIGH_PID_LIMIT)))
-          motor_speed = -Q16_ONE;
-        else if (sin_pitch > target_angle + FLT_TO_Q16(HIGH_PID_LIMIT))
-          motor_speed = Q16_ONE;
-        else
-          motor_speed = pid_compute(sin_pitch, target_angle,
-              &pid_settings_arr[ANGLE], &angle_pid_state);
-        xSemaphoreGive(pid_mutex);
+          if (sin_pitch < (target_angle - FLT_TO_Q16(HIGH_PID_LIMIT)))
+            motor_speed = -Q16_ONE;
+          else if (sin_pitch > target_angle + FLT_TO_Q16(HIGH_PID_LIMIT))
+            motor_speed = Q16_ONE;
+          else
+            motor_speed = pid_compute(sin_pitch, target_angle,
+                &pid_settings_arr[ANGLE], &angle_pid_state);
+        }
 
         if (abs(motor_speed) < FLT_TO_Q16(MOTOR_DEADBAND))
           motor_speed = 0;
