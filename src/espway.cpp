@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+extern "C" {
 #include <string.h>
 #include <espressif/esp_common.h>
 #include <user_exception.h>
@@ -23,11 +24,12 @@
 #include <esp8266.h>
 #include <esp/uart.h>
 
-#include "lib/imu_math.h"
-#include "lib/imu_hal.h"
 #include "lib/eyes.h"
-#include "lib/motors.h"
 #include "lib/delta_sigma.h"
+#include "lib/imu_hal.h"
+#include "lib/imu_math.h"
+#include "lib/motors.h"
+}
 #include "espway.h"
 #include "espway_config.h"
 
@@ -81,9 +83,9 @@ static SemaphoreHandle_t orientation_mutex;
 static vector3d_fix gravity = {{ 0, 0, Q16_ONE }};
 static q16 sin_pitch, sin_roll;
 
-orientation get_orientation(void)
+orientation get_orientation()
 {
-  orientation copy_orientation;
+  orientation copy_orientation = {};
   {
     xSemaphoreTake(orientation_mutex, portMAX_DELAY);
     copy_orientation.sin_pitch = sin_pitch;
@@ -105,7 +107,7 @@ void set_steering(q16 new_target_speed, q16 new_steering_bias)
   if (xSteeringWatcher) xTaskNotify(xSteeringWatcher, 0, eNoAction);
 }
 
-void battery_cutoff(void)
+void battery_cutoff()
 {
   set_both_eyes(BLACK);
   set_motors(0, 0);
@@ -113,7 +115,7 @@ void battery_cutoff(void)
 }
 
 static state my_state;
-state get_state(void)
+state get_state()
 {
   return my_state;
 }
@@ -279,7 +281,7 @@ static void imu_watcher(void *arg)
     abort();
 }
 
-static void IRAM espway_exception_handler(void)
+static void IRAM espway_exception_handler()
 {
   _xt_isr_mask(BIT(INUM_TIMER_FRC1));  // Shut down the timer driving the motors
   // Make sure that the motor outputs are enabled as outputs and drive them low
@@ -290,7 +292,7 @@ static void IRAM espway_exception_handler(void)
   }
 }
 
-static void wifi_setup(void)
+static void wifi_setup()
 {
   sdk_wifi_set_opmode(SOFTAP_MODE);
   struct ip_info ap_ip;
@@ -313,7 +315,7 @@ static void wifi_setup(void)
   dhcpserver_start(&first_client_ip, 1);
 }
 
-void user_init(void)
+extern "C" void user_init(void)
 {
   set_user_exception_handler(espway_exception_handler);
   sdk_system_update_cpu_freq(SYS_CPU_160MHZ);

@@ -66,21 +66,21 @@ extern espway_config my_config;
 extern SemaphoreHandle_t pid_mutex;
 extern pidsettings pid_settings_arr[2];
 
-void pretty_print_config(void);
-void apply_config_params(void);
-bool save_flash_config(void);
-bool clear_flash_config(void);
-void load_config(void);
-void load_hardcoded_config(void);
+void pretty_print_config();
+void apply_config_params();
+bool save_flash_config();
+bool clear_flash_config();
+void load_config();
+void load_hardcoded_config();
 void update_pid_controller(pid_controller_index idx, q16 p, q16 i, q16 d);
 
 void httpd_task(void *pvParameters);
 
-void battery_cutoff(void);
+void battery_cutoff();
 
-state get_state(void);
+state get_state();
 void set_steering(q16 new_target_speed, q16 new_turning_bias);
-orientation get_orientation(void);
+orientation get_orientation();
 
 void maze_solver_task(void *pvParameters);
 

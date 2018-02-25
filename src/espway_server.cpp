@@ -16,8 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+extern "C" {
 #include <string.h>
 #include <espressif/esp_common.h>
+}
 #include <lwip/altcp.h>
 #include <lwip/tcpip.h>
 #include <lwip/apps/httpd.h>
@@ -183,17 +185,12 @@ static void battery_task(void *pvParameter)
   vTaskDelete(NULL);
 }
 
-const char *pid_handler(int iIndex, int iNumParams, char* pvParams[], char* pvValues[])
-{
-  return "/pid.html";
-}
-
 void httpd_task(void *pvParameters)
 {
   xTaskCreate(battery_task, "Battery task", 256, NULL, uxTaskPriorityGet(NULL), NULL);
 
   tCGI pCGIs[] = {
-    {"/pid", pid_handler }
+    {"/pid", [](int, int, char*[], char*[]) { return "/pid.html"; }}
   };
   http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
 
