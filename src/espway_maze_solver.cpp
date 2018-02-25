@@ -100,22 +100,19 @@ void maze_solver_task(void *pvParameters)
 
       {
         q16 bias = 0;
+        int front_median = samplebuffer_median(front_buffer);
+        int side_median = samplebuffer_median(side_buffer);
+        const int WALL_AVOIDANCE = CM_TO_US(30);
 
+        if (front_median < WALL_AVOIDANCE)
+          bias = q16_mul((front_median - WALL_AVOIDANCE) * Q16_ONE, FLT_TO_Q16(0.0002f));
+        else if (side_median < CM_TO_US(20))
+          bias = pid_compute(side_median * Q16_ONE, ref_distance, &pid, &pid_state);
+        else
         {
-          int side_median = samplebuffer_median(side_buffer);
-          if (side_median > CM_TO_US(20)) bias = 0;
-          else bias = pid_compute(side_median * Q16_ONE, ref_distance, &pid, &pid_state);
-        }
-
-        {
-          const int WALL_AVOIDANCE = CM_TO_US(30);
-          int front_median = samplebuffer_median(front_buffer);
-          if (front_median < WALL_AVOIDANCE)
-            bias = q16_mul((front_median - WALL_AVOIDANCE) * Q16_ONE, FLT_TO_Q16(0.0002f));
-        }
-
-        if (bias == 0)
+          // TODO zigzag
           bias = FLT_TO_Q16(0.07f);
+        }
 
         set_steering(speed, bias);
       }
