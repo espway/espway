@@ -76,7 +76,11 @@ void maze_solver_task(void *pvParameters)
   q16 speed = FLT_TO_Q16(0.3f);
   q16 ref_distance = CM_TO_US(10) * Q16_ONE;
 
-  if (!probe_for_sensors({0, 1})) goto exit;
+  if (!probe_for_sensors({0, 1}))
+  {
+    set_both_eyes(RED);
+    goto exit;
+  }
 
   for (;;)
   {
@@ -122,7 +126,6 @@ void maze_solver_task(void *pvParameters)
   }
 
 exit:
-  set_both_eyes(RED);
   free(front_buffer);
   free(side_buffer);
   vTaskDelete(NULL);
