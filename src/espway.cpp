@@ -56,13 +56,6 @@ extern "C" {
 #define PRIO_COMMUNICATION  2
 #define PRIO_MAIN_LOOP      (TCPIP_THREAD_PRIO + 1)
 
-const color_t RED    = { .color = 0xb40000 };
-const color_t YELLOW = { .color = 0xb4b400 };
-const color_t GREEN  = { .color = 0x00b400 };
-const color_t BLUE   = { .color = 0x0000b4 };
-const color_t LILA   = { .color = 0xb400b4 };
-const color_t BLACK  = { .color = 0x000000 };
-
 typedef enum { LOG_FREQ, LOG_RAW, LOG_PITCH, LOG_NONE } logmode;
 
 static TaskHandle_t xCalculationTask = NULL;
