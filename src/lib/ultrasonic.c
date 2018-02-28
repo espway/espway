@@ -109,7 +109,6 @@ int ultrasonic_sensor_read(uint8_t sensor_index)
   GPIO.OUT_SET = sensor->pin_mask;
   sdk_os_delay_us(20);
   GPIO.OUT_CLEAR = sensor->pin_mask;
-  sdk_os_delay_us(20);
 
   // Listen to rising edge interrupts on the pin
   taskENTER_CRITICAL();
