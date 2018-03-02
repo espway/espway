@@ -69,11 +69,11 @@ void maze_solver_task(void *pvParameters)
 
   pidsettings pid;
   pidstate pid_state;
-  pid_coeffs coeffs = { FLT_TO_Q16(0.00015), 0, FLT_TO_Q16(0.000015f) };
+  pid_coeffs coeffs = { FLT_TO_Q16(0.0003f), 0, FLT_TO_Q16(0.00002f) };
   pid_initialize(&coeffs, FLT_TO_Q16(0.01f), FLT_TO_Q16(-0.3f), FLT_TO_Q16(0.3f),
     false, &pid);
 
-  q16 speed = FLT_TO_Q16(0.3f);
+  q16 speed = FLT_TO_Q16(0.4f);
   q16 ref_distance = CM_TO_US(10) * Q16_ONE;
 
   if (!probe_for_sensors({0, 1}))
@@ -91,6 +91,7 @@ void maze_solver_task(void *pvParameters)
 
     while (get_state() != RUNNING) vTaskDelay(500 / portTICK_PERIOD_MS);
 
+    q16 actual_speed = 0;
     while (get_state() == RUNNING)
     {
       {
@@ -106,19 +107,17 @@ void maze_solver_task(void *pvParameters)
         q16 bias = 0;
         int front_median = samplebuffer_median(front_buffer);
         int side_median = samplebuffer_median(side_buffer);
-        const int WALL_AVOIDANCE = CM_TO_US(30);
+        const int WALL_AVOIDANCE = CM_TO_US(15);
 
         if (front_median > 0 && front_median < WALL_AVOIDANCE)
-          bias = q16_mul((front_median - WALL_AVOIDANCE) * Q16_ONE, FLT_TO_Q16(0.0002f));
-        else if (side_median > 0 && side_median < CM_TO_US(20))
+          bias = q16_mul((front_median - WALL_AVOIDANCE) * Q16_ONE, FLT_TO_Q16(0.0008f));
+        else if (side_median > 0 && side_median < CM_TO_US(15))
           bias = pid_compute(side_median * Q16_ONE, ref_distance, &pid, &pid_state);
         else
-        {
-          // TODO zigzag
-          bias = FLT_TO_Q16(0.08f);
-        }
+          bias = FLT_TO_Q16(0.12f);
 
-        set_steering(speed, bias);
+        actual_speed = q16_exponential_smooth(actual_speed, speed, FLT_TO_Q16(0.05f));
+        set_steering(actual_speed, bias);
       }
 
       vTaskDelay(10 / portTICK_PERIOD_MS);
