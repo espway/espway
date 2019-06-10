@@ -30,11 +30,14 @@ ESPTOOL_ARGS = --flash_freq $(FLASH_FREQ) --flash_mode $(FLASH_MODE) --flash_siz
 
 HTTPD_DIR = $(LWIP_DIR)apps/http/
 FSDATA = $(SRC_DIR)/fsdata_custom.c
+FRONTEND_INDEX = frontend/output/index.bundle.js
 
 all: $(FSDATA)
 
-$(FSDATA): $(HTTPD_DIR)makefsdata/makefsdata.c $(HTTPD_DIR)makefsdata/tinydir.h frontend/src/* 
+FRONTEND_INDEX:
 	cd frontend; npm run build
+
+$(FSDATA): $(HTTPD_DIR)makefsdata/makefsdata.c $(HTTPD_DIR)makefsdata/tinydir.h $(FRONTEND_INDEX)
 	tcc -w -I$(lwip_ROOT)include -I$(LWIP_DIR)include -Iesp-open-rtos/core/include \
 		-run $< frontend/output -f:$@
 
