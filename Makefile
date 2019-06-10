@@ -32,6 +32,8 @@ HTTPD_DIR = $(LWIP_DIR)apps/http/
 FSDATA = $(SRC_DIR)/fsdata_custom.c
 FRONTEND_INDEX = frontend/output/index.bundle.js
 
+# There actual dependencies of the "all" target come from the esp-open-rtos/common.mk
+# included above
 all: $(FSDATA)
 
 FRONTEND_INDEX:
