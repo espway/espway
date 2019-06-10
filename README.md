@@ -12,9 +12,31 @@ For building the firmware, a Linux host is recommended. For other platforms, the
 
 *NOTE*: if you intend to use Docker, you only have to install `esptool`, `git` and `make` on your host. Please see below for further Docker instructions.
 
+### Using the Docker image
+
+First, [install Docker](https://www.docker.com/community-edition).
+
+Building the firmware using the supplied Docker image is easy. Instead of running `make parallel`, just run `./docker-run make parallel` in the root folder of the repo. The command supplied to the script will be run in the Docker container, and the image will be automatically downloaded.
+
+Flashing the image differs, though, and for this you'll need `make` on your host. Instead of
+```
+make flash ESPPORT=/dev/ttyUSBx
+```
+(`/dev/ttyUSBx` being the ESP's serial port) run
+```
+make flash-only ESPPORT=/dev/ttyUSBx
+```
+in your host shell. The separate `flash-only` target is needed because the `flash` target would try to build the firmware. In the future, it is intended to provide a separate Python script for flashing, lifting the need for `make` on host.
+
+*TODO*: `docker-compose` configuration file for even easier usage
+
+### Installing the tools manually (not recommended, not guaranteed to work)
+
+**WARNING**: As of currently, the compiler installed by this method seems to have issues compiling the code. Thus this method is not recommended. Please see above for the Docker-based toolchain instead.
+
 Install these packages:
 * `git` (from your package manager)
-* `xtensa-lx106-elf` toolchain. You can use `esp-open-sdk` to build it, see the [instructions](https://github.com/SuperHouse/esp-open-rtos/#quick-start) in the esp-open-rtos repo
+* `xtensa-lx106-elf` toolchain. You can use `esp-open-sdk` to build it, see the [instructions](https://github.com/SuperHouse/esp-open-rtos/#quick-start) in the esp-open-rtos repo.
 * `esptool` (`pip install -U esptool`). Please do not use the outdated version pulled by `esp-open-sdk`.
 * `tcc`, `nodejs` and `npm` are currently required due to the frontend code, although I'm investigating how to relax this dependency.
 
@@ -36,22 +58,6 @@ The default port is `/dev/ttyUSB0`. If you need to change this, use
 ```
 make flash ESPPORT=/dev/ttyUSBx
 ```
-
-### Using the Docker image
-
-First, [install Docker](https://www.docker.com/community-edition).
-
-Building the firmware using the supplied Docker image is easy. Instead of running `make parallel`, just run `./docker-run make parallel` in the root folder of the repo. The command supplied to the script will be run in the Docker container, and the image will be automatically downloaded.
-
-Flashing the image differs, though, and for this you'll need `make` on your host. Instead of
-```
-make flash ESPPORT=/dev/ttyUSBx
-```
-(`/dev/ttyUSBx` being the ESP's serial port) run
-```
-make flash-only ESPPORT=/dev/ttyUSBx
-```
-in your host shell. The separate `flash-only` target is needed because the `flash` target would try to build the firmware. In the future, it is intended to provide a separate Python script for flashing, lifting the need for `make` on host.
 
 ## Supported browsers
 Please use the latest Firefox or Chrome if possible. The HTML/JS UI uses some
