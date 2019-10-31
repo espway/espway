@@ -28,6 +28,6 @@
     "riot": "^3.2.1",
     "style-loader": "^0.13.1",
     "webpack": "^2.2.1",
-    "webpack-dev-server": "^2.3.0"
+    "webpack-dev-server": "^3.1.11"
   }
 }
