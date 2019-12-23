@@ -11,7 +11,7 @@
     "url": "git+https://github.com/flannelhead/espway.git"
   },
   "author": "Sakari Kapanen",
-  "license": "GPL-3.0",
+  "license": "LGPL-3.0",
   "bugs": {
     "url": "https://github.com/flannelhead/espway/issues"
   },
