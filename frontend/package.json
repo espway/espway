@@ -16,6 +16,7 @@
     "url": "https://github.com/flannelhead/espway/issues"
   },
   "homepage": "https://github.com/flannelhead/espway#readme",
+  "private": true,
   "devDependencies": {
     "babel-core": "^6.22.1",
     "babel-loader": "^6.2.10",
