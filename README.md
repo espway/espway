@@ -84,7 +84,7 @@ Meanwhile, you can still build an ESPway using breakout boards available from th
 
 To use the old hardware config and schematic, you'll have to edit `src/espway_config.h` before compilation. See that file for notes.
 
-See the `schematic-old` folder for the schematic. It is drawn with [KiCad](http://kicad-pcb.org/) and there's a [rendered PDF](https://github.com/flannelhead/espway/raw/master/schematic/espway.pdf) in the repo.
+See the `schematic-old` folder for the schematic. It is drawn with [KiCad](http://kicad.org/) and there's a [rendered PDF](https://github.com/flannelhead/espway/raw/master/schematic/espway.pdf) in the repo.
 
 The new schematic in `schematic` folder uses components
 from [kicad-ESP8266](https://github.com/jdunmire/kicad-ESP8266) by J. Dunmire,
