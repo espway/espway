@@ -84,14 +84,14 @@ Meanwhile, you can still build an ESPway using breakout boards available from th
 
 To use the old hardware config and schematic, you'll have to edit `src/espway_config.h` before compilation. See that file for notes.
 
-See the `schematic-old` folder for the schematic. It is drawn with [KiCad](http://kicad.org/) and there's a [rendered PDF](https://github.com/flannelhead/espway/raw/master/schematic/espway.pdf) in the repo.
+See the `schematic-old` folder for the schematic. It is drawn with [KiCad](https://kicad.org/) and there's a [rendered PDF](https://github.com/flannelhead/espway/raw/master/schematic/espway.pdf) in the repo.
 
 The new schematic in `schematic` folder uses components
 from [kicad-ESP8266](https://github.com/jdunmire/kicad-ESP8266) by J. Dunmire,
 licensed under CC-BY-SA 4.0. The schematic is also licensed under CC-BY-SA 4.0.
 
 ## Developing the frontend
-The HTML/JS frontend uses [Webpack](https://webpack.github.io/) as the build system. You will need [NodeJS](https://nodejs.org/en/) and NPM (the package manager) to build the frontend pages. It does jobs like bundling the JavaScript modules together, minifying and transpiling the [ES2015](https://babeljs.io/learn-es2015/) code for older browsers, compiling [Riot tags](http://riotjs.com/), minifying/autoprefixing CSS etc.
+The HTML/JS frontend uses [Webpack](https://webpack.github.io/) as the build system. You will need [NodeJS](https://nodejs.org/en/) and NPM (the package manager) to build the frontend pages. It does jobs like bundling the JavaScript modules together, minifying and transpiling the [ES2015](https://babeljs.io/learn-es2015/) code for older browsers, compiling [Riot tags](https://riot.js.org/), minifying/autoprefixing CSS etc.
 
 After you've cloned this repo, run `npm install` in the root folder to install the package dependencies. There are two commands specified in `package.json` which run Webpack:
 
